@@ -34,7 +34,7 @@ uv run flet run
 
 ```bash
 # executable will be in the /dist folder
-uv run flet pack src/main.py
+uv run flet pack src/main.py --add-data "src/assets:assets"
 ```
 
 ---
