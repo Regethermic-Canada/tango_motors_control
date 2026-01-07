@@ -5,6 +5,14 @@
 
 ---
 
+## Using a raspberrypi 3 (weak support for openGL -> force cpu rendering)
+
+```
+export LIBGL_ALWAYS_SOFTWARE=1
+```
+
+---
+
 ## Run the app
 
 ```
