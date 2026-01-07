@@ -12,8 +12,11 @@ export LIBGL_ALWAYS_SOFTWARE=1
 
 ## Run the app
 
-```
-uv pip install -r requirements.txt
+```bash
+# Install dependencies from pyproject.toml
+uv sync
+
+# Run the application
 uv run flet run
 ```
 
