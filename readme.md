@@ -1,8 +1,5 @@
-
 ---
-
 # tango_motors_control
-
 ---
 
 ## Using a raspberrypi 3 (weak support for openGL -> force cpu rendering)
@@ -22,7 +19,7 @@ uv run flet run
 
 ---
 
-##  Package the app
+## Package the app
 
 ```
 # executable will be in the /dist folder
