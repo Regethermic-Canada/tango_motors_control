@@ -1,162 +1,180 @@
 import flet as ft
-import random
-import threading
 import time
+import threading
+from typing import Optional
 
-class MotorControl(ft.Container):
-    def __init__(self, motor_name, initial_speed=0):
-        super().__init__()
-        self.motor_name = motor_name
-        self.speed = initial_speed
-        self.is_running = False
-        self.load_value = 0.0
+class TangoCounterApp:
+    INACTIVITY_LIMIT: float = 30.0
+    ASSET_LOGO: str = "tango_logo.png"
+    ASSET_SCREENSAVER: str = "regethermic_screensaver.png"
+    
+    def __init__(self, page: ft.Page):
+        self.page = page
+        self.setup_page()
         
-        # UI components
-        self.status_text = ft.Text("STOPPED", color=ft.Colors.RED, weight=ft.FontWeight.BOLD)
-        self.slider_speed = ft.Slider(
-            min=0, max=100, divisions=10, value=self.speed, label="{value}%",
-            on_change=self.change_speed, disabled=True
+        # State
+        self._counter_val: int = 0
+        self._last_interaction: float = time.time()
+        self._is_screensaver_active: bool = False
+        self._running: bool = True
+        
+        # Controls
+        self.counter_display = ft.Text(
+            value="0", 
+            size=80, 
+            weight=ft.FontWeight.BOLD
         )
-        self.speed_text = ft.Text(f"{self.speed} RPM")
-        self.pb_load = ft.ProgressBar(width=150, value=0, color=ft.Colors.BLUE)
+        self.theme_icon = ft.IconButton(
+            icon=ft.Icons.DARK_MODE,
+            on_click=self.toggle_theme,
+            tooltip="Toggle Theme"
+        )
+        self.screensaver_overlay = self._build_screensaver()
         
-        # Container properties
-        self.padding = 20
-        self.bgcolor = ft.Colors.GREY_200
-        self.border_radius = 10
-        self.width = 300
+        # Initialization
+        self.build_ui()
+        self.start_inactivity_monitor()
+
+    def setup_page(self):
+        self.page.title = "Tango Motors Control"
+        self.page.theme_mode = ft.ThemeMode.DARK
+        self.page.padding = 0
         
-        # Build content
-        self.content = self._build_content()
+        # Global Event Listeners
+        self.page.on_pointer_down = self.reset_timer
+        self.page.on_keyboard_event = self.reset_timer
 
-    def did_mount(self):
-        # Simulate load changes in background
-        self.running_simulation = True
-        self.sim_thread = threading.Thread(target=self.simulate_load, daemon=True)
-        self.sim_thread.start()
+    # Logic
 
-    def will_unmount(self):
-        self.running_simulation = False
+    def reset_timer(self, e: Optional[ft.ControlEvent] = None):
+        """Resets the inactivity timer and dismisses screensaver if active."""
+        self._last_interaction = time.time()
+        if self._is_screensaver_active:
+            self.dismiss_screensaver()
 
-    def simulate_load(self):
-        while self.running_simulation:
-            if self.is_running:
-                # Fluctuate load based on speed
-                base_load = (self.speed / 100) * 0.8
-                fluctuation = random.uniform(-0.05, 0.05)
-                self.load_value = max(0.0, min(1.0, base_load + fluctuation))
-            else:
-                self.load_value = 0.0
-            
-            self.update_load_visuals()
-            time.sleep(0.5)
+    def dismiss_screensaver(self):
+        self._is_screensaver_active = False
+        self.screensaver_overlay.visible = False
+        self.screensaver_overlay.update()
 
-    def update_load_visuals(self):
-        try:
-            if self.page:
-                self.pb_load.value = self.load_value
-                # Change color based on load
-                if self.load_value > 0.9:
-                    self.pb_load.color = ft.Colors.RED
-                elif self.load_value > 0.7:
-                    self.pb_load.color = ft.Colors.ORANGE
-                else:
-                    self.pb_load.color = ft.Colors.BLUE
-                self.pb_load.update()
-        except Exception:
-            pass # Handle race conditions during unmount
+    def activate_screensaver(self):
+        if not self._is_screensaver_active:
+            self._is_screensaver_active = True
+            self.screensaver_overlay.visible = True
+            self.screensaver_overlay.update()
 
-    def toggle_motor(self, e):
-        self.is_running = e.control.value
-        self.slider_speed.disabled = not self.is_running
-        self.status_text.value = "RUNNING" if self.is_running else "STOPPED"
-        self.status_text.color = ft.Colors.GREEN if self.is_running else ft.Colors.RED
-        self.update()
+    def increment(self, e: ft.ControlEvent):
+        self._counter_val += 1
+        self.update_counter()
+        self.reset_timer()
 
-    def change_speed(self, e):
-        self.speed = e.control.value
-        self.speed_text.value = f"{int(self.speed)} RPM"
-        self.speed_text.update()
+    def decrement(self, e: ft.ControlEvent):
+        self._counter_val -= 1
+        self.update_counter()
+        self.reset_timer()
 
-    def _build_content(self):
-        return ft.Column([
-            ft.Row([
-                ft.Icon("settings_input_component", size=30),
-                ft.Text(self.motor_name, size=20, weight=ft.FontWeight.W_600),
-                ft.Container(expand=True),
-                ft.Switch(label="Power", on_change=self.toggle_motor)
-            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-            ft.Divider(),
-            ft.Row([
-                ft.Text("Speed Control:"),
-                self.speed_text
-            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-            self.slider_speed,
-            ft.Row([
-                ft.Text("Motor Load:"),
-                self.status_text
-            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-            self.pb_load,
-        ])
+    def update_counter(self):
+        self.counter_display.value = str(self._counter_val)
+        self.counter_display.update()
+
+    def toggle_theme(self, e: ft.ControlEvent):
+        is_dark = self.page.theme_mode == ft.ThemeMode.DARK
+        self.page.theme_mode = ft.ThemeMode.LIGHT if is_dark else ft.ThemeMode.DARK
+        self.theme_icon.icon = ft.Icons.DARK_MODE if self.page.theme_mode == ft.ThemeMode.DARK else ft.Icons.LIGHT_MODE
+        self.page.update()
+        self.reset_timer()
+
+    # UI
+
+    def _build_screensaver(self) -> ft.Container:
+        return ft.Container(
+            visible=False,
+            expand=True,
+            bgcolor=ft.Colors.BLACK,
+            alignment=ft.Alignment.CENTER,
+            on_click=self.reset_timer,
+            content=ft.Image(
+                src=self.ASSET_SCREENSAVER,
+                fit="cover",
+                opacity=0.8
+            )
+        )
+
+    def build_ui(self):
+        # 1. Background Layer (Bottom)
+        background = ft.Container(
+            expand=True,
+            alignment=ft.Alignment.BOTTOM_CENTER,
+            padding=ft.Padding(0, 0, 0, 60),
+            opacity=0.1,
+            content=ft.Image(src=self.ASSET_LOGO, width=400, fit="contain")
+        )
+
+        # 2. Controls Layer
+        controls_layer = ft.Container(
+            expand=True,
+            alignment=ft.Alignment.CENTER,
+            content=ft.Column(
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                alignment=ft.MainAxisAlignment.CENTER,
+                tight=True,
+                controls=[
+                    self.counter_display,
+                    ft.Row(
+                        controls=[
+                            ft.IconButton(
+                                icon=ft.Icons.REMOVE, 
+                                icon_size=40, 
+                                on_click=self.decrement
+                            ),
+                            ft.IconButton(
+                                icon=ft.Icons.ADD, 
+                                icon_size=40, 
+                                on_click=self.increment
+                            ),
+                        ],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=40
+                    )
+                ]
+            )
+        )
+
+        # 3. Header Layer
+        header_layer = ft.Container(
+            content=self.theme_icon,
+            top=20,
+            right=20,
+        )
+
+        # Stack Composition
+        self.page.add(
+            ft.Stack(
+                expand=True,
+                controls=[
+                    background,
+                    controls_layer,
+                    header_layer,
+                    self.screensaver_overlay
+                ]
+            )
+        )
+
+    # Background Tasks
+
+    def start_inactivity_monitor(self):
+        thread = threading.Thread(target=self._monitor_loop, daemon=True)
+        thread.start()
+
+    def _monitor_loop(self):
+        while self._running:
+            time.sleep(1.0)
+            elapsed = time.time() - self._last_interaction
+            if elapsed > self.INACTIVITY_LIMIT:
+                self.activate_screensaver()
 
 def main(page: ft.Page):
-    page.title = "Tango Motors Control"
-    page.theme_mode = ft.ThemeMode.DARK
-    page.padding = 0
-    page.window_width = 1000
-    page.window_height = 800
-
-    # Header with Logo
-    header = ft.Container(
-        content=ft.Row([
-            ft.Image(src="tango_logo.png", height=60, fit="contain"),
-            ft.Text("Tango Motors Control", size=30, weight=ft.FontWeight.BOLD),
-            ft.Container(expand=True),
-            ft.IconButton("notifications"),
-            ft.IconButton("account_circle"),
-        ], alignment=ft.MainAxisAlignment.START),
-        padding=20,
-        bgcolor=ft.Colors.SURFACE,
-    )
-
-    # Hero/Banner Section
-    banner = ft.Container(
-        content=ft.Image(
-            src="regethermic_screensaver.png",
-            width=1000, 
-            height=200,
-            fit="cover",
-            border_radius=10,
-            opacity=0.8
-        ),
-        padding=20,
-        alignment=ft.Alignment.CENTER
-    )
-
-    # Dashboard Grid
-    motors_grid = ft.Row(
-        [
-            MotorControl("Conveyor Belt A"),
-            MotorControl("Hydraulic Pump B"),
-            MotorControl("Cooling Fan C"),
-        ],
-        wrap=True,
-        alignment=ft.MainAxisAlignment.CENTER,
-        spacing=20
-    )
-
-    # Main Content Area
-    content = ft.Column([
-        header,
-        banner,
-        ft.Container(
-            content=ft.Text("System Overview", size=24, weight=ft.FontWeight.BOLD),
-            padding=ft.Padding.only(left=20, top=10)
-        ),
-        ft.Container(motors_grid, padding=20)
-    ], scroll=ft.ScrollMode.AUTO)
-
-    page.add(content)
+    TangoCounterApp(page)
 
 if __name__ == "__main__":
     ft.run(main)
