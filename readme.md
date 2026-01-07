@@ -8,6 +8,7 @@
 ## Run the app
 
 ```
+uv pip install -r requirements.txt
 uv run flet run
 ```
 
@@ -21,4 +22,3 @@ uv run flet pack main.py
 ```
 
 ---
-
