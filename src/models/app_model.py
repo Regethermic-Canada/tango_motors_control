@@ -26,7 +26,7 @@ class AppModel:
         )
 
         logger.info(
-            f"App initialized. Theme: {self.theme_mode}, Timeout: {self.inactivity_limit}s"
+            f"App Refreshed. Theme: {self.theme_mode}, Timeout: {self.inactivity_limit}s"
         )
 
     def navigate(self, new_route: str) -> None:
@@ -38,7 +38,7 @@ class AppModel:
         self.counter_val += 1
         self.reset_timer()
         logger.info(f"Counter incremented to {self.counter_val}")
-
+ 
     def decrement(self) -> None:
         self.counter_val -= 1
         self.reset_timer()
