@@ -9,7 +9,11 @@ def CounterView(model: AppModel) -> ft.Control:
         alignment=ft.MainAxisAlignment.CENTER,
         tight=True,
         controls=[
-            ft.Text(value=str(model.counter_val), size=80, weight=ft.FontWeight.BOLD),
+            ft.Text(
+                value=str(model.counter_val),
+                size=80,
+                weight=ft.FontWeight.BOLD,
+            ),
             ft.Row(
                 controls=[
                     ft.IconButton(

@@ -33,6 +33,15 @@ uv run flet run
 
 ---
 
+## Check the code quality
+
+```bash
+# Check the types
+uv run mypy --strict src/
+```
+
+---
+
 ## Package the app
 
 ```bash

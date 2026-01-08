@@ -98,12 +98,8 @@ class Config:
         Updates a configuration value in memory and persists it to the storage file.
         """
         str_value: str = str(value)
-
-        # 1. Update instance and environment (memory)
-        # Convert key to attribute name (e.g., THEME_MODE -> theme_mode)
         attr_name: str = key.lower()
         if hasattr(self, attr_name):
-            # rudimentary type casting based on current type
             current_val: Any = getattr(self, attr_name)
             if isinstance(current_val, int):
                 setattr(self, attr_name, int(value))
@@ -113,8 +109,6 @@ class Config:
                 setattr(self, attr_name, str_value)
 
         os.environ[key] = str_value
-
-        # 2. Persist to file
         self._write_to_file(key, str_value)
 
     def _write_to_file(self, key: str, value: str) -> None:
@@ -146,5 +140,4 @@ class Config:
             f.writelines(new_lines)
 
 
-# Initialize global instance
 config: Config = Config.load()
