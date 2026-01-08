@@ -18,7 +18,6 @@ class AppModel:
     inactivity_limit: float = 30.0
 
     def __post_init__(self) -> None:
-        # Initialize from config
         self.inactivity_limit = config.inactivity_timeout
 
         saved_theme = config.theme_mode
@@ -51,7 +50,6 @@ class AppModel:
             if self.theme_mode == ft.ThemeMode.DARK
             else ft.ThemeMode.DARK
         )
-        # Persist change
         config_value = "LIGHT" if self.theme_mode == ft.ThemeMode.LIGHT else "DARK"
         config.set("THEME_MODE", config_value)
 
