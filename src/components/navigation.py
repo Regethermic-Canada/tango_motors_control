@@ -83,13 +83,15 @@ def PopupColorItem(color: ft.Colors, name_key: str) -> ft.PopupMenuItem:
 def ThemeModeToggle() -> ft.Control:
     theme = ft.use_context(ThemeContext)
     loc = ft.use_context(LocaleContext)
-    
+
     tooltip_key = "light_mode" if theme.mode == ft.ThemeMode.DARK else "dark_mode"
-    
+
     return ft.IconButton(
-        icon=ft.Icons.DARK_MODE
-        if theme.mode == ft.ThemeMode.DARK
-        else ft.Icons.LIGHT_MODE,
+        icon=(
+            ft.Icons.DARK_MODE
+            if theme.mode == ft.ThemeMode.DARK
+            else ft.Icons.LIGHT_MODE
+        ),
         tooltip=loc.t(tooltip_key),
         on_click=lambda _: theme.toggle_mode(),
     )
@@ -113,7 +115,7 @@ def ThemeSeedColor() -> ft.Control:
         ft.Colors.DEEP_ORANGE: "deep_orange",
         ft.Colors.PINK: "pink",
     }
-    
+
     current_key = color_keys.get(theme.seed_color, "blue")
     color_name = loc.t(current_key)
 
