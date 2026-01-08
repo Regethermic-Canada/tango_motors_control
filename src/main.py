@@ -9,7 +9,7 @@ def main(page: ft.Page) -> None:
 
     # Render the App component
     # Lambda that returns the component for page.render_views
-    page.render_views(lambda: App())  # pyright: ignore[reportUnknownMemberType]
+    page.render_views(lambda: [App()])  # pyright: ignore[reportUnknownMemberType]
 
 
 if __name__ == "__main__":

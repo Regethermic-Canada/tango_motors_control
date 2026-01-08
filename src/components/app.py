@@ -1,4 +1,3 @@
-import threading
 import time
 import logging
 import flet as ft
@@ -32,11 +31,9 @@ def App() -> ft.Control:
 
     def on_mounted() -> None:
         ft.context.page.title = config.app_title
-        ft.context.page.padding = 0
         ft.context.page.on_pointer_down = lambda _: model.reset_timer()  # type: ignore[attr-defined]
         ft.context.page.on_keyboard_event = lambda _: model.reset_timer()
-        thread: threading.Thread = threading.Thread(target=monitor_loop, daemon=True)
-        thread.start()
+        ft.context.page.run_thread(monitor_loop)
 
     ft.on_mounted(on_mounted)
 
