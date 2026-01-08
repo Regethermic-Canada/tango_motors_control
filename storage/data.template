@@ -10,7 +10,7 @@ APP_ADMIN_DEFAULT_PASSCODE=1010
 ###############################################################################
 # App Theme (LIGHT | DARK)
 THEME_MODE=DARK
-# Default Motor Speed (0-100)
+# Default Motors Speed
 DEFAULT_SPEED=50
 # Admin Passcode Hash (Argon2)
 ADMIN_PASSCODE_HASH=argon2:$argon2id$v=19$m=65536,t=3,p=4$HashPlaceholder...
