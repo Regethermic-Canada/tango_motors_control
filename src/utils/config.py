@@ -49,16 +49,11 @@ class Config:
         Load configuration from the storage file, initializing the singleton.
         """
         if getattr(sys, "frozen", False):
-            # Running as a packaged executable
-            # Use the directory where the executable is located for persistent data
             project_root = Path(sys.executable).parent
         else:
-            # Running in normal development environment
             project_root = Path(__file__).resolve().parent.parent.parent
 
         storage_path: Path = project_root / "storage" / "data"
-
-        # Create storage directory if it doesn't exist (important for packaged apps)
         storage_path.parent.mkdir(parents=True, exist_ok=True)
 
         if storage_path.exists():
