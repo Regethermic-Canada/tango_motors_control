@@ -8,6 +8,7 @@ authors = [
     { name = "samor", email = "samor140@hotmail.com" }
 ]
 dependencies = [
+  "argon2-cffi>=25.1.0",
   "flet>=0.80.1",
   "python-dotenv>=1.2.1",
 ]
