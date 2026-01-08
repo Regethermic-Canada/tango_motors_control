@@ -51,6 +51,7 @@ uv run flet pack src/main.py \
             --add-data "src/components:components" \
             --add-data "src/contexts:contexts" \
             --add-data "src/models:models" \
+            --add-data "storage:storage" \
             --add-data "src/utils:utils"
 ```
 
