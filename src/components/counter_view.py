@@ -16,11 +16,13 @@ def CounterView(model: AppModel) -> ft.Control:
                         icon=ft.Icons.REMOVE,
                         icon_size=40,
                         on_click=lambda _: model.decrement(),
+                        key="increment_speed_btn",
                     ),
                     ft.IconButton(
                         icon=ft.Icons.ADD,
                         icon_size=40,
                         on_click=lambda _: model.increment(),
+                        key="decrement_speed_btn",
                     ),
                 ],
                 alignment=ft.MainAxisAlignment.CENTER,

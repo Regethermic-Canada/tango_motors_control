@@ -1,4 +1,4 @@
-import time
+import asyncio
 import logging
 import flet as ft
 from models.app_model import AppModel
@@ -23,10 +23,10 @@ def App() -> ft.Control:
     ASSET_LOGO: str = config.asset_logo
     ASSET_SCREENSAVER: str = config.asset_screensaver
 
-    def monitor_loop() -> None:
+    async def monitor_loop() -> None:
         logger.info("Inactivity monitor thread started")
         while True:
-            time.sleep(1.0)
+            await asyncio.sleep(1.0)
             model.check_inactivity()
 
     def on_mounted() -> None:
@@ -96,6 +96,7 @@ def App() -> ft.Control:
                                     ),
                                     on_click=lambda _: model.toggle_theme(),
                                     tooltip="Toggle Theme",
+                                    key="theme_toggle_btn",
                                 ),
                                 top=20,
                                 right=20,
