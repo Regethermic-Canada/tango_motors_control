@@ -1,119 +1,71 @@
-import asyncio
-import logging
 import flet as ft
-from models.app_model import AppModel
-from components.counter_view import CounterView
-from components.screensaver import Screensaver
-from contexts.theme import ThemeContext, ThemeContextValue
-from contexts.route import RouteContext, RouteContextValue
-from utils.config import config
 
-logger: logging.Logger = logging.getLogger(__name__)
+from components.main_view import MainView
+from contexts.route import RouteContext, RouteContextValue
+from contexts.theme import ThemeContext, ThemeContextValue
+from models.app_model import AppModel
 
 
 @ft.component
 def App() -> ft.Control:
-    model: AppModel
-    model, _ = (  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
-        ft.use_state(  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
-            AppModel()
-        )
+    app, _ = ft.use_state(AppModel(route=ft.context.page.route))
+
+    # subscribe to page events as soon as possible
+    ft.context.page.on_route_change = app.route_change
+    ft.context.page.on_view_pop = app.view_popped
+
+    # stable callbacks (don’t change identity each render)
+    toggle_mode = ft.use_callback(
+        lambda: app.toggle_theme(), dependencies=[app.theme_mode]
+    )
+    set_theme_color = ft.use_callback(
+        lambda color: app.set_theme_color(color), dependencies=[app.theme_color]
     )
 
-    ASSET_LOGO: str = config.asset_logo
-    ASSET_SCREENSAVER: str = config.asset_screensaver
+    # memoize the provided value so its identity changes only when mode changes
+    theme_value = ft.use_memo(
+        lambda: ThemeContextValue(
+            mode=app.theme_mode,
+            seed_color=app.theme_color,
+            toggle_mode=toggle_mode,
+            set_seed_color=set_theme_color,
+        ),
+        dependencies=[app.theme_mode, app.theme_color, toggle_mode, set_theme_color],
+    )
 
-    async def monitor_loop() -> None:
-        logger.info("Inactivity monitor task started")
-        while True:
-            await asyncio.sleep(1.0)
-            model.check_inactivity()
+    navigate_callback = ft.use_callback(
+        lambda new_route: app.navigate(new_route), dependencies=[app.route]
+    )
+
+    route_value = ft.use_memo(
+        lambda: RouteContextValue(
+            route=app.route,
+            navigate=navigate_callback,
+        ),
+        dependencies=[app.route],
+    )
 
     def on_mounted() -> None:
-        ft.context.page.title = config.app_title
-        ft.context.page.on_pointer_down = lambda _: model.reset_timer()  # type: ignore[attr-defined]
-        ft.context.page.on_keyboard_event = lambda _: model.reset_timer()
-        ft.context.page.run_task(monitor_loop)
+        ft.context.page.title = "Tango Motors Control"
 
     ft.on_mounted(on_mounted)
 
     def update_theme() -> None:
-        ft.context.page.theme_mode = model.theme_mode
-        logger.debug(f"Applied theme mode: {model.theme_mode}")
+        ft.context.page.theme_mode = app.theme_mode
+        ft.context.page.theme = ft.context.page.dark_theme = ft.Theme(
+            color_scheme_seed=app.theme_color
+        )
 
-    ft.on_updated(update_theme, [model.theme_mode])
-
-    theme_value: ThemeContextValue = ft.use_memo(
-        lambda: ThemeContextValue(
-            mode=model.theme_mode,
-            toggle_mode=lambda: model.toggle_theme(),
-        ),
-        dependencies=[model.theme_mode],
-    )
-
-    route_value: RouteContextValue = ft.use_memo(
-        lambda: RouteContextValue(
-            route=model.route,
-            navigate=lambda r: model.navigate(r),
-        ),
-        dependencies=[model.route],
-    )
+    ft.on_updated(update_theme, [app.theme_mode, app.theme_color])
 
     return RouteContext(
         route_value,
         lambda: ThemeContext(
             theme_value,
             lambda: ft.View(
-                key="main_view",
                 route="/",
                 padding=0,
-                controls=[
-                    ft.Stack(
-                        expand=True,
-                        controls=[
-                            # 1. Background Layer
-                            ft.Container(
-                                expand=True,
-                                alignment=ft.Alignment.BOTTOM_CENTER,
-                                padding=ft.Padding(0, 0, 0, 60),
-                                opacity=0.1,
-                                content=ft.Image(
-                                    src=ASSET_LOGO, width=400, fit=ft.BoxFit.CONTAIN
-                                ),
-                            ),
-                            # 2. Controls Layer
-                            ft.Container(
-                                expand=True,
-                                alignment=ft.Alignment.CENTER,
-                                content=CounterView(model),
-                            ),
-                            # 3. Header Layer
-                            ft.Container(
-                                content=ft.IconButton(
-                                    icon=(
-                                        ft.Icons.DARK_MODE
-                                        if model.theme_mode == ft.ThemeMode.DARK
-                                        else ft.Icons.LIGHT_MODE
-                                    ),
-                                    on_click=lambda _: model.toggle_theme(),
-                                    tooltip="Toggle Theme",
-                                    key="theme_toggle_btn",
-                                ),
-                                top=20,
-                                right=20,
-                            ),
-                            # 4. Screensaver Overlay
-                            (
-                                Screensaver(
-                                    asset_path=ASSET_SCREENSAVER,
-                                    on_click=lambda _: model.reset_timer(),
-                                )
-                                if model.is_screensaver_active
-                                else ft.Container(visible=False)
-                            ),
-                        ],
-                    )
-                ],
+                controls=[MainView(app)],
             ),
         ),
     )
