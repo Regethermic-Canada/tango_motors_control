@@ -47,12 +47,12 @@ uv run mypy --strict src/
 ```bash
 # executable will be in the /dist folder
 uv run flet pack src/main.py \
-            --add-data "src/assets:assets" \
-            --add-data "src/components:components" \
-            --add-data "src/contexts:contexts" \
-            --add-data "src/models:models" \
-            --add-data "src/utils:utils" \
-            --add-data "storage:storage"
+  --add-data "src/assets:assets" \
+  --add-data "src/components:components" \
+  --add-data "src/contexts:contexts" \
+  --add-data "src/models:models" \
+  --add-data "src/utils:utils" \
+  --add-data "storage:storage"
 ```
 
 ---
