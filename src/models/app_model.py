@@ -1,7 +1,9 @@
 import asyncio
+import json
 import logging
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import flet as ft
 
@@ -14,9 +16,11 @@ logger: logging.Logger = logging.getLogger(__name__)
 @dataclass
 class AppModel:
     route: str = "/"
-    counter_val: int = 0
+    speed_level: int = 0
     theme_mode: ft.ThemeMode = ft.ThemeMode.DARK
     theme_color: ft.Colors = ft.Colors.BLUE
+    locale: str = "en"
+    translations: dict[str, str] = field(default_factory=dict)
     last_interaction: float = field(default_factory=time.time)
     is_screensaver_active: bool = False
     inactivity_limit: float = 30.0
@@ -36,9 +40,30 @@ class AppModel:
         except AttributeError:
             self.theme_color = ft.Colors.BLUE
 
+        self.locale = config.locale
+        self.load_translations()
+
         logger.info(
-            f"App Refreshed. Theme: {self.theme_mode}, Color: {self.theme_color}, Timeout: {self.inactivity_limit}s"
+            f"App Refreshed. Theme: {self.theme_mode}, Color: {self.theme_color}, Locale: {self.locale}, Timeout: {self.inactivity_limit}s"
         )
+
+    def load_translations(self) -> None:
+        project_root: Path = Path(__file__).resolve().parent.parent
+        lang_file = project_root / "assets" / "lang" / f"{self.locale}.json"
+        if lang_file.exists():
+            with open(lang_file, "r", encoding="utf-8") as f:
+                self.translations = json.load(f)
+        else:
+            logger.error(f"Translation file not found: {lang_file}")
+            self.translations = {}
+
+    def set_locale(self, locale: str) -> None:
+        if self.locale != locale:
+            self.locale = locale
+            config.set("LOCALE", locale)
+            self.load_translations()
+            self.reset_timer()
+            logger.info(f"Locale changed to {self.locale}")
 
     def route_change(self, e: ft.RouteChangeEvent) -> None:
         logger.info(f"Route changed from: {self.route} to: {e.route}")
@@ -57,14 +82,14 @@ class AppModel:
             await ft.context.page.push_route(views[-2].route)
 
     def increment(self) -> None:
-        self.counter_val += 1
+        self.speed_level += 1
         self.reset_timer()
-        logger.info(f"Counter incremented to {self.counter_val}")
+        logger.info(f"Speed level incremented to {self.speed_level}")
 
     def decrement(self) -> None:
-        self.counter_val -= 1
+        self.speed_level -= 1
         self.reset_timer()
-        logger.info(f"Counter decremented to {self.counter_val}")
+        logger.info(f"Speed level decremented to {self.speed_level}")
 
     def toggle_theme(self) -> None:
         self.theme_mode = (

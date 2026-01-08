@@ -1,0 +1,22 @@
+{
+    "theme_mode": "Theme Mode",
+    "light_mode": "Light mode",
+    "dark_mode": "Dark mode",
+    "theme_color": "Theme color",
+    "select_language": "Select language",
+    "english": "English",
+    "french": "French",
+    "speed": "Speed",
+    "increment": "Increment",
+    "decrement": "Decrement",
+    "purple": "Deep purple",
+    "indigo": "Indigo",
+    "blue": "Blue",
+    "teal": "Teal",
+    "green": "Green",
+    "yellow": "Yellow",
+    "orange": "Orange",
+    "deep_orange": "Deep orange",
+    "pink": "Pink",
+    "default_label": "default"
+}

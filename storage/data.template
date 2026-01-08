@@ -12,6 +12,8 @@ APP_ADMIN_DEFAULT_PASSCODE=1010
 THEME_MODE=DARK
 # App Theme Color (BLUE, GREEN, etc.)
 THEME_COLOR=BLUE
+# App Language (fr | en)
+LOCALE=fr
 # Default Motors Speed
 DEFAULT_SPEED=50
 # Admin Passcode Hash (Argon2)

@@ -3,8 +3,8 @@ import logging
 
 import flet as ft
 
-from components.counter_view import CounterView
-from components.navigation import ThemeModeToggle, ThemeSeedColor
+from components.speed_view import SpeedView
+from components.navigation import LanguageSelector, ThemeModeToggle, ThemeSeedColor
 from components.screensaver import Screensaver
 from models.app_model import AppModel
 from utils.config import config
@@ -48,12 +48,13 @@ def MainView(app_model: AppModel) -> ft.Control:
                 ft.Container(
                     expand=True,
                     alignment=ft.Alignment.CENTER,
-                    content=CounterView(app_model),
+                    content=SpeedView(app_model),
                 ),
                 # 3. Header Layer (Theme Controls)
                 ft.Container(
                     content=ft.Row(
                         controls=[
+                            LanguageSelector(),
                             ThemeSeedColor(),
                             ThemeModeToggle(),
                         ],

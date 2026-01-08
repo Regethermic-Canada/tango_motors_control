@@ -28,6 +28,7 @@ class Config:
     # User Preferences
     theme_mode: str
     theme_color: str
+    locale: str
     default_speed: int
     admin_passcode_hash: str
 
@@ -73,6 +74,7 @@ class Config:
         return {
             "theme_mode": get_env("THEME_MODE", "DARK").upper(),
             "theme_color": get_env("THEME_COLOR", "BLUE").upper(),
+            "locale": get_env("LOCALE", "fr").lower(),
             "default_speed": int(get_env("DEFAULT_SPEED", "50")),
             "admin_passcode_hash": get_env("ADMIN_PASSCODE_HASH", ""),
         }

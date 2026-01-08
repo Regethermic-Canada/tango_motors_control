@@ -1,6 +1,7 @@
 import flet as ft
 
 from components.main_view import MainView
+from contexts.locale import LocaleContext, LocaleContextValue
 from contexts.route import RouteContext, RouteContextValue
 from contexts.theme import ThemeContext, ThemeContextValue
 from models.app_model import AppModel
@@ -45,6 +46,19 @@ def App() -> ft.Control:
         dependencies=[app.route],
     )
 
+    set_locale = ft.use_callback(
+        lambda loc: app.set_locale(loc), dependencies=[app.locale]
+    )
+
+    locale_value = ft.use_memo(
+        lambda: LocaleContextValue(
+            locale=app.locale,
+            translations=app.translations,
+            set_locale=set_locale,
+        ),
+        dependencies=[app.locale, app.translations, set_locale],
+    )
+
     def on_mounted() -> None:
         ft.context.page.title = "Tango Motors Control"
 
@@ -58,14 +72,17 @@ def App() -> ft.Control:
 
     ft.on_updated(update_theme, [app.theme_mode, app.theme_color])
 
-    return RouteContext(
-        route_value,
-        lambda: ThemeContext(
-            theme_value,
-            lambda: ft.View(
-                route="/",
-                padding=0,
-                controls=[MainView(app)],
+    return LocaleContext(
+        locale_value,
+        lambda: RouteContext(
+            route_value,
+            lambda: ThemeContext(
+                theme_value,
+                lambda: ft.View(
+                    route="/",
+                    padding=0,
+                    controls=[MainView(app)],
+                ),
             ),
         ),
     )
