@@ -4,8 +4,8 @@ import logging
 import flet as ft
 
 from components.counter_view import CounterView
+from components.navigation import ThemeModeToggle, ThemeSeedColor
 from components.screensaver import Screensaver
-from contexts.theme import ThemeContext
 from models.app_model import AppModel
 from utils.config import config
 
@@ -14,8 +14,6 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 @ft.component
 def MainView(app_model: AppModel) -> ft.Control:
-    theme = ft.use_context(ThemeContext)
-
     ASSET_LOGO: str = config.asset_logo
     ASSET_SCREENSAVER: str = config.asset_screensaver
 
@@ -31,18 +29,6 @@ def MainView(app_model: AppModel) -> ft.Control:
         ft.context.page.run_task(monitor_loop)
 
     ft.on_mounted(on_mounted)
-
-    def seed_color_item(color: ft.Colors, name: str) -> ft.PopupMenuItem:
-        display_name = f"{name} (default)" if color == app_model.theme_color else name
-        return ft.PopupMenuItem(
-            content=ft.Row(
-                controls=[
-                    ft.Icon(ft.Icons.COLOR_LENS_OUTLINED, color=color),
-                    ft.Text(display_name),
-                ],
-            ),
-            on_click=lambda _: theme.set_seed_color(color),
-        )
 
     return ft.Container(
         expand=True,
@@ -68,35 +54,8 @@ def MainView(app_model: AppModel) -> ft.Control:
                 ft.Container(
                     content=ft.Row(
                         controls=[
-                            ft.PopupMenuButton(
-                                icon=ft.Icons.COLOR_LENS_OUTLINED,
-                                tooltip="Select theme seed color",
-                                items=[
-                                    seed_color_item(
-                                        ft.Colors.DEEP_PURPLE, "Deep purple"
-                                    ),
-                                    seed_color_item(ft.Colors.INDIGO, "Indigo"),
-                                    seed_color_item(ft.Colors.BLUE, "Blue"),
-                                    seed_color_item(ft.Colors.TEAL, "Teal"),
-                                    seed_color_item(ft.Colors.GREEN, "Green"),
-                                    seed_color_item(ft.Colors.YELLOW, "Yellow"),
-                                    seed_color_item(ft.Colors.ORANGE, "Orange"),
-                                    seed_color_item(
-                                        ft.Colors.DEEP_ORANGE, "Deep orange"
-                                    ),
-                                    seed_color_item(ft.Colors.PINK, "Pink"),
-                                ],
-                            ),
-                            ft.IconButton(
-                                icon=(
-                                    ft.Icons.DARK_MODE
-                                    if app_model.theme_mode == ft.ThemeMode.DARK
-                                    else ft.Icons.LIGHT_MODE
-                                ),
-                                on_click=lambda _: theme.toggle_mode(),
-                                tooltip="Toggle Theme",
-                                key="theme_toggle_btn",
-                            ),
+                            ThemeSeedColor(),
+                            ThemeModeToggle(),
                         ],
                         alignment=ft.MainAxisAlignment.END,
                     ),
