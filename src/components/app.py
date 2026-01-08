@@ -24,7 +24,7 @@ def App() -> ft.Control:
     ASSET_SCREENSAVER: str = config.asset_screensaver
 
     async def monitor_loop() -> None:
-        logger.info("Inactivity monitor thread started")
+        logger.info("Inactivity monitor task started")
         while True:
             await asyncio.sleep(1.0)
             model.check_inactivity()
@@ -33,7 +33,7 @@ def App() -> ft.Control:
         ft.context.page.title = config.app_title
         ft.context.page.on_pointer_down = lambda _: model.reset_timer()  # type: ignore[attr-defined]
         ft.context.page.on_keyboard_event = lambda _: model.reset_timer()
-        ft.context.page.run_thread(monitor_loop)
+        ft.context.page.run_task(monitor_loop)
 
     ft.on_mounted(on_mounted)
 
@@ -64,6 +64,7 @@ def App() -> ft.Control:
         lambda: ThemeContext(
             theme_value,
             lambda: ft.View(
+                key="main_view",
                 route="/",
                 padding=0,
                 controls=[
