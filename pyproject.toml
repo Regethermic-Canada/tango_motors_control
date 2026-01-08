@@ -8,12 +8,14 @@ authors = [
     { name = "samor", email = "samor140@hotmail.com" }
 ]
 dependencies = [
-  "flet>=0.80.1"
+  "flet>=0.80.1",
+  "python-dotenv>=1.2.1",
 ]
 
 [dependency-groups]
 dev = [
   "flet[all]>=0.80.1",
+  "mypy>=1.19.1",
   "pyinstaller",
 ]
 

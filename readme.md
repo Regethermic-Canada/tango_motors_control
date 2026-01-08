@@ -21,6 +21,9 @@ sudo apt install libmpv2
 ## Run the app
 
 ```bash
+# Create a copy of data.template to data (.env in flet)
+cp storage/data.template storage/data
+
 # Install dependencies from pyproject.toml
 uv sync
 

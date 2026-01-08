@@ -1,0 +1,31 @@
+###############################################################################
+# App
+###############################################################################
+APP_TITLE=Tango Motors Control
+APP_VERSION=0.1.0
+APP_ADMIN_DEFAULT_PASSCODE=1010
+
+###############################################################################
+# User Preferences
+###############################################################################
+# App Theme (LIGHT | DARK)
+THEME_MODE=DARK
+# Default Motor Speed (0-100)
+DEFAULT_SPEED=50
+# Admin Passcode Hash (Argon2)
+ADMIN_PASSCODE_HASH=argon2:$argon2id$v=19$m=65536,t=3,p=4$HashPlaceholder...
+
+###############################################################################
+# Assets
+###############################################################################
+# Filenames located in src/assets/
+ASSET_LOGO=tango_logo.png
+ASSET_SCREENSAVER=regethermic_screensaver.png
+
+###############################################################################
+# Behavior
+###############################################################################
+# Inactivity Timeout in seconds before screensaver
+INACTIVITY_TIMEOUT=30
+# Logging Level (DEBUG | INFO | WARNING | ERROR)
+LOG_LEVEL=INFO
