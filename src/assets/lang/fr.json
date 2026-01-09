@@ -18,5 +18,13 @@
   "orange": "Orange",
   "deep_orange": "Orange foncé",
   "pink": "Rose",
-  "default_label": "défaut"
+  "default_label": "défaut",
+  "admin_settings": "Paramètres Admin",
+  "main_view": "Vue Principale",
+  "screensaver": "Écran de veille",
+  "back_to_main": "Retour au menu",
+  "application_config": "Configuration de l'application",
+  "locale": "Langue",
+  "inactivity_timeout": "Délai d'inactivité",
+  "seconds": "secondes"
 }

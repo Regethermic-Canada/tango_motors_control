@@ -18,5 +18,13 @@
   "orange": "Orange",
   "deep_orange": "Deep orange",
   "pink": "Pink",
-  "default_label": "default"
+  "default_label": "default",
+  "admin_settings": "Admin Settings",
+  "main_view": "Main View",
+  "screensaver": "Screensaver",
+  "back_to_main": "Back to Main",
+  "application_config": "Application Configuration",
+  "locale": "Locale",
+  "inactivity_timeout": "Inactivity Timeout",
+  "seconds": "seconds"
 }

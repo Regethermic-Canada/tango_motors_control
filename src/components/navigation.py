@@ -4,6 +4,7 @@ from contexts.locale import LocaleContext
 from contexts.route import RouteContext
 from contexts.theme import ThemeContext
 from models.controls import NavItem
+from models.app_model import AppModel
 
 
 @ft.component
@@ -42,7 +43,7 @@ def Group(item: NavItem, selected: bool) -> ft.Control:
             ],
             alignment=ft.MainAxisAlignment.CENTER,
         ),
-        on_click=lambda _: route_context.navigate(f"/{item.name}"),
+        on_click=lambda _: route_context.navigate(f"{item.name}"),
     )
 
 
@@ -63,7 +64,6 @@ def Groups(nav_items: list[NavItem], selected_name: str | None) -> ft.Control:
 def PopupColorItem(color: ft.Colors, name_key: str) -> ft.PopupMenuItem:
     theme = ft.use_context(ThemeContext)
     loc = ft.use_context(LocaleContext)
-    # Restore dynamic "(default)" label based on current seed color
     is_current = color == theme.seed_color
     name = loc.t(name_key)
     display_name = f"{name} ({loc.t('default_label')})" if is_current else name
@@ -76,6 +76,16 @@ def PopupColorItem(color: ft.Colors, name_key: str) -> ft.PopupMenuItem:
             ],
         ),
         on_click=lambda _: theme.set_seed_color(color),
+    )
+
+
+@ft.component
+def AdminModeToggle(app_model: AppModel) -> ft.Control:
+    loc = ft.use_context(LocaleContext)
+    return ft.IconButton(
+        icon=ft.Icons.SETTINGS,
+        tooltip=loc.t("admin_settings"),
+        on_click=lambda _: app_model.navigate("/admin"),
     )
 
 
@@ -102,8 +112,6 @@ def ThemeSeedColor() -> ft.Control:
     theme = ft.use_context(ThemeContext)
     loc = ft.use_context(LocaleContext)
 
-    color_name = "Unknown"
-    # Find the key for the current color
     color_keys = {
         ft.Colors.DEEP_PURPLE: "purple",
         ft.Colors.INDIGO: "indigo",

@@ -4,7 +4,12 @@ import logging
 import flet as ft
 
 from components.speed_view import SpeedView
-from components.navigation import LanguageSelector, ThemeModeToggle, ThemeSeedColor
+from components.navigation import (
+    LanguageSelector,
+    ThemeModeToggle,
+    ThemeSeedColor,
+    AdminModeToggle,
+)
 from components.screensaver import Screensaver
 from models.app_model import AppModel
 from utils.config import config
@@ -54,6 +59,7 @@ def MainView(app_model: AppModel) -> ft.Control:
                 ft.Container(
                     content=ft.Row(
                         controls=[
+                            AdminModeToggle(app_model),
                             LanguageSelector(),
                             ThemeSeedColor(),
                             ThemeModeToggle(),
@@ -62,7 +68,7 @@ def MainView(app_model: AppModel) -> ft.Control:
                     ),
                     top=20,
                     right=20,
-                ),
+                 ),
                 # 4. Screensaver Overlay
                 *(
                     [
