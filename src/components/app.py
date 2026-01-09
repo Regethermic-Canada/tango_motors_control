@@ -2,9 +2,8 @@ import asyncio
 import logging
 import flet as ft
 
-from components.main.main_view import MainView
-from components.admin.admin_view import AdminView
 from components.shared.layout import Layout
+from components.shared.app_body import AppBody
 from contexts.locale import LocaleContext, LocaleContextValue
 from contexts.route import RouteContext, RouteContextValue
 from contexts.theme import ThemeContext, ThemeContextValue
@@ -103,16 +102,7 @@ def App() -> ft.Control:
                 lambda: ft.View(
                     route=app.route,
                     padding=0,
-                    controls=[
-                        Layout(
-                            app,
-                            (
-                                AdminView(app)
-                                if app.route == "/admin"
-                                else MainView(app)
-                            ),
-                        )
-                    ],
+                    controls=[Layout(app, AppBody(app))],
                 ),
             ),
         ),
