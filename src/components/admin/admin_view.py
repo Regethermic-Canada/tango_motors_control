@@ -32,9 +32,11 @@ def AdminView(app_model: AppModel) -> ft.Control:
         p2 = tf2.value
         if not p1 or not p2:
             return
-            
+
         if len(p1) != 4:
-            set_passcode_error(loc.t("passcode_mismatch")) # Or a more specific error if needed
+            set_passcode_error(
+                loc.t("passcode_mismatch")
+            )  # Or a more specific error if needed
             return
 
         if p1 == p2:
@@ -49,7 +51,7 @@ def AdminView(app_model: AppModel) -> ft.Control:
                 page=ft.context.page,
                 message=loc.t("passcode_updated"),
                 type=ToastType.SUCCESS,
-                close_tooltip=loc.t("close")
+                close_tooltip=loc.t("close"),
             )
         else:
             set_passcode_error(loc.t("passcode_mismatch"))
@@ -77,7 +79,6 @@ def AdminView(app_model: AppModel) -> ft.Control:
                     ],
                 ),
                 ft.Divider(),
-                
                 # Inactivity Timeout Section
                 ft.Column(
                     spacing=10,
@@ -105,7 +106,6 @@ def AdminView(app_model: AppModel) -> ft.Control:
                     ],
                 ),
                 ft.Divider(),
-                
                 # Change Passcode Section
                 ft.Column(
                     spacing=15,
