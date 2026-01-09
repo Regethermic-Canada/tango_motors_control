@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -48,13 +49,34 @@ class Config:
         """
         Load configuration from the storage file, initializing the singleton.
         """
-        if getattr(sys, "frozen", False):
-            project_root = Path(sys.executable).parent
-        else:
-            project_root = Path(__file__).resolve().parent.parent.parent
+        is_frozen = getattr(sys, "frozen", False)
 
-        storage_path: Path = project_root / "storage" / "data"
-        storage_path.parent.mkdir(parents=True, exist_ok=True)
+        if is_frozen:
+            # Bundle directory (contains assets and templates)
+            bundle_dir = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
+
+            if sys.platform.startswith("linux"):
+                # Linux XDG Standard: ~/.config/tango_motors_control/data
+                config_home = Path(
+                    os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")
+                )
+                storage_path = config_home / "tango_motors_control" / "data"
+            else:
+                # Other OS builds: store in a 'storage' folder next to the executable
+                storage_path = Path(sys.executable).parent / "storage" / "data"
+
+            if not storage_path.exists():
+                storage_path.parent.mkdir(parents=True, exist_ok=True)
+                # Try to find a pre-configured 'data' or the 'data.template' in the bundle
+                for source_name in ["data", "data.template"]:
+                    source_path = bundle_dir / "storage" / source_name
+                    if source_path.exists():
+                        shutil.copy(source_path, storage_path)
+                        break
+        else:
+            project_root = Path(__file__).resolve().parents[2]
+            storage_path = project_root / "storage" / "data"
+            storage_path.parent.mkdir(parents=True, exist_ok=True)
 
         if storage_path.exists():
             load_dotenv(dotenv_path=storage_path, override=True)
