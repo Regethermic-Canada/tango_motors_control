@@ -1,3 +1,4 @@
+from typing import Any
 import flet as ft
 
 from contexts.locale import LocaleContext

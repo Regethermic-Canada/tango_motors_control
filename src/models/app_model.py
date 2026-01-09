@@ -106,6 +106,20 @@ class AppModel:
         self.reset_timer()
         logger.info(f"Theme color changed to {self.theme_color}")
 
+    def set_inactivity_timeout(self, seconds: float) -> None:
+        if self.inactivity_limit != seconds:
+            self.inactivity_limit = seconds
+            config.set("INACTIVITY_TIMEOUT", seconds)
+            self.reset_timer()
+            logger.info(f"Inactivity timeout changed to {self.inactivity_limit}s")
+
+    def update_admin_passcode(self, new_passcode: str) -> None:
+        from argon2 import PasswordHasher
+        ph = PasswordHasher()
+        new_hash = ph.hash(new_passcode)
+        config.set("ADMIN_PASSCODE_HASH", new_hash)
+        logger.info("Admin passcode updated and persisted.")
+
     def reset_timer(self) -> None:
         self.last_interaction = time.time()
         if self.is_screensaver_active:

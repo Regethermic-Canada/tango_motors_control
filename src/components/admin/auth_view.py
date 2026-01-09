@@ -1,4 +1,5 @@
 from typing import Any
+import logging
 import flet as ft
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
@@ -7,6 +8,7 @@ from models.app_model import AppModel
 from contexts.locale import LocaleContext
 from utils.config import config
 
+logger = logging.getLogger(__name__)
 
 class DigitButton(ft.TextButton):
     def __init__(self, text: str, on_click: Any) -> None:
@@ -43,30 +45,42 @@ def AuthView(app_model: AppModel) -> ft.Control:
             set_error_message("")
 
     def on_login_click(e: ft.ControlEvent) -> None:
+        import traceback
         stored_hash = config.admin_passcode_hash
-        default_passcode = config.app_admin_default_passcode
-
+        default_passcode = config.app_admin_default_passcode       
         authenticated = False
         try:
             if not stored_hash:
-                # Fallback to default passcode if no hash is set
                 if passcode == default_passcode:
-                    authenticated = True
-                    # Auto-hash and save for future use
-                    new_hash = ph.hash(passcode)
-                    config.set("ADMIN_PASSCODE_HASH", new_hash)
+                    try:
+                        authenticated = True
+                        new_hash = ph.hash(passcode)
+                        logger.debug(f"Passcode hashed successfully: {new_hash[:10]}...")
+                        config.set("ADMIN_PASSCODE_HASH", new_hash)
+                        logger.info("New hash persisted to config.")
+                    except Exception as e_inner:
+                        logger.error(f"Error during hashing/saving: {e_inner}")
+                        logger.error(traceback.format_exc())
+                else:
+                    logger.warning("Passcode does not match default.")
             else:
+                logger.info("Verifying against stored hash.")
                 ph.verify(stored_hash, passcode)
                 authenticated = True
+                logger.info("Hash verification successful.")
         except VerifyMismatchError:
+            logger.warning("Passcode verification failed: Mismatch.")
             authenticated = False
         except Exception as ex:
-            print(f"Auth error: {ex}")
+            logger.error(f"Auth error: {ex}")
+            logger.error(traceback.format_exc())
             authenticated = False
 
         if authenticated:
+            logger.info("Authentication successful, navigating to /admin")
             app_model.navigate("/admin")
         else:
+            logger.warning("Authentication failed.")
             set_error_message(loc.t("invalid_passcode"))
             set_passcode("")
 

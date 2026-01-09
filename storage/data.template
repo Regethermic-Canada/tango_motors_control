@@ -17,7 +17,7 @@ LOCALE=fr
 # Default Motors Speed
 DEFAULT_SPEED=50
 # Admin Passcode Hash (Argon2)
-ADMIN_PASSCODE_HASH=argon2:$argon2id$v=19$m=65536,t=3,p=4$HashPlaceholder...
+ADMIN_PASSCODE_HASH=
 
 ###############################################################################
 # Assets

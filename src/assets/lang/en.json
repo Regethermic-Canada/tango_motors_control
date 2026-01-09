@@ -31,5 +31,11 @@
   "enter_passcode": "Enter Passcode",
   "invalid_passcode": "Invalid Passcode",
   "login": "Login",
-  "back": "Back"
+  "back": "Back",
+  "change_passcode": "Change Passcode",
+  "new_passcode": "New Passcode",
+  "confirm_passcode": "Confirm Passcode",
+  "passcode_mismatch": "Passcodes do not match",
+  "passcode_updated": "Passcode updated successfully",
+  "save": "Save"
 }
