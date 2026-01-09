@@ -1,28 +1,18 @@
 import flet as ft
 from models.app_model import AppModel
-from contexts.route import RouteContext
 from contexts.locale import LocaleContext
 
 @ft.component
 def AdminView(app_model: AppModel) -> ft.Control:
-    route_context = ft.use_context(RouteContext)
     loc = ft.use_context(LocaleContext)
 
     return ft.Container(
         expand=True,
-        padding=20,
+        padding=ft.Padding(40, 80, 40, 40), # Added top padding for global header
         content=ft.Column(
+            scroll=ft.ScrollMode.AUTO,
             controls=[
-                ft.Row(
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    controls=[
-                        ft.Text(loc.t("admin_settings"), theme_style=ft.TextThemeStyle.HEADLINE_MEDIUM),
-                        ft.IconButton(
-                            icon=ft.Icons.CLOSE,
-                            on_click=lambda _: route_context.navigate("/")
-                        ),
-                    ]
-                ),
+                ft.Text(loc.t("admin_settings"), theme_style=ft.TextThemeStyle.HEADLINE_MEDIUM),
                 ft.Divider(),
                 ft.Text(loc.t("application_config"), theme_style=ft.TextThemeStyle.TITLE_MEDIUM),
                 ft.ListTile(
@@ -40,11 +30,6 @@ def AdminView(app_model: AppModel) -> ft.Control:
                     subtitle=ft.Text(f"{app_model.inactivity_limit} {loc.t('seconds')}"),
                     leading=ft.Icon(ft.Icons.TIMER),
                 ),
-                ft.ElevatedButton(
-                    loc.t("back_to_main"),
-                    icon=ft.Icons.ARROW_BACK,
-                    on_click=lambda _: route_context.navigate("/")
-                )
             ]
         )
     )

@@ -1,21 +1,29 @@
+import asyncio
+import logging
 import flet as ft
 
-from components.main_view import MainView
+from components.main.main_view import MainView
+from components.admin.admin_view import AdminView
+from components.shared.layout import Layout
 from contexts.locale import LocaleContext, LocaleContextValue
 from contexts.route import RouteContext, RouteContextValue
 from contexts.theme import ThemeContext, ThemeContextValue
 from models.app_model import AppModel
 
+logger = logging.getLogger(__name__)
+
 
 @ft.component
 def App() -> ft.Control:
-    app, _ = ft.use_state(AppModel(route=ft.context.page.route))
+    # Use a lambda to ensure AppModel is only instantiated once
+    app: AppModel
+    app, _ = ft.use_state(lambda: AppModel(route=ft.context.page.route))  # type: ignore
 
     # subscribe to page events as soon as possible
     ft.context.page.on_route_change = app.route_change
     ft.context.page.on_view_pop = app.view_popped
 
-    # stable callbacks (don’t change identity each render)
+    # stable callbacks
     toggle_mode = ft.use_callback(
         lambda: app.toggle_theme(), dependencies=[app.theme_mode]
     )
@@ -23,7 +31,6 @@ def App() -> ft.Control:
         lambda color: app.set_theme_color(color), dependencies=[app.theme_color]
     )
 
-    # memoize the provided value so its identity changes only when mode changes
     theme_value = ft.use_memo(
         lambda: ThemeContextValue(
             mode=app.theme_mode,
@@ -59,8 +66,18 @@ def App() -> ft.Control:
         dependencies=[app.locale, app.translations, set_locale],
     )
 
+    async def monitor_loop() -> None:
+        logger.info("Global inactivity monitor task started")
+        while True:
+            await asyncio.sleep(1.0)
+            app.check_inactivity()
+
     def on_mounted() -> None:
         ft.context.page.title = "Tango Motors Control"
+        # Global interaction tracking
+        ft.context.page.on_pointer_down = lambda _: app.reset_timer()  # type: ignore[attr-defined]
+        ft.context.page.on_keyboard_event = lambda _: app.reset_timer()
+        ft.context.page.run_task(monitor_loop)
 
     ft.on_mounted(on_mounted)
 
@@ -72,6 +89,9 @@ def App() -> ft.Control:
 
     ft.on_updated(update_theme, [app.theme_mode, app.theme_color])
 
+    # Select inner content based on route
+    inner_content = AdminView(app) if app.route == "/admin" else MainView(app)
+
     return LocaleContext(
         locale_value,
         lambda: RouteContext(
@@ -79,9 +99,9 @@ def App() -> ft.Control:
             lambda: ThemeContext(
                 theme_value,
                 lambda: ft.View(
-                    route="/",
+                    route=app.route,
                     padding=0,
-                    controls=[MainView(app)],
+                    controls=[Layout(app, inner_content)],
                 ),
             ),
         ),

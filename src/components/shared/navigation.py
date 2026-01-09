@@ -43,7 +43,7 @@ def Group(item: NavItem, selected: bool) -> ft.Control:
             ],
             alignment=ft.MainAxisAlignment.CENTER,
         ),
-        on_click=lambda _: route_context.navigate(f"{item.name}"),
+        on_click=lambda _: route_context.navigate(f"/{item.name}"),
     )
 
 
@@ -78,14 +78,14 @@ def PopupColorItem(color: ft.Colors, name_key: str) -> ft.PopupMenuItem:
         on_click=lambda _: theme.set_seed_color(color),
     )
 
-
 @ft.component
 def AdminModeToggle(app_model: AppModel) -> ft.Control:
     loc = ft.use_context(LocaleContext)
+    is_admin = app_model.route == "/admin"
     return ft.IconButton(
-        icon=ft.Icons.SETTINGS,
-        tooltip=loc.t("admin_settings"),
-        on_click=lambda _: app_model.navigate("/admin"),
+        icon=ft.Icons.SETTINGS if not is_admin else ft.Icons.HOME,
+        tooltip=loc.t("admin_settings") if not is_admin else loc.t("main_view"),
+        on_click=lambda _: app_model.navigate("/main" if is_admin else "/admin"),
     )
 
 
@@ -112,6 +112,8 @@ def ThemeSeedColor() -> ft.Control:
     theme = ft.use_context(ThemeContext)
     loc = ft.use_context(LocaleContext)
 
+    color_name = "Unknown"
+    # Find the key for the current color
     color_keys = {
         ft.Colors.DEEP_PURPLE: "purple",
         ft.Colors.INDIGO: "indigo",

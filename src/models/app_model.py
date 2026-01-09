@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import time
-from dataclasses import dataclass, field
 from pathlib import Path
 
 import flet as ft
@@ -13,22 +12,21 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 
 @ft.observable
-@dataclass
 class AppModel:
-    route: str = "/"
-    speed_level: int = 0
-    theme_mode: ft.ThemeMode = ft.ThemeMode.DARK
-    theme_color: ft.Colors = ft.Colors.BLUE
-    locale: str = "en"
-    translations: dict[str, str] = field(default_factory=dict)
-    last_interaction: float = field(default_factory=time.time)
-    is_screensaver_active: bool = False
-    inactivity_limit: float = 30.0
-
-    def __post_init__(self) -> None:
-        self.inactivity_limit = config.inactivity_timeout
+    def __init__(self, route: str = "/main"):
+        # Redirect from root to main
+        self.route = "/main" if route == "/" else route
+        self.speed_level = 0
+        self.theme_mode = ft.ThemeMode.DARK
+        self.theme_color = ft.Colors.BLUE
+        self.locale = "en"
+        self.translations: dict[str, str] = {}
+        self.last_interaction = time.time()
+        self.is_screensaver_active = False
+        self.inactivity_limit = 30.0
 
         # Load persisted preferences
+        self.inactivity_limit = config.inactivity_timeout
         saved_mode = config.theme_mode
         self.theme_mode = (
             ft.ThemeMode.LIGHT if saved_mode == "LIGHT" else ft.ThemeMode.DARK
@@ -44,7 +42,7 @@ class AppModel:
         self.load_translations()
 
         logger.info(
-            f"App Refreshed. Theme: {self.theme_mode}, Color: {self.theme_color}, Locale: {self.locale}, Timeout: {self.inactivity_limit}s"
+            f"App Initialized. Theme: {self.theme_mode}, Color: {self.theme_color}, Locale: {self.locale}, Timeout: {self.inactivity_limit}s"
         )
 
     def load_translations(self) -> None:
@@ -66,7 +64,7 @@ class AppModel:
             logger.info(f"Locale changed to {self.locale}")
 
     def route_change(self, e: ft.RouteChangeEvent) -> None:
-        logger.info(f"Route changed from: {self.route} to: {e.route}")
+        logger.info(f"Route changed to: {e.route}")
         self.route = e.route
         self.reset_timer()
 
@@ -84,12 +82,10 @@ class AppModel:
     def increment(self) -> None:
         self.speed_level += 1
         self.reset_timer()
-        logger.info(f"Speed level incremented to {self.speed_level}")
 
     def decrement(self) -> None:
         self.speed_level -= 1
         self.reset_timer()
-        logger.info(f"Speed level decremented to {self.speed_level}")
 
     def toggle_theme(self) -> None:
         self.theme_mode = (
@@ -100,24 +96,21 @@ class AppModel:
         config_value = "LIGHT" if self.theme_mode == ft.ThemeMode.LIGHT else "DARK"
         config.set("THEME_MODE", config_value)
         self.reset_timer()
-        logger.info(f"Theme toggled to {self.theme_mode}")
 
     def set_theme_color(self, color: ft.Colors) -> None:
         self.theme_color = color
-        # Persist color name (e.g. 'blue', 'deep_orange')
         color_name = color.name if hasattr(color, "name") else str(color)
         config.set("THEME_COLOR", color_name.upper())
         self.reset_timer()
-        logger.info(f"Theme color changed to {self.theme_color}")
 
     def reset_timer(self) -> None:
         self.last_interaction = time.time()
         if self.is_screensaver_active:
             self.is_screensaver_active = False
-            logger.info("Screensaver dismissed")
+            logger.info("Screensaver deactivated")
 
     def check_inactivity(self) -> None:
         elapsed: float = time.time() - self.last_interaction
         if elapsed > self.inactivity_limit and not self.is_screensaver_active:
             self.is_screensaver_active = True
-            logger.info("Screensaver activated due to inactivity")
+            logger.info("Screensaver activated")
