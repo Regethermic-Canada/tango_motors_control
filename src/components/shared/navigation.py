@@ -86,7 +86,7 @@ def AdminModeToggle(app_model: AppModel) -> ft.Control:
     return ft.IconButton(
         icon=ft.Icons.SETTINGS if not is_admin else ft.Icons.HOME,
         tooltip=loc.t("admin_settings") if not is_admin else loc.t("main_view"),
-        on_click=lambda _: app_model.navigate("/main" if is_admin else "/admin"),
+        on_click=lambda _: app_model.navigate("/" if is_admin else "/admin"),
     )
 
 

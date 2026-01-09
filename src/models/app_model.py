@@ -13,9 +13,8 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 @ft.observable
 class AppModel:
-    def __init__(self, route: str = "/main"):
-        # Redirect from root to main
-        self.route = "/main" if route == "/" else route
+    def __init__(self, route: str = "/"):
+        self.route = route
         self.speed_level = 0
         self.theme_mode = ft.ThemeMode.DARK
         self.theme_color = ft.Colors.BLUE
@@ -42,7 +41,7 @@ class AppModel:
         self.load_translations()
 
         logger.info(
-            f"App Initialized. Theme: {self.theme_mode}, Color: {self.theme_color}, Locale: {self.locale}, Timeout: {self.inactivity_limit}s"
+            f"App Refreshed. Theme: {self.theme_mode}, Color: {self.theme_color}, Locale: {self.locale}, Timeout: {self.inactivity_limit}s"
         )
 
     def load_translations(self) -> None:
@@ -64,7 +63,7 @@ class AppModel:
             logger.info(f"Locale changed to {self.locale}")
 
     def route_change(self, e: ft.RouteChangeEvent) -> None:
-        logger.info(f"Route changed to: {e.route}")
+        logger.info(f"Route changed from: {self.route} to: {e.route}")
         self.route = e.route
         self.reset_timer()
 
@@ -82,10 +81,12 @@ class AppModel:
     def increment(self) -> None:
         self.speed_level += 1
         self.reset_timer()
+        logger.info(f"Speed level incremented to {self.speed_level}")
 
     def decrement(self) -> None:
         self.speed_level -= 1
         self.reset_timer()
+        logger.info(f"Speed level decremented to {self.speed_level}")
 
     def toggle_theme(self) -> None:
         self.theme_mode = (
@@ -96,21 +97,23 @@ class AppModel:
         config_value = "LIGHT" if self.theme_mode == ft.ThemeMode.LIGHT else "DARK"
         config.set("THEME_MODE", config_value)
         self.reset_timer()
+        logger.info(f"Theme toggled to {self.theme_mode}")
 
     def set_theme_color(self, color: ft.Colors) -> None:
         self.theme_color = color
         color_name = color.name if hasattr(color, "name") else str(color)
         config.set("THEME_COLOR", color_name.upper())
         self.reset_timer()
+        logger.info(f"Theme color changed to {self.theme_color}")
 
     def reset_timer(self) -> None:
         self.last_interaction = time.time()
         if self.is_screensaver_active:
             self.is_screensaver_active = False
-            logger.info("Screensaver deactivated")
+            logger.info("Screensaver dismissed")
 
     def check_inactivity(self) -> None:
         elapsed: float = time.time() - self.last_interaction
         if elapsed > self.inactivity_limit and not self.is_screensaver_active:
             self.is_screensaver_active = True
-            logger.info("Screensaver activated")
+            logger.info("Screensaver activated due to inactivity")

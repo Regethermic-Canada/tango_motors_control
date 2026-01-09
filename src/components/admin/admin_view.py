@@ -9,7 +9,7 @@ def AdminView(app_model: AppModel) -> ft.Control:
 
     return ft.Container(
         expand=True,
-        padding=ft.Padding(40, 80, 40, 40),  # Added top padding for global header
+        padding=ft.Padding(40, 80, 40, 40),
         content=ft.Column(
             scroll=ft.ScrollMode.AUTO,
             controls=[
