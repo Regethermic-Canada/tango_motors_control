@@ -2,6 +2,7 @@ import flet as ft
 from models.app_model import AppModel
 from contexts.locale import LocaleContext
 
+
 @ft.component
 def AdminView(app_model: AppModel) -> ft.Control:
     loc = ft.use_context(LocaleContext)
@@ -12,9 +13,15 @@ def AdminView(app_model: AppModel) -> ft.Control:
         content=ft.Column(
             scroll=ft.ScrollMode.AUTO,
             controls=[
-                ft.Text(loc.t("admin_settings"), theme_style=ft.TextThemeStyle.HEADLINE_MEDIUM),
+                ft.Text(
+                    loc.t("admin_settings"),
+                    theme_style=ft.TextThemeStyle.HEADLINE_MEDIUM,
+                ),
                 ft.Divider(),
-                ft.Text(loc.t("application_config"), theme_style=ft.TextThemeStyle.TITLE_MEDIUM),
+                ft.Text(
+                    loc.t("application_config"),
+                    theme_style=ft.TextThemeStyle.TITLE_MEDIUM,
+                ),
                 ft.ListTile(
                     title=ft.Text(loc.t("locale")),
                     subtitle=ft.Text(f"{app_model.locale}"),
@@ -27,9 +34,11 @@ def AdminView(app_model: AppModel) -> ft.Control:
                 ),
                 ft.ListTile(
                     title=ft.Text(loc.t("inactivity_timeout")),
-                    subtitle=ft.Text(f"{app_model.inactivity_limit} {loc.t('seconds')}"),
+                    subtitle=ft.Text(
+                        f"{app_model.inactivity_limit} {loc.t('seconds')}"
+                    ),
                     leading=ft.Icon(ft.Icons.TIMER),
                 ),
-            ]
-        )
+            ],
+        ),
     )

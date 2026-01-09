@@ -100,7 +100,7 @@ def App() -> ft.Control:
             lambda: ThemeContext(
                 theme_value,
                 lambda: ft.View(
-                    route=app.route,
+                    route="/",
                     padding=0,
                     controls=[Layout(app, AppBody(app))],
                 ),
