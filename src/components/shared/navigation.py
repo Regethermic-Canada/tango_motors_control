@@ -82,11 +82,18 @@ def PopupColorItem(color: ft.Colors, name_key: str) -> ft.PopupMenuItem:
 @ft.component
 def AdminModeToggle(app_model: AppModel) -> ft.Control:
     loc = ft.use_context(LocaleContext)
-    is_admin = app_model.route == "/admin"
+    is_admin = app_model.route in ["/admin", "/auth"]
+    
+    def on_admin_click(_: Any) -> None:
+        if is_admin:
+            app_model.navigate("/")
+        else:
+            app_model.navigate("/auth")
+
     return ft.IconButton(
         icon=ft.Icons.SETTINGS if not is_admin else ft.Icons.HOME,
         tooltip=loc.t("admin_settings") if not is_admin else loc.t("main_view"),
-        on_click=lambda _: app_model.navigate("/" if is_admin else "/admin"),
+        on_click=on_admin_click,
     )
 
 

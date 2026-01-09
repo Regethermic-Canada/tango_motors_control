@@ -1,5 +1,6 @@
 import flet as ft
 from components.admin.admin_view import AdminView
+from components.admin.auth_view import AuthView
 from components.main.main_view import MainView
 from contexts.route import RouteContext
 from models.app_model import AppModel
@@ -11,4 +12,6 @@ def AppBody(app_model: AppModel) -> ft.Control:
 
     if route_ctx.route == "/admin":
         return AdminView(app_model)
+    elif route_ctx.route == "/auth":
+        return AuthView(app_model)
     return MainView(app_model)

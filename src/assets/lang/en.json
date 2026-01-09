@@ -26,5 +26,10 @@
   "application_config": "Application Configuration",
   "locale": "Locale",
   "inactivity_timeout": "Inactivity Timeout",
-  "seconds": "seconds"
+  "seconds": "seconds",
+  "admin_access": "Admin Access",
+  "enter_passcode": "Enter Passcode",
+  "invalid_passcode": "Invalid Passcode",
+  "login": "Login",
+  "back": "Back"
 }
