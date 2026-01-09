@@ -15,12 +15,12 @@ def LanguageSelector() -> ft.Control:
         tooltip=loc.t("select_language"),
         items=[
             ft.PopupMenuItem(
-                content=ft.Text(loc.t("english")),
+                content=ft.Text(loc.t("en")),
                 on_click=lambda _: loc.set_locale("en"),
                 checked=(loc.locale == "en"),
             ),
             ft.PopupMenuItem(
-                content=ft.Text(loc.t("french")),
+                content=ft.Text(loc.t("fr")),
                 on_click=lambda _: loc.set_locale("fr"),
                 checked=(loc.locale == "fr"),
             ),
@@ -53,7 +53,7 @@ def Groups(nav_items: list[NavItem], selected_name: str | None) -> ft.Control:
         expand=True,
         spacing=0,
         scroll=ft.ScrollMode.ALWAYS,
-        width=60,  # Reduced width for icon-only navigation
+        width=60,
         controls=[
             Group(item, selected=(item.name == selected_name)) for item in nav_items
         ],

@@ -4,7 +4,7 @@ from contexts.locale import LocaleContext
 
 
 @ft.component
-def SpeedView(model: AppModel) -> ft.Control:
+def MotorsView(model: AppModel) -> ft.Control:
     loc = ft.use_context(LocaleContext)
     return ft.Column(
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,

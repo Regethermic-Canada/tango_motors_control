@@ -19,6 +19,11 @@ def App() -> ft.Control:
     app: AppModel
     app, _ = ft.use_state(lambda: AppModel(route=ft.context.page.route))  # type: ignore
 
+    # Explicitly subscribe to observable properties used in build or contexts
+    _ = app.locale
+    _ = app.translations
+    _ = app.route
+
     # subscribe to page events as soon as possible
     ft.context.page.on_route_change = app.route_change
     ft.context.page.on_view_pop = app.view_popped
@@ -89,9 +94,6 @@ def App() -> ft.Control:
 
     ft.on_updated(update_theme, [app.theme_mode, app.theme_color])
 
-    # Select inner content based on route
-    inner_content = AdminView(app) if app.route == "/admin" else MainView(app)
-
     return LocaleContext(
         locale_value,
         lambda: RouteContext(
@@ -101,7 +103,16 @@ def App() -> ft.Control:
                 lambda: ft.View(
                     route=app.route,
                     padding=0,
-                    controls=[Layout(app, inner_content)],
+                    controls=[
+                        Layout(
+                            app,
+                            (
+                                AdminView(app)
+                                if app.route == "/admin"
+                                else MainView(app)
+                            ),
+                        )
+                    ],
                 ),
             ),
         ),
