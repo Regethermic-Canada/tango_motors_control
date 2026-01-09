@@ -78,6 +78,7 @@ def PopupColorItem(color: ft.Colors, name_key: str) -> ft.PopupMenuItem:
         on_click=lambda _: theme.set_seed_color(color),
     )
 
+
 @ft.component
 def AdminModeToggle(app_model: AppModel) -> ft.Control:
     loc = ft.use_context(LocaleContext)

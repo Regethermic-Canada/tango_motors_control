@@ -1,8 +1,14 @@
 import flet as ft
 from models.app_model import AppModel
-from .navigation import LanguageSelector, ThemeModeToggle, ThemeSeedColor, AdminModeToggle
+from .navigation import (
+    LanguageSelector,
+    ThemeModeToggle,
+    ThemeSeedColor,
+    AdminModeToggle,
+)
 from .screensaver import Screensaver
 from utils.config import config
+
 
 @ft.component
 def Layout(app_model: AppModel, content: ft.Control) -> ft.Control:
