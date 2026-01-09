@@ -1,5 +1,6 @@
 from typing import Any
 import logging
+import asyncio
 import flet as ft
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
@@ -7,183 +8,143 @@ from argon2.exceptions import VerifyMismatchError
 from models.app_model import AppModel
 from contexts.locale import LocaleContext
 from utils.config import config
+from components.shared.numpad import NumericNumpad
+from components.shared.toast import show_toast, ToastType
 
 logger = logging.getLogger(__name__)
-
-class DigitButton(ft.TextButton):
-    def __init__(self, text: str, on_click: Any) -> None:
-        super().__init__()
-        self.text = text
-        self.on_click = on_click
-        self.content = ft.Text(text, size=24, weight=ft.FontWeight.W_500)
-        self.style = ft.ButtonStyle(
-            shape=ft.CircleBorder(),
-            padding=ft.Padding(25, 25, 25, 25),
-        )
 
 
 @ft.component
 def AuthView(app_model: AppModel) -> ft.Control:
     loc = ft.use_context(LocaleContext)
-    passcode, set_passcode = ft.use_state("")
-    error_message, set_error_message = ft.use_state("")
+    passcode, set_passcode = ft.use_state("")  # type: ignore
+    shake_offset, set_shake_offset = ft.use_state(ft.Offset(0, 0))  # type: ignore
     ph = PasswordHasher()
 
-    def on_digit_click(e: ft.ControlEvent) -> None:
-        if len(passcode) < 6:  # Reasonable limit for passcode
-            digit = getattr(e.control, "text", "")
-            set_passcode(passcode + digit)
-            set_error_message("")
-
-    def on_clear_click(e: ft.ControlEvent) -> None:
-        set_passcode("")
-        set_error_message("")
-
-    def on_backspace_click(e: ft.ControlEvent) -> None:
-        if len(passcode) > 0:
-            set_passcode(passcode[:-1])
-            set_error_message("")
-
-    def on_login_click(e: ft.ControlEvent) -> None:
-        import traceback
+    async def verify_passcode(current_passcode: str) -> None:
         stored_hash = config.admin_passcode_hash
-        default_passcode = config.app_admin_default_passcode       
+        default_passcode = config.app_admin_default_passcode
         authenticated = False
+
+        # Small delay to let the 4th dot render
+        await asyncio.sleep(0.1)
+
         try:
             if not stored_hash:
-                if passcode == default_passcode:
-                    try:
-                        authenticated = True
-                        new_hash = ph.hash(passcode)
-                        logger.debug(f"Passcode hashed successfully: {new_hash[:10]}...")
-                        config.set("ADMIN_PASSCODE_HASH", new_hash)
-                        logger.info("New hash persisted to config.")
-                    except Exception as e_inner:
-                        logger.error(f"Error during hashing/saving: {e_inner}")
-                        logger.error(traceback.format_exc())
-                else:
-                    logger.warning("Passcode does not match default.")
+                if current_passcode == default_passcode:
+                    authenticated = True
+                    new_hash = ph.hash(current_passcode)
+                    config.set("ADMIN_PASSCODE_HASH", new_hash)
+                    set_passcode("")
             else:
-                logger.info("Verifying against stored hash.")
-                ph.verify(stored_hash, passcode)
+                ph.verify(stored_hash, current_passcode)
                 authenticated = True
-                logger.info("Hash verification successful.")
+                set_passcode("")
         except VerifyMismatchError:
-            logger.warning("Passcode verification failed: Mismatch.")
             authenticated = False
         except Exception as ex:
             logger.error(f"Auth error: {ex}")
-            logger.error(traceback.format_exc())
             authenticated = False
 
         if authenticated:
-            logger.info("Authentication successful, navigating to /admin")
             app_model.navigate("/admin")
         else:
-            logger.warning("Authentication failed.")
-            set_error_message(loc.t("invalid_passcode"))
+            # Show toast simultaneously with shake
+            show_toast(
+                page=ft.context.page,
+                message=loc.t("invalid_passcode"),
+                type=ToastType.ERROR,
+                close_tooltip=loc.t("close"),
+            )
+
+            # Multi-directional shake animation (More complex 4-point sequence)
+            shake_points = [
+                ft.Offset(0.02, 0.01),
+                ft.Offset(-0.02, -0.01),
+                ft.Offset(0.02, -0.01),
+                ft.Offset(-0.02, 0.01),
+            ]
+            for _ in range(2):
+                for point in shake_points:
+                    set_shake_offset(point)
+                    ft.context.page.update()  # type: ignore
+                    await asyncio.sleep(0.03)
+
+            set_shake_offset(ft.Offset(0, 0))
+            ft.context.page.update()  # type: ignore
+
             set_passcode("")
+
+    def on_digit_click(digit: str) -> None:
+        if len(passcode) < 4:
+            new_passcode = passcode + digit
+            set_passcode(new_passcode)
+            if len(new_passcode) == 4:
+                asyncio.create_task(verify_passcode(new_passcode))
+
+    def on_clear_click() -> None:
+        set_passcode("")
+
+    def on_backspace_click() -> None:
+        if len(passcode) > 0:
+            set_passcode(passcode[:-1])
+
+    # Visual dots representation: ● for filled, ○ for empty
+    dots = ""
+    for i in range(4):
+        dots += "● " if i < len(passcode) else "○ "
 
     return ft.Container(
         expand=True,
         content=ft.Column(
             alignment=ft.MainAxisAlignment.CENTER,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            spacing=30,
+            spacing=20,
             controls=[
                 ft.Column(
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=10,
                     controls=[
-                        ft.Icon(ft.Icons.LOCK_OUTLINED, size=50, color=ft.Colors.PRIMARY),
+                        ft.Icon(
+                            ft.Icons.LOCK_OUTLINED, size=50, color=ft.Colors.PRIMARY
+                        ),
                         ft.Text(
                             loc.t("admin_access"),
                             theme_style=ft.TextThemeStyle.HEADLINE_MEDIUM,
                             weight=ft.FontWeight.BOLD,
                         ),
-                    ]
+                    ],
                 ),
                 ft.Container(
                     content=ft.Column(
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                         spacing=20,
                         controls=[
-                            ft.Row(
-                                alignment=ft.MainAxisAlignment.CENTER,
-                                controls=[
-                                    ft.Text(
-                                        "● " * len(passcode) if passcode else loc.t("enter_passcode"),
-                                        size=30,
-                                        style=ft.TextStyle(letter_spacing=5),
-                                        color=ft.Colors.PRIMARY if passcode else ft.Colors.OUTLINE,
-                                    )
-                                ],
-                            ),
-                            ft.Text(
-                                error_message,
-                                color=ft.Colors.ERROR,
-                                visible=bool(error_message),
-                            ),
                             ft.Container(
-                                width=280,
-                                content=ft.Column(
+                                content=ft.Row(
+                                    alignment=ft.MainAxisAlignment.CENTER,
                                     controls=[
-                                        ft.Row(
-                                            alignment=ft.MainAxisAlignment.SPACE_EVENLY,
-                                            controls=[
-                                                DigitButton("1", on_digit_click),
-                                                DigitButton("2", on_digit_click),
-                                                DigitButton("3", on_digit_click),
-                                            ]
-                                        ),
-                                        ft.Row(
-                                            alignment=ft.MainAxisAlignment.SPACE_EVENLY,
-                                            controls=[
-                                                DigitButton("4", on_digit_click),
-                                                DigitButton("5", on_digit_click),
-                                                DigitButton("6", on_digit_click),
-                                            ]
-                                        ),
-                                        ft.Row(
-                                            alignment=ft.MainAxisAlignment.SPACE_EVENLY,
-                                            controls=[
-                                                DigitButton("7", on_digit_click),
-                                                DigitButton("8", on_digit_click),
-                                                DigitButton("9", on_digit_click),
-                                            ]
-                                        ),
-                                        ft.Row(
-                                            alignment=ft.MainAxisAlignment.SPACE_EVENLY,
-                                            controls=[
-                                                ft.IconButton(
-                                                    icon=ft.Icons.BACKSPACE_OUTLINED,
-                                                    on_click=on_backspace_click,
-                                                    icon_size=24,
-                                                ),
-                                                DigitButton("0", on_digit_click),
-                                                ft.IconButton(
-                                                    icon=ft.Icons.CLEAR_ALL,
-                                                    on_click=on_clear_click,
-                                                    icon_size=24,
-                                                ),
-                                            ]
-                                        ),
+                                        ft.Text(
+                                            dots.strip(),
+                                            size=40,
+                                            style=ft.TextStyle(letter_spacing=10),
+                                            color=(
+                                                ft.Colors.PRIMARY
+                                                if passcode
+                                                else ft.Colors.OUTLINE
+                                            ),
+                                        )
                                     ],
                                 ),
-                            ),
-                            ft.ElevatedButton(
-                                loc.t("login"),
-                                icon=ft.Icons.LOGIN,
-                                on_click=on_login_click,
-                                width=280,
-                                height=60,
-                                style=ft.ButtonStyle(
-                                    shape=ft.RoundedRectangleBorder(radius=12),
+                                offset=shake_offset,
+                                animate_offset=ft.Animation(
+                                    40, ft.AnimationCurve.LINEAR
                                 ),
                             ),
-                            ft.TextButton(
-                                loc.t("back"),
-                                on_click=lambda _: app_model.navigate("/"),
+                            NumericNumpad(
+                                on_digit_click=on_digit_click,
+                                on_backspace_click=on_backspace_click,
+                                on_clear_click=on_clear_click,
                             ),
                         ],
                     ),

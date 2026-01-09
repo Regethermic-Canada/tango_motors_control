@@ -115,6 +115,7 @@ class AppModel:
 
     def update_admin_passcode(self, new_passcode: str) -> None:
         from argon2 import PasswordHasher
+
         ph = PasswordHasher()
         new_hash = ph.hash(new_passcode)
         config.set("ADMIN_PASSCODE_HASH", new_hash)
