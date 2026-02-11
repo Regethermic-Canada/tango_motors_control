@@ -18,6 +18,12 @@ sudo apt install libmpv2
 
 ---
 
+## For the can hat -> follow those instructions :
+
+- https://www.waveshare.com/wiki/RS485_CAN_HAT
+
+---
+
 ## Run the app
 
 ```bash
