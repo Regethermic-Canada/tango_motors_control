@@ -76,14 +76,22 @@ def App() -> ft.Control:
             await asyncio.sleep(1.0)
             app.check_inactivity()
 
+    async def start_motors_task() -> None:
+        await asyncio.to_thread(app.start_motors)
+
+    async def stop_motors_task() -> None:
+        await asyncio.to_thread(app.stop_motors)
+
     def on_mounted() -> None:
         ft.context.page.title = "Tango Motors Control"
         # Global interaction tracking
         ft.context.page.on_pointer_down = lambda _: app.reset_timer()  # type: ignore[attr-defined]
         ft.context.page.on_keyboard_event = lambda _: app.reset_timer()
+        ft.context.page.run_task(start_motors_task)
         ft.context.page.run_task(monitor_loop)
 
     ft.on_mounted(on_mounted)
+    ft.on_unmounted(stop_motors_task)
 
     def update_theme() -> None:
         ft.context.page.theme_mode = app.theme_mode

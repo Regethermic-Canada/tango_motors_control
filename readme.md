@@ -39,6 +39,22 @@ uv run flet run
 
 ---
 
+## Motor control config
+
+Motor control is disabled by default for safety. In `storage/data`:
+
+```ini
+MOTOR_ENABLED=true
+MOTOR_TYPE=AK40-10
+MOTOR_CAN_CHANNEL=can0
+MOTOR_1_ID=1
+MOTOR_2_ID=2
+MOTOR_1_DIRECTION=1
+MOTOR_2_DIRECTION=-1
+```
+
+---
+
 ## Check the code quality
 
 1.  **Install dependencies:**
@@ -69,6 +85,7 @@ uv run flet pack src/main.py \
   --add-data "src/components:components" \
   --add-data "src/contexts:contexts" \
   --add-data "src/models:models" \
+  --add-data "src/services:services" \
   --add-data "src/utils:utils" \
   --add-data "storage:storage"
 ```

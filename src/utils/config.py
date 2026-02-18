@@ -15,6 +15,11 @@ def get_env(key: str, default: str) -> str:
     return val
 
 
+def get_env_bool(key: str, default: bool) -> bool:
+    value = get_env(key, "true" if default else "false").strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
 @dataclass
 class Config:
     """
@@ -41,6 +46,18 @@ class Config:
     # Behavior
     inactivity_timeout: float
     log_level: str
+
+    # Motor Control
+    motor_enabled: bool
+    motor_type: str
+    motor_can_channel: str
+    motor_1_id: int
+    motor_2_id: int
+    motor_1_direction: int
+    motor_2_direction: int
+    motor_speed_min: int
+    motor_speed_max: int
+    motor_max_temp_c: float
 
     _storage_path: Path
 
@@ -87,6 +104,7 @@ class Config:
             **cls._load_preferences(),
             **cls._load_assets(),
             **cls._load_behavior(),
+            **cls._load_motor_control(),
         )
 
     @staticmethod
@@ -103,7 +121,7 @@ class Config:
             "theme_mode": get_env("THEME_MODE", "DARK").upper(),
             "theme_color": get_env("THEME_COLOR", "BLUE").upper(),
             "locale": get_env("LOCALE", "fr").lower(),
-            "default_speed": int(get_env("DEFAULT_SPEED", "50")),
+            "default_speed": int(get_env("DEFAULT_SPEED", "0")),
             "admin_passcode_hash": get_env("ADMIN_PASSCODE_HASH", ""),
         }
 
@@ -123,6 +141,21 @@ class Config:
             "log_level": get_env("LOG_LEVEL", "INFO").upper(),
         }
 
+    @staticmethod
+    def _load_motor_control() -> Dict[str, Any]:
+        return {
+            "motor_enabled": get_env_bool("MOTOR_ENABLED", False),
+            "motor_type": get_env("MOTOR_TYPE", "AK40-10"),
+            "motor_can_channel": get_env("MOTOR_CAN_CHANNEL", "can0"),
+            "motor_1_id": int(get_env("MOTOR_1_ID", "1")),
+            "motor_2_id": int(get_env("MOTOR_2_ID", "2")),
+            "motor_1_direction": int(get_env("MOTOR_1_DIRECTION", "1")),
+            "motor_2_direction": int(get_env("MOTOR_2_DIRECTION", "-1")),
+            "motor_speed_min": int(get_env("MOTOR_SPEED_MIN", "-100")),
+            "motor_speed_max": int(get_env("MOTOR_SPEED_MAX", "100")),
+            "motor_max_temp_c": float(get_env("MOTOR_MAX_TEMP_C", "70.0")),
+        }
+
     def set(self, key: str, value: Any) -> None:
         """
         Updates a configuration value in memory and persists it to the storage file.
@@ -131,7 +164,13 @@ class Config:
         attr_name: str = key.lower()
         if hasattr(self, attr_name):
             current_val: Any = getattr(self, attr_name)
-            if isinstance(current_val, int):
+            if isinstance(current_val, bool):
+                setattr(
+                    self,
+                    attr_name,
+                    str_value.strip().lower() in {"1", "true", "yes", "on"},
+                )
+            elif isinstance(current_val, int):
                 setattr(self, attr_name, int(value))
             elif isinstance(current_val, float):
                 setattr(self, attr_name, float(value))

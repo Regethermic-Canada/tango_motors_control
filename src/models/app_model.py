@@ -6,6 +6,7 @@ from pathlib import Path
 
 import flet as ft
 
+from services.motors import MotorService, MotorServiceConfig
 from utils.config import config
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -15,6 +16,8 @@ logger: logging.Logger = logging.getLogger(__name__)
 class AppModel:
     def __init__(self, route: str = "/"):
         self.route = route
+        self.speed_min = -100
+        self.speed_max = 100
         self.speed_level = 0
         self.theme_mode = ft.ThemeMode.DARK
         self.theme_color = ft.Colors.BLUE
@@ -39,6 +42,10 @@ class AppModel:
 
         self.locale = config.locale
         self.load_translations()
+        self.speed_min = config.motor_speed_min
+        self.speed_max = config.motor_speed_max
+        self.speed_level = self._clamp_speed(config.default_speed)
+        self._motor_service = MotorService(MotorServiceConfig.from_app_config(config))
 
         logger.info(
             f"App Refreshed. Theme: {self.theme_mode}, Color: {self.theme_color}, Locale: {self.locale}, Timeout: {self.inactivity_limit}s"
@@ -79,12 +86,14 @@ class AppModel:
             await ft.context.page.push_route(views[-2].route)
 
     def increment(self) -> None:
-        self.speed_level += 1
+        self.speed_level = self._clamp_speed(self.speed_level + 1)
+        self._apply_speed_to_motors()
         self.reset_timer()
         logger.info(f"Speed level incremented to {self.speed_level}")
 
     def decrement(self) -> None:
-        self.speed_level -= 1
+        self.speed_level = self._clamp_speed(self.speed_level - 1)
+        self._apply_speed_to_motors()
         self.reset_timer()
         logger.info(f"Speed level decremented to {self.speed_level}")
 
@@ -132,3 +141,26 @@ class AppModel:
         if elapsed > self.inactivity_limit and not self.is_screensaver_active:
             self.is_screensaver_active = True
             logger.info("Screensaver activated due to inactivity")
+
+    def start_motors(self) -> None:
+        try:
+            self._motor_service.start(initial_speed_percent=self.speed_level)
+        except Exception:
+            logger.exception("Motor startup failed")
+
+    def stop_motors(self) -> None:
+        try:
+            self._motor_service.stop()
+        except Exception:
+            logger.exception("Motor shutdown failed")
+
+    def _apply_speed_to_motors(self) -> None:
+        try:
+            self.speed_level = self._motor_service.set_speed_percent(self.speed_level)
+        except Exception:
+            logger.exception("Failed to apply speed command to motors")
+
+    def _clamp_speed(self, speed: int) -> int:
+        low = min(self.speed_min, self.speed_max)
+        high = max(self.speed_min, self.speed_max)
+        return max(low, min(speed, high))

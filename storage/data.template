@@ -14,8 +14,8 @@ THEME_MODE=DARK
 THEME_COLOR=BLUE
 # App Language (fr | en)
 LOCALE=fr
-# Default Motors Speed
-DEFAULT_SPEED=50
+# Default Motors Speed (%) on startup
+DEFAULT_SPEED=0
 # Admin Passcode Hash (Argon2)
 ADMIN_PASSCODE_HASH=
 
@@ -33,3 +33,24 @@ ASSET_SCREENSAVER=regethermic_screensaver.png
 INACTIVITY_TIMEOUT=30
 # Logging Level (DEBUG | INFO | WARNING | ERROR)
 LOG_LEVEL=INFO
+
+###############################################################################
+# Motors (CubeMars Servo CAN)
+###############################################################################
+# Enable hardware control (true | false)
+MOTOR_ENABLED=false
+# Motor type supported by cubemars-servo-can (e.g., AK40-10)
+MOTOR_TYPE=AK40-10
+# SocketCAN channel
+MOTOR_CAN_CHANNEL=can0
+# Motor CAN IDs
+MOTOR_1_ID=1
+MOTOR_2_ID=2
+# Direction multiplier (1 or -1). Use mirrored signs for mirrored mechanics.
+MOTOR_1_DIRECTION=1
+MOTOR_2_DIRECTION=-1
+# UI speed range (%)
+MOTOR_SPEED_MIN=-100
+MOTOR_SPEED_MAX=100
+# Safety max MOSFET temperature in Celsius
+MOTOR_MAX_TEMP_C=70.0
