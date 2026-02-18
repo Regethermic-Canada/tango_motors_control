@@ -63,7 +63,7 @@ class AppModel:
         self.load_translations()
         self.speed_max = abs(config.motor_max_step_speed)
         self.speed_min = -self.speed_max
-        self.speed_percent_max = abs(config.motor_max_speed)
+        self.speed_percent_max = min(100, abs(config.motor_max_speed))
         self.speed_level = self._clamp_speed(config.default_speed)
         self.speed_percent = self._level_to_percent(self.speed_level)
         self._motor_service = MotorService(MotorServiceConfig.from_app_config(config))

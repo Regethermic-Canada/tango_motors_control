@@ -52,7 +52,7 @@ MOTOR_DIRECTIONS=1,-1
 MOTOR_COMMAND_HZ=2
 # UI speed level max absolute value shown in interface.
 MOTOR_MAX_STEP_SPEED=10
-# Effective motor speed max absolute percent used by scaling from UI level.
+# Effective motor speed cap in absolute percent (0..100).
 MOTOR_MAX_SPEED=100
 # Safety max MOSFET temperature in Celsius
 MOTOR_MAX_TEMP_C=70.0

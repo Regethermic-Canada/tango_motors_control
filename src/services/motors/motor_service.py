@@ -44,13 +44,9 @@ class MotorServiceConfig:
             motor_ids=tuple(ids),
             motor_directions=tuple(directions),
             command_hz=max(1.0, app_config.motor_command_hz),
-            max_speed_percent=max(0, abs(app_config.motor_max_speed)),
+            max_speed_percent=min(100, max(0, abs(app_config.motor_max_speed))),
             max_mosfet_temp_c=app_config.motor_max_temp_c,
         )
-
-    @property
-    def speed_domain(self) -> int:
-        return max(self.max_speed_percent, 1)
 
     @property
     def motor_targets(self) -> list[tuple[int, int]]:
@@ -87,6 +83,7 @@ class MotorService:
         self._initialized = False
         self._active = False
         self._pool: list[_ManagedMotor] = []
+        self._connected: list[_ManagedMotor] = []
         self._motors: list[_ManagedMotor] = []
         self._failed_start_ids: set[int] = set()
         self._max_motor_velocity_rad_s = 0.0
@@ -100,9 +97,8 @@ class MotorService:
             return
 
         with self._lock:
-            if self._initialized:
-                return
-            self._build_pool_locked()
+            self._ensure_initialized_locked()
+            self._connect_available_locked()
 
     def start(self, initial_speed_percent: int = 0) -> None:
         if not self._cfg.enabled:
@@ -114,43 +110,21 @@ class MotorService:
                 self.set_speed_percent(initial_speed_percent)
                 return
 
-            connected: list[_ManagedMotor] = []
             self._ensure_initialized_locked()
+            self._connect_available_locked()
 
-            for item in self._pool:
-                if item.motor_id in self._failed_start_ids:
-                    continue
-                entered = False
-                try:
-                    item.motor.__enter__()
-                    entered = True
-                    item.motor.enter_velocity_control()
-                    connected.append(item)
-                except Exception:
-                    logger.warning(
-                        "Skipping unavailable motor ID %s on %s",
-                        item.motor_id,
-                        self._cfg.can_channel,
-                    )
-                    self._failed_start_ids.add(item.motor_id)
-                    if entered:
-                        _safe_exit(item.motor)
-
-            if not connected:
+            if not self._connected:
                 raise RuntimeError("No configured motors are connected")
 
-            self._motors = connected
+            self._motors = list(self._connected)
             self._active = True
-            self._max_motor_velocity_rad_s = min(
-                _motor_velocity_limit_rad_s(item.motor) for item in connected
-            )
             self._target_speed_percent = self._clamp_speed(initial_speed_percent)
             self._apply_speed_locked(self._target_speed_percent)
             self._start_keepalive_loop_locked()
             logger.info(
                 "Motor service started on %s with active IDs: %s",
                 self._cfg.can_channel,
-                [item.motor_id for item in connected],
+                [item.motor_id for item in self._motors],
             )
 
     def stop(self) -> None:
@@ -171,11 +145,12 @@ class MotorService:
             if not self._active:
                 return
             motors = list(self._motors)
-            # Rely on library shutdown semantics (__exit__ sends 0.0A) and keep CAN open.
+            # Rely on library shutdown semantics (__exit__ sends 0.0A).
             for item in motors:
                 _safe_exit(item.motor)
 
             self._motors = []
+            self._connected = []
             self._active = False
             self._max_motor_velocity_rad_s = 0.0
             self._target_speed_percent = 0
@@ -232,7 +207,7 @@ class MotorService:
             return self._clamp_speed(speed_percent)
 
         clamped_speed = self._clamp_speed(speed_percent)
-        speed_ratio = float(clamped_speed) / float(self._cfg.speed_domain)
+        speed_ratio = float(clamped_speed) / 100.0
         base_velocity = speed_ratio * self._max_motor_velocity_rad_s
 
         failed: list[_ManagedMotor] = []
@@ -254,6 +229,9 @@ class MotorService:
 
         if failed:
             failed_ids = {item.motor_id for item in failed}
+            self._connected = [
+                item for item in self._connected if item.motor_id not in failed_ids
+            ]
             self._motors = [
                 item for item in self._motors if item.motor_id not in failed_ids
             ]
@@ -317,6 +295,7 @@ class MotorService:
             )
 
         self._pool = pool
+        self._connected = []
         self._failed_start_ids.clear()
         self._initialized = True
         logger.info(
@@ -324,6 +303,49 @@ class MotorService:
             self._cfg.can_channel,
             [item.motor_id for item in self._pool],
         )
+
+    def _connect_available_locked(self) -> None:
+        connected_by_id = {item.motor_id for item in self._connected}
+        new_connected: list[int] = []
+        for item in self._pool:
+            if item.motor_id in connected_by_id:
+                continue
+            if item.motor_id in self._failed_start_ids:
+                continue
+
+            entered = False
+            try:
+                item.motor.__enter__()
+                entered = True
+                item.motor.enter_velocity_control()
+                # Prime one safe zero-speed update so first Start has no connection/setup latency.
+                item.motor.set_motor_velocity_radians_per_second(0.0)
+                item.motor.update()
+                self._connected.append(item)
+                new_connected.append(item.motor_id)
+            except Exception:
+                logger.warning(
+                    "Skipping unavailable motor ID %s on %s",
+                    item.motor_id,
+                    self._cfg.can_channel,
+                )
+                self._failed_start_ids.add(item.motor_id)
+                if entered:
+                    _safe_exit(item.motor)
+
+        if self._connected:
+            self._max_motor_velocity_rad_s = min(
+                _motor_velocity_limit_rad_s(item.motor) for item in self._connected
+            )
+        else:
+            self._max_motor_velocity_rad_s = 0.0
+
+        if new_connected:
+            logger.info(
+                "Motor pre-connection ready on %s for IDs: %s",
+                self._cfg.can_channel,
+                new_connected,
+            )
 
     def _ensure_initialized_locked(self) -> None:
         if self._initialized:
@@ -341,13 +363,15 @@ class MotorService:
         self._active = False
 
         by_id: dict[int, _ManagedMotor] = {}
+        for item in self._connected:
+            by_id[item.motor_id] = item
         for item in self._motors:
             by_id[item.motor_id] = item
         for item in self._pool:
             by_id[item.motor_id] = item
 
         managed = list(by_id.values())
-        for item in self._motors:
+        for item in managed:
             _safe_exit(item.motor)
         for item in managed:
             _detach_motor_listener(item.motor)
@@ -356,6 +380,7 @@ class MotorService:
 
         self._motors = []
         self._pool = []
+        self._connected = []
         self._failed_start_ids.clear()
         self._initialized = False
         self._max_motor_velocity_rad_s = 0.0
