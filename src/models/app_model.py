@@ -2,6 +2,8 @@ import asyncio
 import json
 import logging
 import time
+from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 
 import flet as ft
@@ -10,6 +12,20 @@ from services.motors import MotorService, MotorServiceConfig
 from utils.config import config
 
 logger: logging.Logger = logging.getLogger(__name__)
+
+
+class MotorAction(Enum):
+    STARTED = "started"
+    STOPPED = "stopped"
+    START_FAILED_NO_MOTORS = "start_failed_no_motors"
+    START_FAILED = "start_failed"
+    STOP_FAILED = "stop_failed"
+
+
+@dataclass(frozen=True)
+class MotorActionResult:
+    action: MotorAction
+    error: str = ""
 
 
 @ft.observable
@@ -169,20 +185,33 @@ class AppModel:
         except Exception:
             logger.exception("Motor CAN initialization failed")
 
-    def start_motors(self) -> None:
+    def start_motors(self) -> MotorActionResult:
         try:
             self._motor_service.start(initial_speed_percent=self.speed_percent)
             self.is_motors_running = self._motor_service.is_running()
-        except Exception:
+            if self.is_motors_running:
+                return MotorActionResult(action=MotorAction.STARTED)
+            return MotorActionResult(
+                action=MotorAction.START_FAILED,
+                error="Motor service did not enter running state",
+            )
+        except Exception as ex:
             self.is_motors_running = False
             logger.exception("Motor startup failed")
+            if "No configured motors are connected" in str(ex):
+                return MotorActionResult(
+                    action=MotorAction.START_FAILED_NO_MOTORS, error=str(ex)
+                )
+            return MotorActionResult(action=MotorAction.START_FAILED, error=str(ex))
 
-    def stop_motors(self) -> None:
+    def stop_motors(self) -> MotorActionResult:
         try:
             self._motor_service.stop()
             self.is_motors_running = False
-        except Exception:
+            return MotorActionResult(action=MotorAction.STOPPED)
+        except Exception as ex:
             logger.exception("Motor shutdown failed")
+            return MotorActionResult(action=MotorAction.STOP_FAILED, error=str(ex))
 
     def shutdown_motors(self) -> None:
         try:
@@ -201,12 +230,13 @@ class AppModel:
             self.is_motors_running = self._motor_service.is_running()
             return False
 
-    def toggle_motors(self) -> None:
+    def toggle_motors(self) -> MotorActionResult:
         if self.is_motors_running:
-            self.stop_motors()
+            result = self.stop_motors()
         else:
-            self.start_motors()
+            result = self.start_motors()
         self.reset_timer()
+        return result
 
     def _apply_speed_to_motors(self) -> None:
         try:

@@ -1,6 +1,8 @@
 import asyncio
+import time
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 import flet as ft
 
 
@@ -11,15 +13,33 @@ class ToastType(Enum):
     INFO = "info"
 
 
+@dataclass
+class _ToastRuntime:
+    container: ft.Container
+    close_token: int
+
+
+_active_toasts: dict[int, _ToastRuntime] = {}
+_last_toast_at: dict[tuple[int, str], float] = {}
+
+
 def show_toast(
     page: ft.Page,
     message: str,
     type: ToastType = ToastType.ERROR,
-    duration: int = 3,
+    duration: float = 3.0,
     position_top: int = 80,
     position_right: int = 20,
     close_tooltip: str = "Close",
+    dedupe_window_s: float = 1.5,
 ) -> None:
+    page_key = id(page)
+    toast_key = f"{type.value}:{message}"
+    now = time.monotonic()
+    last_shown = _last_toast_at.get((page_key, toast_key))
+    if last_shown is not None and (now - last_shown) < dedupe_window_s:
+        return
+    _last_toast_at[(page_key, toast_key)] = now
 
     colors = {
         ToastType.SUCCESS: ("green600", ft.Icons.CHECK_CIRCLE_OUTLINE),
@@ -30,22 +50,35 @@ def show_toast(
 
     bg_color, icon = colors.get(type, colors[ToastType.INFO])
 
-    toast_container: Optional[ft.Container] = None
+    existing = _active_toasts.get(page_key)
+    if existing and existing.container in page.overlay:
+        page.overlay.remove(existing.container)
 
-    def close_toast(e: Any = None) -> None:
-        nonlocal toast_container
-        if toast_container and toast_container in page.overlay:
-            toast_container.opacity = 0
-            toast_container.offset = ft.Offset(0, -1)
-            page.update()
+    close_token = int(time.monotonic_ns())
 
-            async def remove() -> None:
-                await asyncio.sleep(0.3)
-                if toast_container in page.overlay:
-                    page.overlay.remove(toast_container)
-                    page.update()
+    def close_toast(_: Any = None) -> None:
+        current = _active_toasts.get(page_key)
+        if current is None or current.close_token != close_token:
+            return
+        toast_container = current.container
+        if toast_container not in page.overlay:
+            return
 
-            asyncio.create_task(remove())
+        toast_container.opacity = 0
+        toast_container.offset = ft.Offset(0, -1)
+        page.update()
+
+        async def remove() -> None:
+            await asyncio.sleep(0.3)
+            still_current = _active_toasts.get(page_key)
+            if still_current is None or still_current.close_token != close_token:
+                return
+            if toast_container in page.overlay:
+                page.overlay.remove(toast_container)
+                page.update()
+            _active_toasts.pop(page_key, None)
+
+        asyncio.create_task(remove())
 
     toast_container = ft.Container(
         content=ft.Row(
@@ -83,6 +116,10 @@ def show_toast(
         right=position_right,
     )
 
+    _active_toasts[page_key] = _ToastRuntime(
+        container=toast_container,
+        close_token=close_token,
+    )
     page.overlay.append(toast_container)
     page.update()
     toast_container.opacity = 1
