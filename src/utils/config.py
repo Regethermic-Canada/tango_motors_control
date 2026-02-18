@@ -59,6 +59,8 @@ class Config:
     motor_ids: List[int]
     motor_directions: List[int]
     motor_command_hz: float
+    motor_min_step_speed: int
+    motor_max_step_speed: int
     motor_speed_min: int
     motor_speed_max: int
     motor_max_temp_c: float
@@ -160,6 +162,8 @@ class Config:
             "motor_ids": motor_ids,
             "motor_directions": motor_directions,
             "motor_command_hz": float(get_env("MOTOR_COMMAND_HZ", "20.0")),
+            "motor_min_step_speed": int(get_env("MOTOR_MIN_STEP_SPEED", "-10")),
+            "motor_max_step_speed": int(get_env("MOTOR_MAX_STEP_SPEED", "10")),
             "motor_speed_min": int(get_env("MOTOR_SPEED_MIN", "-100")),
             "motor_speed_max": int(get_env("MOTOR_SPEED_MAX", "100")),
             "motor_max_temp_c": float(get_env("MOTOR_MAX_TEMP_C", "70.0")),

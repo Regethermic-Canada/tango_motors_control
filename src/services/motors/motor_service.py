@@ -183,24 +183,20 @@ class MotorService:
         with self._lock:
             motors = list(self._motors)
             can_ref = motors[0].motor if motors else None
-            try:
-                self._apply_speed_locked(0)
-            except Exception:
-                logger.exception("Failed to send zero-speed command during shutdown")
-            finally:
-                for item in motors:
-                    _safe_exit(item.motor)
-                    _detach_motor_listener(item.motor)
-                if can_ref is not None:
-                    _close_can_manager(can_ref)
+            # Rely on library shutdown semantics (__exit__ sends 0.0A).
+            for item in motors:
+                _safe_exit(item.motor)
+                _detach_motor_listener(item.motor)
+            if can_ref is not None:
+                _close_can_manager(can_ref)
 
-                self._motors = []
-                self._active = False
-                self._max_motor_velocity_rad_s = 0.0
-                self._target_speed_percent = 0
-                self._keepalive_thread = None
-                self._keepalive_stop = Event()
-                logger.info("Motor service stopped")
+            self._motors = []
+            self._active = False
+            self._max_motor_velocity_rad_s = 0.0
+            self._target_speed_percent = 0
+            self._keepalive_thread = None
+            self._keepalive_stop = Event()
+            logger.info("Motor service stopped")
 
     def set_speed_percent(self, speed_percent: int) -> int:
         if not self._cfg.enabled:

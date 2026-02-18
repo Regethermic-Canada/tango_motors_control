@@ -46,6 +46,8 @@ class AppModel:
 
         self.locale = config.locale
         self.load_translations()
+        self.speed_min = config.motor_min_step_speed
+        self.speed_max = config.motor_max_step_speed
         self.speed_percent_min = config.motor_speed_min
         self.speed_percent_max = config.motor_speed_max
         self.speed_level = self._clamp_speed(config.default_speed)
