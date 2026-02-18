@@ -72,10 +72,6 @@ def AdminView(app_model: AppModel) -> ft.Control:
                             theme_style=ft.TextThemeStyle.HEADLINE_MEDIUM,
                             weight=ft.FontWeight.BOLD,
                         ),
-                        ft.IconButton(
-                            icon=ft.Icons.CLOSE,
-                            on_click=lambda _: app_model.navigate("/"),
-                        ),
                     ],
                 ),
                 ft.Divider(),

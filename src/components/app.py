@@ -77,18 +77,25 @@ def App() -> ft.Control:
             app.check_inactivity()
             app.sync_motor_state()
 
-    async def stop_motors_task() -> None:
-        await asyncio.to_thread(app.stop_motors)
+    async def initialize_motors_task() -> None:
+        await asyncio.to_thread(app.initialize_motors)
+
+    async def shutdown_motors_task() -> None:
+        await asyncio.to_thread(app.shutdown_motors)
 
     def on_mounted() -> None:
         ft.context.page.title = "Tango Motors Control"
+        ft.context.page.window.maximized = True
+        ft.context.page.window.full_screen = True
+        ft.context.page.update()
         # Global interaction tracking
         ft.context.page.on_pointer_down = lambda _: app.reset_timer()  # type: ignore[attr-defined]
         ft.context.page.on_keyboard_event = lambda _: app.reset_timer()
+        ft.context.page.run_task(initialize_motors_task)
         ft.context.page.run_task(monitor_loop)
 
     ft.on_mounted(on_mounted)
-    ft.on_unmounted(stop_motors_task)
+    ft.on_unmounted(shutdown_motors_task)
 
     def update_theme() -> None:
         ft.context.page.theme_mode = app.theme_mode

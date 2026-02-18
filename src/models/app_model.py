@@ -163,6 +163,12 @@ class AppModel:
             self.is_motors_running = running
             logger.info("Motor running state changed to %s", self.is_motors_running)
 
+    def initialize_motors(self) -> None:
+        try:
+            self._motor_service.initialize()
+        except Exception:
+            logger.exception("Motor CAN initialization failed")
+
     def start_motors(self) -> None:
         try:
             self._motor_service.start(initial_speed_percent=self.speed_percent)
@@ -177,6 +183,23 @@ class AppModel:
             self.is_motors_running = False
         except Exception:
             logger.exception("Motor shutdown failed")
+
+    def shutdown_motors(self) -> None:
+        try:
+            self._motor_service.shutdown()
+            self.is_motors_running = False
+        except Exception:
+            logger.exception("Motor full shutdown failed")
+
+    def rescan_motors(self) -> bool:
+        try:
+            running = self._motor_service.rescan()
+            self.is_motors_running = running
+            return True
+        except Exception:
+            logger.exception("Motor rescan failed")
+            self.is_motors_running = self._motor_service.is_running()
+            return False
 
     def toggle_motors(self) -> None:
         if self.is_motors_running:

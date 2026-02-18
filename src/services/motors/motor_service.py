@@ -91,12 +91,25 @@ class MotorService:
     def __init__(self, cfg: MotorServiceConfig) -> None:
         self._cfg = cfg
         self._lock = RLock()
+        self._initialized = False
         self._active = False
+        self._pool: list[_ManagedMotor] = []
         self._motors: list[_ManagedMotor] = []
+        self._failed_start_ids: set[int] = set()
         self._max_motor_velocity_rad_s = 0.0
         self._target_speed_percent = 0
         self._keepalive_stop = Event()
         self._keepalive_thread: Thread | None = None
+
+    def initialize(self) -> None:
+        if not self._cfg.enabled:
+            logger.info("Motor service disabled by config (MOTOR_ENABLED=false)")
+            return
+
+        with self._lock:
+            if self._initialized:
+                return
+            self._build_pool_locked()
 
     def start(self, initial_speed_percent: int = 0) -> None:
         if not self._cfg.enabled:
@@ -108,43 +121,29 @@ class MotorService:
                 self.set_speed_percent(initial_speed_percent)
                 return
 
-            candidates = self._cfg.motor_targets
-
             connected: list[_ManagedMotor] = []
-            last_motor: CubeMarsServoCAN | None = None
-            for motor_id, direction in candidates:
-                motor = CubeMarsServoCAN(
-                    motor_type=self._cfg.motor_type,
-                    motor_ID=motor_id,
-                    max_mosfet_temp=self._cfg.max_mosfet_temp_c,
-                    can_channel=self._cfg.can_channel,
-                )
-                last_motor = motor
+            self._ensure_initialized_locked()
+
+            for item in self._pool:
+                if item.motor_id in self._failed_start_ids:
+                    continue
                 entered = False
                 try:
-                    motor.__enter__()
+                    item.motor.__enter__()
                     entered = True
-                    motor.enter_velocity_control()
-                    connected.append(
-                        _ManagedMotor(
-                            motor=motor,
-                            direction=direction,
-                            motor_id=motor_id,
-                        )
-                    )
+                    item.motor.enter_velocity_control()
+                    connected.append(item)
                 except Exception:
                     logger.warning(
                         "Skipping unavailable motor ID %s on %s",
-                        motor_id,
+                        item.motor_id,
                         self._cfg.can_channel,
                     )
+                    self._failed_start_ids.add(item.motor_id)
                     if entered:
-                        _safe_exit(motor)
-                    _detach_motor_listener(motor)
+                        _safe_exit(item.motor)
 
             if not connected:
-                if last_motor is not None:
-                    _close_can_manager(last_motor)
                 raise RuntimeError("No configured motors are connected")
 
             self._motors = connected
@@ -165,30 +164,23 @@ class MotorService:
         if not self._cfg.enabled:
             return
 
-        stop_evt: Event | None = None
         keepalive_thread: Thread | None = None
         with self._lock:
             if not self._active:
                 return
-
-            stop_evt = self._keepalive_stop
-            keepalive_thread = self._keepalive_thread
             self._target_speed_percent = 0
+            keepalive_thread = self._signal_keepalive_stop_locked()
 
-        if stop_evt is not None:
-            stop_evt.set()
         if keepalive_thread is not None:
             keepalive_thread.join(timeout=1.0)
 
         with self._lock:
+            if not self._active:
+                return
             motors = list(self._motors)
-            can_ref = motors[0].motor if motors else None
-            # Rely on library shutdown semantics (__exit__ sends 0.0A).
+            # Rely on library shutdown semantics (__exit__ sends 0.0A) and keep CAN open.
             for item in motors:
                 _safe_exit(item.motor)
-                _detach_motor_listener(item.motor)
-            if can_ref is not None:
-                _close_can_manager(can_ref)
 
             self._motors = []
             self._active = False
@@ -197,6 +189,32 @@ class MotorService:
             self._keepalive_thread = None
             self._keepalive_stop = Event()
             logger.info("Motor service stopped")
+
+    def shutdown(self) -> None:
+        if not self._cfg.enabled:
+            return
+
+        self.stop()
+        with self._lock:
+            self._reset_connection_locked()
+            logger.info("Motor service shutdown complete")
+
+    def rescan(self) -> bool:
+        if not self._cfg.enabled:
+            return False
+
+        target_speed_percent = 0
+        was_running = False
+        with self._lock:
+            was_running = self._active
+            target_speed_percent = self._target_speed_percent
+
+        self.shutdown()
+        self.initialize()
+
+        if was_running:
+            self.start(initial_speed_percent=target_speed_percent)
+        return self.is_running()
 
     def set_speed_percent(self, speed_percent: int) -> int:
         if not self._cfg.enabled:
@@ -234,8 +252,8 @@ class MotorService:
                     item.motor_id,
                     exc_info=True,
                 )
+                self._failed_start_ids.add(item.motor_id)
                 _safe_exit(item.motor)
-                _detach_motor_listener(item.motor)
                 failed.append(item)
 
         if failed:
@@ -244,13 +262,15 @@ class MotorService:
                 item for item in self._motors if item.motor_id not in failed_ids
             ]
             if not self._motors:
-                can_ref = failed[0].motor
-                _close_can_manager(can_ref)
                 self._active = False
                 self._max_motor_velocity_rad_s = 0.0
                 self._target_speed_percent = 0
                 self._keepalive_stop.set()
-                raise RuntimeError("All configured motors became unavailable")
+                # Reset connection on global failure so the next start reinitializes from scratch.
+                self._reset_connection_locked()
+                raise RuntimeError(
+                    "All active motors became unavailable; CAN interface reset"
+                )
 
             self._max_motor_velocity_rad_s = min(
                 _motor_velocity_limit_rad_s(item.motor) for item in self._motors
@@ -282,6 +302,70 @@ class MotorService:
                     logger.exception("Motor keepalive command failed")
                     if not self._active:
                         return
+
+    def _build_pool_locked(self) -> None:
+        pool: list[_ManagedMotor] = []
+        for motor_id, direction in self._cfg.motor_targets:
+            motor = CubeMarsServoCAN(
+                motor_type=self._cfg.motor_type,
+                motor_ID=motor_id,
+                max_mosfet_temp=self._cfg.max_mosfet_temp_c,
+                can_channel=self._cfg.can_channel,
+            )
+            pool.append(
+                _ManagedMotor(
+                    motor=motor,
+                    direction=direction,
+                    motor_id=motor_id,
+                )
+            )
+
+        self._pool = pool
+        self._failed_start_ids.clear()
+        self._initialized = True
+        logger.info(
+            "Motor CAN interface initialized on %s for IDs: %s",
+            self._cfg.can_channel,
+            [item.motor_id for item in self._pool],
+        )
+
+    def _ensure_initialized_locked(self) -> None:
+        if self._initialized:
+            return
+        self._build_pool_locked()
+
+    def _signal_keepalive_stop_locked(self) -> Thread | None:
+        keepalive_thread = self._keepalive_thread
+        if keepalive_thread is not None:
+            self._keepalive_stop.set()
+        return keepalive_thread
+
+    def _reset_connection_locked(self) -> None:
+        self._signal_keepalive_stop_locked()
+        self._active = False
+
+        by_id: dict[int, _ManagedMotor] = {}
+        for item in self._motors:
+            by_id[item.motor_id] = item
+        for item in self._pool:
+            by_id[item.motor_id] = item
+
+        managed = list(by_id.values())
+        for item in self._motors:
+            _safe_exit(item.motor)
+        for item in managed:
+            _detach_motor_listener(item.motor)
+        if managed:
+            _close_can_manager(managed[0].motor)
+
+        self._motors = []
+        self._pool = []
+        self._failed_start_ids.clear()
+        self._initialized = False
+        self._max_motor_velocity_rad_s = 0.0
+        self._target_speed_percent = 0
+        self._keepalive_thread = None
+        self._keepalive_stop = Event()
 
 
 def _safe_exit(motor: CubeMarsServoCAN) -> None:
