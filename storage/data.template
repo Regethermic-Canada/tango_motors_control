@@ -49,7 +49,7 @@ MOTOR_IDS=1,2
 # Example for 4 mirrored motors: 1,-1,1,-1
 MOTOR_DIRECTIONS=1,-1
 # Motor command/update rate in Hz while running velocity mode.
-MOTOR_COMMAND_HZ=2
+MOTOR_COMMAND_HZ=50
 # UI speed level max absolute value shown in interface.
 MOTOR_MAX_STEP_SPEED=10
 # Effective motor speed cap in absolute percent (0..100).
