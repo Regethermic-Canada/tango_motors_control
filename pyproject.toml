@@ -1,7 +1,7 @@
 [project]
 name = "tango-motors-control"
 version = "0.1.0"
-description = ""
+description = "tango motors control for Regethermic Canada"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
@@ -9,12 +9,15 @@ authors = [
 ]
 dependencies = [
   "argon2-cffi>=25.1.0",
+  "cubemars-servo-can",
   "flet>=0.80.1",
   "python-dotenv>=1.2.1",
 ]
 
 [dependency-groups]
 dev = [
+  "black>=26.1.0",
+  "ruff>=0.15.0",
   "flet[all]>=0.80.1",
   "mypy>=1.19.1",
   "pyinstaller",
@@ -28,3 +31,6 @@ copyright = "Copyright (C) 2026 by Regethermic"
 
 [tool.flet.app]
 path = "src"
+
+[tool.uv.sources]
+cubemars-servo-can = { git = "https://github.com/sam0rr/cubemars_servo_can.git" }

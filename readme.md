@@ -1,5 +1,5 @@
----
 # tango_motors_control
+
 ---
 
 ## Using a raspberrypi 3 (weak support for openGL -> force cpu rendering)
@@ -41,10 +41,22 @@ uv run flet run
 
 ## Check the code quality
 
-```bash
-# Check the types
-uv run mypy --strict src/
-```
+1.  **Install dependencies:**
+
+    ```bash
+    uv sync
+    ```
+
+2.  **Check the types:**
+
+    ```bash
+    uv run mypy --strict src/
+    ```
+
+3.  **Run linters and formatters:**
+    ```bash
+    uv run black . && uv run ruff check .
+    ```
 
 ---
 
