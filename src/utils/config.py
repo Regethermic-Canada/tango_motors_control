@@ -20,6 +20,11 @@ def get_env_bool(key: str, default: bool) -> bool:
     return value in {"1", "true", "yes", "on"}
 
 
+def parse_int_csv(value: str) -> List[int]:
+    tokens = [token.strip() for token in value.split(",") if token.strip()]
+    return [int(token) for token in tokens]
+
+
 @dataclass
 class Config:
     """
@@ -51,10 +56,8 @@ class Config:
     motor_enabled: bool
     motor_type: str
     motor_can_channel: str
-    motor_1_id: int
-    motor_2_id: int
-    motor_1_direction: int
-    motor_2_direction: int
+    motor_ids: List[int]
+    motor_directions: List[int]
     motor_speed_min: int
     motor_speed_max: int
     motor_max_temp_c: float
@@ -143,14 +146,18 @@ class Config:
 
     @staticmethod
     def _load_motor_control() -> Dict[str, Any]:
+        motor_ids = parse_int_csv(get_env("MOTOR_IDS", "1,2"))
+        motor_directions = parse_int_csv(get_env("MOTOR_DIRECTIONS", "1,-1"))
+
+        if not motor_ids:
+            motor_ids = [1]
+
         return {
             "motor_enabled": get_env_bool("MOTOR_ENABLED", False),
             "motor_type": get_env("MOTOR_TYPE", "AK40-10"),
             "motor_can_channel": get_env("MOTOR_CAN_CHANNEL", "can0"),
-            "motor_1_id": int(get_env("MOTOR_1_ID", "1")),
-            "motor_2_id": int(get_env("MOTOR_2_ID", "2")),
-            "motor_1_direction": int(get_env("MOTOR_1_DIRECTION", "1")),
-            "motor_2_direction": int(get_env("MOTOR_2_DIRECTION", "-1")),
+            "motor_ids": motor_ids,
+            "motor_directions": motor_directions,
             "motor_speed_min": int(get_env("MOTOR_SPEED_MIN", "-100")),
             "motor_speed_max": int(get_env("MOTOR_SPEED_MAX", "100")),
             "motor_max_temp_c": float(get_env("MOTOR_MAX_TEMP_C", "70.0")),
@@ -170,6 +177,8 @@ class Config:
                     attr_name,
                     str_value.strip().lower() in {"1", "true", "yes", "on"},
                 )
+            elif isinstance(current_val, list):
+                setattr(self, attr_name, parse_int_csv(str_value))
             elif isinstance(current_val, int):
                 setattr(self, attr_name, int(value))
             elif isinstance(current_val, float):

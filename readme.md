@@ -47,11 +47,17 @@ Motor control is disabled by default for safety. In `storage/data`:
 MOTOR_ENABLED=true
 MOTOR_TYPE=AK40-10
 MOTOR_CAN_CHANNEL=can0
-MOTOR_1_ID=1
-MOTOR_2_ID=2
-MOTOR_1_DIRECTION=1
-MOTOR_2_DIRECTION=-1
+MOTOR_IDS=1,2
+MOTOR_DIRECTIONS=1,-1
 ```
+
+`MOTOR_IDS` and `MOTOR_DIRECTIONS` must have the same number of entries.
+Example: `MOTOR_IDS=1,2,3,4` with `MOTOR_DIRECTIONS=1,-1,1,-1`.
+
+For complete motor/CAN setup (hardware wiring, CAN interface bring-up, usage and safety flow),
+follow the CubeMars library repository documentation:
+
+- https://github.com/sam0rr/cubemars_servo_can
 
 ---
 

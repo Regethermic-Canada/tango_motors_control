@@ -16,10 +16,8 @@ class MotorServiceConfig:
     enabled: bool
     motor_type: str
     can_channel: str
-    motor_1_id: int
-    motor_2_id: int
-    motor_1_direction: int
-    motor_2_direction: int
+    motor_ids: tuple[int, ...]
+    motor_directions: tuple[int, ...]
     speed_min: int
     speed_max: int
     max_mosfet_temp_c: float
@@ -31,14 +29,25 @@ class MotorServiceConfig:
         if speed_min > speed_max:
             speed_min, speed_max = speed_max, speed_min
 
+        # Keep ID order stable and drop duplicates.
+        seen_ids: set[int] = set()
+        ids: list[int] = []
+        for motor_id in app_config.motor_ids:
+            if motor_id not in seen_ids:
+                ids.append(motor_id)
+                seen_ids.add(motor_id)
+
+        if not ids:
+            raise ValueError("No motor IDs configured")
+
+        directions = list(app_config.motor_directions)
+
         return cls(
             enabled=app_config.motor_enabled,
             motor_type=app_config.motor_type,
             can_channel=app_config.motor_can_channel,
-            motor_1_id=app_config.motor_1_id,
-            motor_2_id=app_config.motor_2_id,
-            motor_1_direction=_normalize_direction(app_config.motor_1_direction),
-            motor_2_direction=_normalize_direction(app_config.motor_2_direction),
+            motor_ids=tuple(ids),
+            motor_directions=tuple(directions),
             speed_min=speed_min,
             speed_max=speed_max,
             max_mosfet_temp_c=app_config.motor_max_temp_c,
@@ -48,11 +57,32 @@ class MotorServiceConfig:
     def speed_domain(self) -> int:
         return max(abs(self.speed_min), abs(self.speed_max), 1)
 
+    @property
+    def motor_targets(self) -> list[tuple[int, int]]:
+        if len(self.motor_ids) != len(self.motor_directions):
+            raise ValueError(
+                "MOTOR_IDS and MOTOR_DIRECTIONS must have the same number of entries "
+                f"(got {len(self.motor_ids)} IDs and {len(self.motor_directions)} directions)"
+            )
 
-def _normalize_direction(value: int) -> int:
-    if value == 0:
-        return 1
-    return -1 if value < 0 else 1
+        if not self.motor_ids:
+            raise ValueError("MOTOR_IDS must contain at least one motor ID")
+
+        for idx, direction in enumerate(self.motor_directions):
+            if direction not in (-1, 1):
+                raise ValueError(
+                    "MOTOR_DIRECTIONS entries must be -1 or 1 "
+                    f"(invalid value {direction} at index {idx})"
+                )
+
+        return list(zip(self.motor_ids, self.motor_directions))
+
+
+@dataclass
+class _ManagedMotor:
+    motor: CubeMarsServoCAN
+    direction: int
+    motor_id: int
 
 
 class MotorService:
@@ -60,8 +90,7 @@ class MotorService:
         self._cfg = cfg
         self._lock = RLock()
         self._active = False
-        self._motor_1: CubeMarsServoCAN | None = None
-        self._motor_2: CubeMarsServoCAN | None = None
+        self._motors: list[_ManagedMotor] = []
         self._max_motor_velocity_rad_s = 0.0
 
     def start(self, initial_speed_percent: int = 0) -> None:
@@ -74,52 +103,56 @@ class MotorService:
                 self.set_speed_percent(initial_speed_percent)
                 return
 
-            motor_1 = CubeMarsServoCAN(
-                motor_type=self._cfg.motor_type,
-                motor_ID=self._cfg.motor_1_id,
-                max_mosfet_temp=self._cfg.max_mosfet_temp_c,
-                can_channel=self._cfg.can_channel,
-            )
-            motor_2 = CubeMarsServoCAN(
-                motor_type=self._cfg.motor_type,
-                motor_ID=self._cfg.motor_2_id,
-                max_mosfet_temp=self._cfg.max_mosfet_temp_c,
-                can_channel=self._cfg.can_channel,
-            )
-            entered_1 = False
-            entered_2 = False
-            try:
-                motor_1.__enter__()
-                entered_1 = True
-                motor_2.__enter__()
-                entered_2 = True
+            candidates = self._cfg.motor_targets
 
-                motor_1.enter_velocity_control()
-                motor_2.enter_velocity_control()
+            connected: list[_ManagedMotor] = []
+            last_motor: CubeMarsServoCAN | None = None
+            for motor_id, direction in candidates:
+                motor = CubeMarsServoCAN(
+                    motor_type=self._cfg.motor_type,
+                    motor_ID=motor_id,
+                    max_mosfet_temp=self._cfg.max_mosfet_temp_c,
+                    can_channel=self._cfg.can_channel,
+                )
+                last_motor = motor
+                entered = False
+                try:
+                    motor.__enter__()
+                    entered = True
+                    motor.enter_velocity_control()
+                    connected.append(
+                        _ManagedMotor(
+                            motor=motor,
+                            direction=direction,
+                            motor_id=motor_id,
+                        )
+                    )
+                except Exception:
+                    logger.warning(
+                        "Skipping unavailable motor ID %s on %s",
+                        motor_id,
+                        self._cfg.can_channel,
+                    )
+                    if entered:
+                        _safe_exit(motor)
+                    _detach_motor_listener(motor)
 
-                self._motor_1 = motor_1
-                self._motor_2 = motor_2
-                self._active = True
-                self._max_motor_velocity_rad_s = min(
-                    _motor_velocity_limit_rad_s(motor_1),
-                    _motor_velocity_limit_rad_s(motor_2),
-                )
-                self._apply_speed_locked(initial_speed_percent)
-                logger.info(
-                    "Motor service started on %s with IDs [%s, %s]",
-                    self._cfg.can_channel,
-                    self._cfg.motor_1_id,
-                    self._cfg.motor_2_id,
-                )
-            except Exception:
-                if entered_2:
-                    _safe_exit(motor_2)
-                    _detach_motor_listener(motor_2)
-                if entered_1:
-                    _safe_exit(motor_1)
-                    _detach_motor_listener(motor_1)
-                _close_can_manager(motor_1)
-                raise
+            if not connected:
+                if last_motor is not None:
+                    _close_can_manager(last_motor)
+                raise RuntimeError("No configured motors are connected")
+
+            self._motors = connected
+            self._active = True
+            self._max_motor_velocity_rad_s = min(
+                _motor_velocity_limit_rad_s(item.motor) for item in connected
+            )
+            self._apply_speed_locked(initial_speed_percent)
+            logger.info(
+                "Motor service started on %s with active IDs: %s",
+                self._cfg.can_channel,
+                [item.motor_id for item in connected],
+            )
 
     def stop(self) -> None:
         if not self._cfg.enabled:
@@ -129,24 +162,20 @@ class MotorService:
             if not self._active:
                 return
 
-            motor_1 = self._motor_1
-            motor_2 = self._motor_2
+            motors = list(self._motors)
+            can_ref = motors[0].motor if motors else None
             try:
                 self._apply_speed_locked(0)
             except Exception:
                 logger.exception("Failed to send zero-speed command during shutdown")
             finally:
-                if motor_2 is not None:
-                    _safe_exit(motor_2)
-                    _detach_motor_listener(motor_2)
-                if motor_1 is not None:
-                    _safe_exit(motor_1)
-                    _detach_motor_listener(motor_1)
-                if motor_1 is not None:
-                    _close_can_manager(motor_1)
+                for item in motors:
+                    _safe_exit(item.motor)
+                    _detach_motor_listener(item.motor)
+                if can_ref is not None:
+                    _close_can_manager(can_ref)
 
-                self._motor_1 = None
-                self._motor_2 = None
+                self._motors = []
                 self._active = False
                 self._max_motor_velocity_rad_s = 0.0
                 logger.info("Motor service stopped")
@@ -165,23 +194,46 @@ class MotorService:
         return max(self._cfg.speed_min, min(speed_percent, self._cfg.speed_max))
 
     def _apply_speed_locked(self, speed_percent: int) -> int:
-        motor_1 = self._motor_1
-        motor_2 = self._motor_2
-        if motor_1 is None or motor_2 is None:
+        if not self._motors:
             return self._clamp_speed(speed_percent)
 
         clamped_speed = self._clamp_speed(speed_percent)
         speed_ratio = float(clamped_speed) / float(self._cfg.speed_domain)
         base_velocity = speed_ratio * self._max_motor_velocity_rad_s
 
-        motor_1.set_motor_velocity_radians_per_second(
-            base_velocity * self._cfg.motor_1_direction
-        )
-        motor_2.set_motor_velocity_radians_per_second(
-            base_velocity * self._cfg.motor_2_direction
-        )
-        motor_1.update()
-        motor_2.update()
+        failed: list[_ManagedMotor] = []
+        for item in self._motors:
+            try:
+                item.motor.set_motor_velocity_radians_per_second(
+                    base_velocity * item.direction
+                )
+                item.motor.update()
+            except Exception:
+                logger.warning(
+                    "Motor ID %s command failed, removing from active set",
+                    item.motor_id,
+                    exc_info=True,
+                )
+                _safe_exit(item.motor)
+                _detach_motor_listener(item.motor)
+                failed.append(item)
+
+        if failed:
+            failed_ids = {item.motor_id for item in failed}
+            self._motors = [
+                item for item in self._motors if item.motor_id not in failed_ids
+            ]
+            if not self._motors:
+                can_ref = failed[0].motor
+                _close_can_manager(can_ref)
+                self._active = False
+                self._max_motor_velocity_rad_s = 0.0
+                raise RuntimeError("All configured motors became unavailable")
+
+            self._max_motor_velocity_rad_s = min(
+                _motor_velocity_limit_rad_s(item.motor) for item in self._motors
+            )
+
         return clamped_speed
 
 
