@@ -37,13 +37,13 @@ def show_toast(
         if toast_container and toast_container in page.overlay:
             toast_container.opacity = 0
             toast_container.offset = ft.Offset(0, -1)
-            page.update()  # type: ignore
+            page.update()
 
             async def remove() -> None:
                 await asyncio.sleep(0.3)
                 if toast_container in page.overlay:
                     page.overlay.remove(toast_container)
-                    page.update()  # type: ignore
+                    page.update()
 
             asyncio.create_task(remove())
 
@@ -84,10 +84,10 @@ def show_toast(
     )
 
     page.overlay.append(toast_container)
-    page.update()  # type: ignore
+    page.update()
     toast_container.opacity = 1
     toast_container.offset = ft.Offset(0, 0)
-    page.update()  # type: ignore
+    page.update()
 
     async def auto_hide() -> None:
         await asyncio.sleep(duration)

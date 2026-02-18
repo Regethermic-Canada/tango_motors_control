@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 @ft.component
 def AuthView(app_model: AppModel) -> ft.Control:
     loc = ft.use_context(LocaleContext)
-    passcode, set_passcode = ft.use_state("")  # type: ignore
-    shake_offset, set_shake_offset = ft.use_state(ft.Offset(0, 0))  # type: ignore
+    passcode, set_passcode = ft.use_state("")
+    shake_offset, set_shake_offset = ft.use_state(ft.Offset(0, 0))
     ph = PasswordHasher()
 
     async def verify_passcode(current_passcode: str) -> None:
@@ -66,11 +66,11 @@ def AuthView(app_model: AppModel) -> ft.Control:
             for _ in range(2):
                 for point in shake_points:
                     set_shake_offset(point)
-                    ft.context.page.update()  # type: ignore
+                    ft.context.page.update()
                     await asyncio.sleep(0.03)
 
             set_shake_offset(ft.Offset(0, 0))
-            ft.context.page.update()  # type: ignore
+            ft.context.page.update()
 
             set_passcode("")
 
