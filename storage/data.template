@@ -51,8 +51,8 @@ MOTOR_DIRECTIONS=1,-1
 # Motor command/update rate in Hz while running velocity mode.
 MOTOR_COMMAND_HZ=50
 # UI speed level max absolute value shown in interface.
-MOTOR_MAX_STEP_SPEED=10
+MOTOR_MAX_STEP_SPEED=5
 # Effective motor speed cap in absolute percent (0..100).
-MOTOR_MAX_SPEED=100
+MOTOR_MAX_SPEED=5
 # Safety max MOSFET temperature in Celsius
 MOTOR_MAX_TEMP_C=70.0
