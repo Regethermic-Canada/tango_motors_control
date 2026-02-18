@@ -119,7 +119,13 @@ class MotorService:
             self._motors = list(self._connected)
             self._active = True
             self._target_speed_percent = self._clamp_speed(initial_speed_percent)
-            self._apply_speed_locked(self._target_speed_percent)
+            try:
+                self._apply_speed_locked(self._target_speed_percent)
+            except Exception:
+                logger.exception(
+                    "Initial motor command failed; attempting full auto-reconnect"
+                )
+                self._reconnect_all_runtime_locked()
             self._start_keepalive_loop_locked()
             logger.info(
                 "Motor service started on %s with active IDs: %s",
@@ -194,7 +200,12 @@ class MotorService:
             if not self._active:
                 logger.debug("Speed updated while motor service inactive")
                 return clamped_speed
-            return self._apply_speed_locked(clamped_speed)
+            try:
+                return self._apply_speed_locked(clamped_speed)
+            except Exception:
+                logger.exception("Speed command failed; attempting full auto-reconnect")
+                self._reconnect_all_runtime_locked()
+                return self._target_speed_percent
 
     def _clamp_speed(self, speed_percent: int) -> int:
         return max(
@@ -223,31 +234,13 @@ class MotorService:
                     item.motor_id,
                     exc_info=True,
                 )
-                self._failed_start_ids.add(item.motor_id)
-                _safe_exit(item.motor)
                 failed.append(item)
 
         if failed:
-            failed_ids = {item.motor_id for item in failed}
-            self._connected = [
-                item for item in self._connected if item.motor_id not in failed_ids
-            ]
-            self._motors = [
-                item for item in self._motors if item.motor_id not in failed_ids
-            ]
-            if not self._motors:
-                self._active = False
-                self._max_motor_velocity_rad_s = 0.0
-                self._target_speed_percent = 0
-                self._keepalive_stop.set()
-                # Reset connection on global failure so the next start reinitializes from scratch.
-                self._reset_connection_locked()
-                raise RuntimeError(
-                    "All active motors became unavailable; CAN interface reset"
-                )
-
-            self._max_motor_velocity_rad_s = min(
-                _motor_velocity_limit_rad_s(item.motor) for item in self._motors
+            failed_ids = [item.motor_id for item in failed]
+            raise RuntimeError(
+                "Motor command failure on IDs "
+                f"{failed_ids}; full shutdown and auto-reconnect required"
             )
 
         return clamped_speed
@@ -273,8 +266,14 @@ class MotorService:
                 try:
                     self._apply_speed_locked(self._target_speed_percent)
                 except Exception:
-                    logger.exception("Motor keepalive command failed")
-                    if not self._active:
+                    logger.exception(
+                        "Motor keepalive command failed; attempting full auto-reconnect"
+                    )
+                    try:
+                        self._reconnect_all_runtime_locked()
+                    except Exception:
+                        logger.exception("Auto-reconnect failed; motor service stopped")
+                        self._active = False
                         return
 
     def _build_pool_locked(self) -> None:
@@ -347,6 +346,30 @@ class MotorService:
                 new_connected,
             )
 
+    def _reconnect_all_runtime_locked(self) -> None:
+        target_speed_percent = self._clamp_speed(self._target_speed_percent)
+        self._teardown_all_motors_locked()
+        self._build_pool_locked()
+        self._connect_available_locked()
+
+        if not self._connected:
+            self._active = False
+            self._motors = []
+            self._target_speed_percent = 0
+            raise RuntimeError(
+                "Automatic reconnect failed: no configured motors are connected"
+            )
+
+        self._motors = list(self._connected)
+        self._active = True
+        self._target_speed_percent = target_speed_percent
+        self._apply_speed_locked(self._target_speed_percent)
+        logger.info(
+            "Motor service auto-reconnected on %s with active IDs: %s",
+            self._cfg.can_channel,
+            [item.motor_id for item in self._motors],
+        )
+
     def _ensure_initialized_locked(self) -> None:
         if self._initialized:
             return
@@ -361,7 +384,11 @@ class MotorService:
     def _reset_connection_locked(self) -> None:
         self._signal_keepalive_stop_locked()
         self._active = False
+        self._teardown_all_motors_locked()
+        self._keepalive_thread = None
+        self._keepalive_stop = Event()
 
+    def _teardown_all_motors_locked(self) -> None:
         by_id: dict[int, _ManagedMotor] = {}
         for item in self._connected:
             by_id[item.motor_id] = item
@@ -385,8 +412,6 @@ class MotorService:
         self._initialized = False
         self._max_motor_velocity_rad_s = 0.0
         self._target_speed_percent = 0
-        self._keepalive_thread = None
-        self._keepalive_stop = Event()
 
 
 def _safe_exit(motor: CubeMarsServoCAN) -> None:

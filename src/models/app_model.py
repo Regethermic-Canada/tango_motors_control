@@ -38,6 +38,7 @@ class AppModel:
         self.speed_percent = 0
         self.speed_percent_max = 100
         self.is_motors_running = False
+        self._motors_armed = False
         self.theme_mode = ft.ThemeMode.DARK
         self.theme_color = ft.Colors.BLUE
         self.locale = "en"
@@ -188,13 +189,16 @@ class AppModel:
             self._motor_service.start(initial_speed_percent=self.speed_percent)
             self.is_motors_running = self._motor_service.is_running()
             if self.is_motors_running:
+                self._motors_armed = True
                 return MotorActionResult(action=MotorAction.STARTED)
+            self._motors_armed = False
             return MotorActionResult(
                 action=MotorAction.START_FAILED,
                 error="Motor service did not enter running state",
             )
         except Exception as ex:
             self.is_motors_running = False
+            self._motors_armed = False
             logger.exception("Motor startup failed")
             if "No configured motors are connected" in str(ex):
                 return MotorActionResult(
@@ -206,6 +210,7 @@ class AppModel:
         try:
             self._motor_service.stop()
             self.is_motors_running = False
+            self._motors_armed = False
             return MotorActionResult(action=MotorAction.STOPPED)
         except Exception as ex:
             logger.exception("Motor shutdown failed")
@@ -215,6 +220,7 @@ class AppModel:
         try:
             self._motor_service.shutdown()
             self.is_motors_running = False
+            self._motors_armed = False
         except Exception:
             logger.exception("Motor full shutdown failed")
 
@@ -238,10 +244,30 @@ class AppModel:
 
     def _apply_speed_to_motors(self) -> None:
         try:
-            self.speed_percent = self._level_to_percent(self.speed_level)
-            self.speed_percent = self._motor_service.set_speed_percent(
-                self.speed_percent
-            )
+            target_percent = self._level_to_percent(self.speed_level)
+
+            if target_percent == 0:
+                self.speed_percent = 0
+                if self.is_motors_running:
+                    self._motor_service.stop()
+                    self.is_motors_running = False
+                    logger.info("Speed reached 0%%; motors auto-stopped")
+                return
+
+            self.speed_percent = target_percent
+            if not self.is_motors_running and self._motors_armed:
+                self._motor_service.start(initial_speed_percent=target_percent)
+                self.is_motors_running = self._motor_service.is_running()
+                if self.is_motors_running:
+                    logger.info(
+                        "Speed left 0%% while armed; motors auto-started at %s%%",
+                        target_percent,
+                    )
+
+            if self.is_motors_running:
+                self.speed_percent = self._motor_service.set_speed_percent(
+                    target_percent
+                )
         except Exception:
             logger.exception("Failed to apply speed command to motors")
 
