@@ -87,7 +87,6 @@ def App() -> ft.Control:
         ft.context.page.title = "Tango Motors Control"
         ft.context.page.window.maximized = True
         ft.context.page.window.full_screen = True
-        ft.context.page.update()
         # Global interaction tracking
         ft.context.page.on_pointer_down = lambda _: app.reset_timer()  # type: ignore[attr-defined]
         ft.context.page.on_keyboard_event = lambda _: app.reset_timer()
