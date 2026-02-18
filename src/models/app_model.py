@@ -16,9 +16,13 @@ logger: logging.Logger = logging.getLogger(__name__)
 class AppModel:
     def __init__(self, route: str = "/"):
         self.route = route
-        self.speed_min = -100
-        self.speed_max = 100
+        self.speed_min = -10
+        self.speed_max = 10
         self.speed_level = 0
+        self.speed_percent = 0
+        self.speed_percent_min = -100
+        self.speed_percent_max = 100
+        self.is_motors_running = False
         self.theme_mode = ft.ThemeMode.DARK
         self.theme_color = ft.Colors.BLUE
         self.locale = "en"
@@ -42,9 +46,10 @@ class AppModel:
 
         self.locale = config.locale
         self.load_translations()
-        self.speed_min = config.motor_speed_min
-        self.speed_max = config.motor_speed_max
+        self.speed_percent_min = config.motor_speed_min
+        self.speed_percent_max = config.motor_speed_max
         self.speed_level = self._clamp_speed(config.default_speed)
+        self.speed_percent = self._level_to_percent(self.speed_level)
         self._motor_service = MotorService(MotorServiceConfig.from_app_config(config))
 
         logger.info(
@@ -89,13 +94,21 @@ class AppModel:
         self.speed_level = self._clamp_speed(self.speed_level + 1)
         self._apply_speed_to_motors()
         self.reset_timer()
-        logger.info(f"Speed level incremented to {self.speed_level}")
+        logger.info(
+            "Speed level incremented to %s (target=%s%%)",
+            self.speed_level,
+            self.speed_percent,
+        )
 
     def decrement(self) -> None:
         self.speed_level = self._clamp_speed(self.speed_level - 1)
         self._apply_speed_to_motors()
         self.reset_timer()
-        logger.info(f"Speed level decremented to {self.speed_level}")
+        logger.info(
+            "Speed level decremented to %s (target=%s%%)",
+            self.speed_level,
+            self.speed_percent,
+        )
 
     def toggle_theme(self) -> None:
         self.theme_mode = (
@@ -142,21 +155,40 @@ class AppModel:
             self.is_screensaver_active = True
             logger.info("Screensaver activated due to inactivity")
 
+    def sync_motor_state(self) -> None:
+        running = self._motor_service.is_running()
+        if running != self.is_motors_running:
+            self.is_motors_running = running
+            logger.info("Motor running state changed to %s", self.is_motors_running)
+
     def start_motors(self) -> None:
         try:
-            self._motor_service.start(initial_speed_percent=self.speed_level)
+            self._motor_service.start(initial_speed_percent=self.speed_percent)
+            self.is_motors_running = self._motor_service.is_running()
         except Exception:
+            self.is_motors_running = False
             logger.exception("Motor startup failed")
 
     def stop_motors(self) -> None:
         try:
             self._motor_service.stop()
+            self.is_motors_running = False
         except Exception:
             logger.exception("Motor shutdown failed")
 
+    def toggle_motors(self) -> None:
+        if self.is_motors_running:
+            self.stop_motors()
+        else:
+            self.start_motors()
+        self.reset_timer()
+
     def _apply_speed_to_motors(self) -> None:
         try:
-            self.speed_level = self._motor_service.set_speed_percent(self.speed_level)
+            self.speed_percent = self._level_to_percent(self.speed_level)
+            self.speed_percent = self._motor_service.set_speed_percent(
+                self.speed_percent
+            )
         except Exception:
             logger.exception("Failed to apply speed command to motors")
 
@@ -164,3 +196,20 @@ class AppModel:
         low = min(self.speed_min, self.speed_max)
         high = max(self.speed_min, self.speed_max)
         return max(low, min(speed, high))
+
+    def _level_to_percent(self, level: int) -> int:
+        level = self._clamp_speed(level)
+        if level == 0:
+            return 0
+
+        positive_bound = max(0, self.speed_percent_max)
+        negative_bound = min(0, self.speed_percent_min)
+
+        if level > 0:
+            if self.speed_max <= 0:
+                return 0
+            return int(round((level / self.speed_max) * positive_bound))
+
+        if self.speed_min >= 0:
+            return 0
+        return int(round((level / abs(self.speed_min)) * abs(negative_bound)))

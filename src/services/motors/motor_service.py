@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from threading import RLock
+from threading import Event, RLock, Thread
 
 from cubemars_servo_can import CubeMarsServoCAN
 
@@ -18,6 +18,7 @@ class MotorServiceConfig:
     can_channel: str
     motor_ids: tuple[int, ...]
     motor_directions: tuple[int, ...]
+    command_hz: float
     speed_min: int
     speed_max: int
     max_mosfet_temp_c: float
@@ -48,6 +49,7 @@ class MotorServiceConfig:
             can_channel=app_config.motor_can_channel,
             motor_ids=tuple(ids),
             motor_directions=tuple(directions),
+            command_hz=max(1.0, app_config.motor_command_hz),
             speed_min=speed_min,
             speed_max=speed_max,
             max_mosfet_temp_c=app_config.motor_max_temp_c,
@@ -92,6 +94,9 @@ class MotorService:
         self._active = False
         self._motors: list[_ManagedMotor] = []
         self._max_motor_velocity_rad_s = 0.0
+        self._target_speed_percent = 0
+        self._keepalive_stop = Event()
+        self._keepalive_thread: Thread | None = None
 
     def start(self, initial_speed_percent: int = 0) -> None:
         if not self._cfg.enabled:
@@ -147,7 +152,9 @@ class MotorService:
             self._max_motor_velocity_rad_s = min(
                 _motor_velocity_limit_rad_s(item.motor) for item in connected
             )
-            self._apply_speed_locked(initial_speed_percent)
+            self._target_speed_percent = self._clamp_speed(initial_speed_percent)
+            self._apply_speed_locked(self._target_speed_percent)
+            self._start_keepalive_loop_locked()
             logger.info(
                 "Motor service started on %s with active IDs: %s",
                 self._cfg.can_channel,
@@ -158,10 +165,22 @@ class MotorService:
         if not self._cfg.enabled:
             return
 
+        stop_evt: Event | None = None
+        keepalive_thread: Thread | None = None
         with self._lock:
             if not self._active:
                 return
 
+            stop_evt = self._keepalive_stop
+            keepalive_thread = self._keepalive_thread
+            self._target_speed_percent = 0
+
+        if stop_evt is not None:
+            stop_evt.set()
+        if keepalive_thread is not None:
+            keepalive_thread.join(timeout=1.0)
+
+        with self._lock:
             motors = list(self._motors)
             can_ref = motors[0].motor if motors else None
             try:
@@ -178,6 +197,9 @@ class MotorService:
                 self._motors = []
                 self._active = False
                 self._max_motor_velocity_rad_s = 0.0
+                self._target_speed_percent = 0
+                self._keepalive_thread = None
+                self._keepalive_stop = Event()
                 logger.info("Motor service stopped")
 
     def set_speed_percent(self, speed_percent: int) -> int:
@@ -185,10 +207,12 @@ class MotorService:
             return speed_percent
 
         with self._lock:
+            clamped_speed = self._clamp_speed(speed_percent)
+            self._target_speed_percent = clamped_speed
             if not self._active:
-                logger.debug("Ignoring speed command while motor service is inactive")
-                return self._clamp_speed(speed_percent)
-            return self._apply_speed_locked(speed_percent)
+                logger.debug("Speed updated while motor service inactive")
+                return clamped_speed
+            return self._apply_speed_locked(clamped_speed)
 
     def _clamp_speed(self, speed_percent: int) -> int:
         return max(self._cfg.speed_min, min(speed_percent, self._cfg.speed_max))
@@ -228,6 +252,8 @@ class MotorService:
                 _close_can_manager(can_ref)
                 self._active = False
                 self._max_motor_velocity_rad_s = 0.0
+                self._target_speed_percent = 0
+                self._keepalive_stop.set()
                 raise RuntimeError("All configured motors became unavailable")
 
             self._max_motor_velocity_rad_s = min(
@@ -235,6 +261,31 @@ class MotorService:
             )
 
         return clamped_speed
+
+    def is_running(self) -> bool:
+        return self._active
+
+    def _start_keepalive_loop_locked(self) -> None:
+        self._keepalive_stop = Event()
+        self._keepalive_thread = Thread(
+            target=self._keepalive_loop,
+            name="motor-keepalive",
+            daemon=True,
+        )
+        self._keepalive_thread.start()
+
+    def _keepalive_loop(self) -> None:
+        period_s = 1.0 / max(1.0, self._cfg.command_hz)
+        while not self._keepalive_stop.wait(period_s):
+            with self._lock:
+                if not self._active:
+                    return
+                try:
+                    self._apply_speed_locked(self._target_speed_percent)
+                except Exception:
+                    logger.exception("Motor keepalive command failed")
+                    if not self._active:
+                        return
 
 
 def _safe_exit(motor: CubeMarsServoCAN) -> None:
