@@ -49,18 +49,16 @@ MOTOR_TYPE=AK40-10
 MOTOR_CAN_CHANNEL=can0
 MOTOR_IDS=1,2
 MOTOR_DIRECTIONS=1,-1
-MOTOR_COMMAND_HZ=20
-MOTOR_MIN_STEP_SPEED=-10
+MOTOR_COMMAND_HZ=2
 MOTOR_MAX_STEP_SPEED=10
-MOTOR_SPEED_MIN=-100
-MOTOR_SPEED_MAX=100
+MOTOR_MAX_SPEED=100
 ```
 
 `MOTOR_IDS` and `MOTOR_DIRECTIONS` must have the same number of entries.
 Example: `MOTOR_IDS=1,2,3,4` with `MOTOR_DIRECTIONS=1,-1,1,-1`.
 
-In UI, speed is configurable with `MOTOR_MIN_STEP_SPEED..MOTOR_MAX_STEP_SPEED` and is
-scaled to `MOTOR_SPEED_MIN..MOTOR_SPEED_MAX` (%).
+In UI, speed is configurable with `-MOTOR_MAX_STEP_SPEED..+MOTOR_MAX_STEP_SPEED` and is
+scaled to `-MOTOR_MAX_SPEED..+MOTOR_MAX_SPEED` (%).
 Use the `Start Motors` / `Stop Motors` button to run or stop commands.
 
 For complete motor/CAN setup (hardware wiring, CAN interface bring-up, usage and safety flow),

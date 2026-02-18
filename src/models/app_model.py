@@ -36,7 +36,6 @@ class AppModel:
         self.speed_max = 10
         self.speed_level = 0
         self.speed_percent = 0
-        self.speed_percent_min = -100
         self.speed_percent_max = 100
         self.is_motors_running = False
         self.theme_mode = ft.ThemeMode.DARK
@@ -62,10 +61,9 @@ class AppModel:
 
         self.locale = config.locale
         self.load_translations()
-        self.speed_min = config.motor_min_step_speed
-        self.speed_max = config.motor_max_step_speed
-        self.speed_percent_min = config.motor_speed_min
-        self.speed_percent_max = config.motor_speed_max
+        self.speed_max = abs(config.motor_max_step_speed)
+        self.speed_min = -self.speed_max
+        self.speed_percent_max = abs(config.motor_max_speed)
         self.speed_level = self._clamp_speed(config.default_speed)
         self.speed_percent = self._level_to_percent(self.speed_level)
         self._motor_service = MotorService(MotorServiceConfig.from_app_config(config))
@@ -254,17 +252,7 @@ class AppModel:
 
     def _level_to_percent(self, level: int) -> int:
         level = self._clamp_speed(level)
-        if level == 0:
+        if level == 0 or self.speed_max <= 0 or self.speed_percent_max <= 0:
             return 0
 
-        positive_bound = max(0, self.speed_percent_max)
-        negative_bound = min(0, self.speed_percent_min)
-
-        if level > 0:
-            if self.speed_max <= 0:
-                return 0
-            return int(round((level / self.speed_max) * positive_bound))
-
-        if self.speed_min >= 0:
-            return 0
-        return int(round((level / abs(self.speed_min)) * abs(negative_bound)))
+        return int(round((level / self.speed_max) * self.speed_percent_max))

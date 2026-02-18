@@ -19,17 +19,11 @@ class MotorServiceConfig:
     motor_ids: tuple[int, ...]
     motor_directions: tuple[int, ...]
     command_hz: float
-    speed_min: int
-    speed_max: int
+    max_speed_percent: int
     max_mosfet_temp_c: float
 
     @classmethod
     def from_app_config(cls, app_config: Config) -> "MotorServiceConfig":
-        speed_min = app_config.motor_speed_min
-        speed_max = app_config.motor_speed_max
-        if speed_min > speed_max:
-            speed_min, speed_max = speed_max, speed_min
-
         # Keep ID order stable and drop duplicates.
         seen_ids: set[int] = set()
         ids: list[int] = []
@@ -50,14 +44,13 @@ class MotorServiceConfig:
             motor_ids=tuple(ids),
             motor_directions=tuple(directions),
             command_hz=max(1.0, app_config.motor_command_hz),
-            speed_min=speed_min,
-            speed_max=speed_max,
+            max_speed_percent=max(0, abs(app_config.motor_max_speed)),
             max_mosfet_temp_c=app_config.motor_max_temp_c,
         )
 
     @property
     def speed_domain(self) -> int:
-        return max(abs(self.speed_min), abs(self.speed_max), 1)
+        return max(self.max_speed_percent, 1)
 
     @property
     def motor_targets(self) -> list[tuple[int, int]]:
@@ -229,7 +222,10 @@ class MotorService:
             return self._apply_speed_locked(clamped_speed)
 
     def _clamp_speed(self, speed_percent: int) -> int:
-        return max(self._cfg.speed_min, min(speed_percent, self._cfg.speed_max))
+        return max(
+            -self._cfg.max_speed_percent,
+            min(speed_percent, self._cfg.max_speed_percent),
+        )
 
     def _apply_speed_locked(self, speed_percent: int) -> int:
         if not self._motors:

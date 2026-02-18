@@ -14,7 +14,7 @@ THEME_MODE=DARK
 THEME_COLOR=BLUE
 # App Language (fr | en)
 LOCALE=fr
-# Default UI speed level on startup (between MOTOR_MIN_STEP_SPEED and MOTOR_MAX_STEP_SPEED)
+# Default UI speed level on startup (between -MOTOR_MAX_STEP_SPEED and +MOTOR_MAX_STEP_SPEED)
 DEFAULT_SPEED=0
 # Admin Passcode Hash (Argon2)
 ADMIN_PASSCODE_HASH=
@@ -48,13 +48,11 @@ MOTOR_IDS=1,2
 # Direction multipliers (CSV). Must match MOTOR_IDS count (1:1).
 # Example for 4 mirrored motors: 1,-1,1,-1
 MOTOR_DIRECTIONS=1,-1
-# Keep-alive command rate in Hz (maintains velocity mode)
-MOTOR_COMMAND_HZ=20
-# UI speed level bounds (number shown in interface).
-MOTOR_MIN_STEP_SPEED=-10
+# Motor command/update rate in Hz while running velocity mode.
+MOTOR_COMMAND_HZ=2
+# UI speed level max absolute value shown in interface.
 MOTOR_MAX_STEP_SPEED=10
-# Effective motor speed bounds in percent used by scaling from UI level.
-MOTOR_SPEED_MIN=-100
-MOTOR_SPEED_MAX=100
+# Effective motor speed max absolute percent used by scaling from UI level.
+MOTOR_MAX_SPEED=100
 # Safety max MOSFET temperature in Celsius
 MOTOR_MAX_TEMP_C=70.0
