@@ -37,7 +37,7 @@ mkdir -p "${LABWC_DIR}"
 
 # 2) Write labwc autostart script
 echo "Writing kiosk autostart..."
-cat > "${AUTOSTART_FILE}" <<EOF
+cat >"${AUTOSTART_FILE}" <<EOF
 #!/usr/bin/env bash
 
 export NO_AT_BRIDGE=1
@@ -63,8 +63,8 @@ echo
 
 echo "The system will shut down in:"
 for i in {5..1}; do
-  echo "  -> ${i} s"
-  sleep 1
+	echo "  -> ${i} s"
+	sleep 1
 done
 
-sudo poweroff
+exec sudo reboot
