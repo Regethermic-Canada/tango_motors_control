@@ -6,13 +6,16 @@ from contexts.route import RouteContext
 from contexts.theme import ThemeContext
 from models.controls import NavItem
 from models.app_model import AppModel
+from utils.ui_scale import get_viewport_metrics
 
 
 @ft.component
 def LanguageSelector() -> ft.Control:
     loc = ft.use_context(LocaleContext)
+    metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
     return ft.PopupMenuButton(
         icon=ft.Icons.LANGUAGE,
+        icon_size=int(round(24 * metrics.scale)),
         tooltip=loc.t("select_language"),
         items=[
             ft.PopupMenuItem(
@@ -32,15 +35,19 @@ def LanguageSelector() -> ft.Control:
 @ft.component
 def Group(item: NavItem, selected: bool) -> ft.Control:
     route_context = ft.use_context(RouteContext)
+    metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
+    group_padding = int(round((8 if metrics.compact else 10) * metrics.scale))
+    group_radius = int(round((4 if metrics.compact else 5) * metrics.scale))
+    icon_size = int(round(22 * metrics.scale))
     return ft.Container(
         ink=True,
-        padding=10,
-        border_radius=5,
+        padding=group_padding,
+        border_radius=group_radius,
         tooltip=item.label,
         bgcolor=ft.Colors.SECONDARY_CONTAINER if selected else ft.Colors.TRANSPARENT,
         content=ft.Row(
             [
-                ft.Icon(item.selected_icon if selected else item.icon),
+                ft.Icon(item.selected_icon if selected else item.icon, size=icon_size),
             ],
             alignment=ft.MainAxisAlignment.CENTER,
         ),
@@ -50,11 +57,13 @@ def Group(item: NavItem, selected: bool) -> ft.Control:
 
 @ft.component
 def Groups(nav_items: list[NavItem], selected_name: str | None) -> ft.Control:
+    metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
+    nav_width = int(round((52 if metrics.compact else 60) * metrics.scale))
     return ft.Column(
         expand=True,
         spacing=0,
         scroll=ft.ScrollMode.ALWAYS,
-        width=60,
+        width=nav_width,
         controls=[
             Group(item, selected=(item.name == selected_name)) for item in nav_items
         ],
@@ -83,6 +92,7 @@ def PopupColorItem(color: ft.Colors, name_key: str) -> ft.PopupMenuItem:
 @ft.component
 def AdminModeToggle(app_model: AppModel) -> ft.Control:
     loc = ft.use_context(LocaleContext)
+    metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
     is_admin = app_model.route in ["/admin", "/auth"]
 
     def on_admin_click(_: Any) -> None:
@@ -93,6 +103,7 @@ def AdminModeToggle(app_model: AppModel) -> ft.Control:
 
     return ft.IconButton(
         icon=ft.Icons.SETTINGS if not is_admin else ft.Icons.HOME,
+        icon_size=int(round(24 * metrics.scale)),
         tooltip=loc.t("admin_settings") if not is_admin else loc.t("main_view"),
         on_click=on_admin_click,
     )
@@ -102,6 +113,7 @@ def AdminModeToggle(app_model: AppModel) -> ft.Control:
 def ThemeModeToggle() -> ft.Control:
     theme = ft.use_context(ThemeContext)
     loc = ft.use_context(LocaleContext)
+    metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
 
     tooltip_key = "light_mode" if theme.mode == ft.ThemeMode.DARK else "dark_mode"
 
@@ -111,6 +123,7 @@ def ThemeModeToggle() -> ft.Control:
             if theme.mode == ft.ThemeMode.DARK
             else ft.Icons.LIGHT_MODE
         ),
+        icon_size=int(round(24 * metrics.scale)),
         tooltip=loc.t(tooltip_key),
         on_click=lambda _: theme.toggle_mode(),
     )
@@ -120,6 +133,7 @@ def ThemeModeToggle() -> ft.Control:
 def ThemeSeedColor() -> ft.Control:
     theme = ft.use_context(ThemeContext)
     loc = ft.use_context(LocaleContext)
+    metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
 
     color_name = "Unknown"
     # Find the key for the current color
@@ -140,6 +154,7 @@ def ThemeSeedColor() -> ft.Control:
 
     return ft.PopupMenuButton(
         icon=ft.Icons.COLOR_LENS_OUTLINED,
+        icon_size=int(round(24 * metrics.scale)),
         tooltip=f"{loc.t('theme_color')}: {color_name}",
         items=[
             PopupColorItem(color=ft.Colors.DEEP_PURPLE, name_key="purple"),

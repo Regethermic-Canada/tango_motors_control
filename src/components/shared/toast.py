@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 import flet as ft
+from utils.ui_scale import get_viewport_metrics
 
 
 class ToastType(Enum):
@@ -33,6 +34,24 @@ def show_toast(
     close_tooltip: str = "Close",
     dedupe_window_s: float = 1.5,
 ) -> None:
+    metrics = get_viewport_metrics(page, min_scale=0.7)
+
+    toast_width = min(
+        340 if metrics.compact else 400,
+        max(260, int(metrics.width - (position_right * 2) - 8)),
+    )
+    toast_icon_size = int(round(28 * metrics.scale))
+    toast_text_size = int(round(18 * metrics.scale))
+    close_icon_size = int(round(24 * metrics.scale))
+    row_spacing = int(round(15 * metrics.scale))
+    pad_h_left = int(round(25 * metrics.scale))
+    pad_v = int(round(15 * metrics.scale))
+    pad_h_right = int(round(20 * metrics.scale))
+    border_radius = int(round(12 * metrics.scale))
+    shadow_blur = int(round(15 * metrics.scale))
+    top_offset = int(round(position_top * metrics.scale))
+    right_offset = int(round(position_right * metrics.scale))
+
     page_key = id(page)
     toast_key = f"{type.value}:{message}"
     now = time.monotonic()
@@ -83,37 +102,37 @@ def show_toast(
     toast_container = ft.Container(
         content=ft.Row(
             [
-                ft.Icon(icon, color="white", size=28),
+                ft.Icon(icon, color="white", size=toast_icon_size),
                 ft.VerticalDivider(width=1, color="white24"),
                 ft.Text(
                     message,
                     color="white",
-                    size=18,
+                    size=toast_text_size,
                     weight=ft.FontWeight.W_600,
                     expand=True,
                 ),
                 ft.IconButton(
                     icon=ft.Icons.CLOSE,
                     icon_color="white",
-                    icon_size=24,
+                    icon_size=close_icon_size,
                     tooltip=close_tooltip,
                     on_click=close_toast,
                 ),
             ],
             tight=True,
-            spacing=15,
+            spacing=row_spacing,
         ),
         bgcolor=bg_color,
-        padding=ft.Padding(25, 15, 20, 15),
-        border_radius=12,
-        width=400,
-        shadow=ft.BoxShadow(blur_radius=15, spread_radius=1, color="black26"),
+        padding=ft.Padding(pad_h_left, pad_v, pad_h_right, pad_v),
+        border_radius=border_radius,
+        width=toast_width,
+        shadow=ft.BoxShadow(blur_radius=shadow_blur, spread_radius=1, color="black26"),
         animate_opacity=300,
         animate_offset=ft.Animation(300, ft.AnimationCurve.DECELERATE),
         opacity=0,
         offset=ft.Offset(0, -1),
-        top=position_top,
-        right=position_right,
+        top=top_offset,
+        right=right_offset,
     )
 
     _active_toasts[page_key] = _ToastRuntime(

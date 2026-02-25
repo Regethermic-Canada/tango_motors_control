@@ -7,6 +7,7 @@ from argon2.exceptions import VerifyMismatchError
 from models.app_model import AppModel
 from contexts.locale import LocaleContext
 from utils.config import config
+from utils.ui_scale import get_viewport_metrics
 from components.shared.numpad import NumericNumpad
 from components.shared.toast import show_toast, ToastType
 
@@ -93,23 +94,35 @@ def AuthView(app_model: AppModel) -> ft.Control:
     for i in range(4):
         dots += "● " if i < len(passcode) else "○ "
 
+    metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
+
+    root_spacing = int(round(20 * metrics.scale))
+    header_spacing = int(round(10 * metrics.scale))
+    content_spacing = int(round(20 * metrics.scale))
+    lock_icon_size = int(round(50 * metrics.scale))
+    title_font_size = int(round((26 if metrics.compact else 32) * metrics.scale))
+    dots_font_size = int(round((30 if metrics.compact else 40) * metrics.scale))
+    dots_letter_spacing = int(round((7 if metrics.compact else 10) * metrics.scale))
+
     return ft.Container(
         expand=True,
         content=ft.Column(
             alignment=ft.MainAxisAlignment.CENTER,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            spacing=20,
+            spacing=root_spacing,
             controls=[
                 ft.Column(
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=10,
+                    spacing=header_spacing,
                     controls=[
                         ft.Icon(
-                            ft.Icons.LOCK_OUTLINED, size=50, color=ft.Colors.PRIMARY
+                            ft.Icons.LOCK_OUTLINED,
+                            size=lock_icon_size,
+                            color=ft.Colors.PRIMARY,
                         ),
                         ft.Text(
                             loc.t("admin_access"),
-                            theme_style=ft.TextThemeStyle.HEADLINE_MEDIUM,
+                            size=title_font_size,
                             weight=ft.FontWeight.BOLD,
                         ),
                     ],
@@ -117,7 +130,7 @@ def AuthView(app_model: AppModel) -> ft.Control:
                 ft.Container(
                     content=ft.Column(
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                        spacing=20,
+                        spacing=content_spacing,
                         controls=[
                             ft.Container(
                                 content=ft.Row(
@@ -125,8 +138,10 @@ def AuthView(app_model: AppModel) -> ft.Control:
                                     controls=[
                                         ft.Text(
                                             dots.strip(),
-                                            size=40,
-                                            style=ft.TextStyle(letter_spacing=10),
+                                            size=dots_font_size,
+                                            style=ft.TextStyle(
+                                                letter_spacing=dots_letter_spacing
+                                            ),
                                             color=(
                                                 ft.Colors.PRIMARY
                                                 if passcode

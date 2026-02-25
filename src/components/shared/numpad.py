@@ -1,16 +1,24 @@
 from typing import Any, Callable
 import flet as ft
+from utils.ui_scale import get_viewport_metrics
 
 
 class DigitButton(ft.TextButton):
-    def __init__(self, text: str, on_click: Callable[[Any], None]) -> None:
+    def __init__(
+        self,
+        text: str,
+        on_click: Callable[[Any], None],
+        *,
+        font_size: int,
+        padding: int,
+    ) -> None:
         super().__init__()
         self.text = text
         self.on_click = on_click
-        self.content = ft.Text(text, size=48, weight=ft.FontWeight.W_500)
+        self.content = ft.Text(text, size=font_size, weight=ft.FontWeight.W_500)
         self.style = ft.ButtonStyle(
             shape=ft.CircleBorder(),
-            padding=ft.Padding(40, 40, 40, 40),
+            padding=ft.Padding(padding, padding, padding, padding),
         )
 
 
@@ -20,6 +28,16 @@ def NumericNumpad(
     on_backspace_click: Callable[[], None],
     on_clear_click: Callable[[], None],
 ) -> ft.Control:
+    metrics = get_viewport_metrics(ft.context.page, min_scale=0.62)
+
+    numpad_width = min(
+        450,
+        max(320 if metrics.compact else 360, int(metrics.width * 0.48)),
+    )
+    row_spacing = int(round(20 * metrics.scale))
+    digit_font_size = int(round(48 * metrics.scale))
+    digit_padding = int(round(40 * metrics.scale))
+    action_icon_size = int(round(48 * metrics.scale))
 
     def handle_digit(e: Any) -> None:
         digit = getattr(e.control, "text", "")
@@ -31,50 +49,59 @@ def NumericNumpad(
     def handle_clear(e: Any) -> None:
         on_clear_click()
 
+    def digit(text: str) -> DigitButton:
+        return DigitButton(
+            text,
+            handle_digit,
+            font_size=digit_font_size,
+            padding=digit_padding,
+        )
+
+    def action_button(
+        icon: ft.IconData, on_click: Callable[[Any], None]
+    ) -> ft.IconButton:
+        return ft.IconButton(
+            icon=icon,
+            on_click=on_click,
+            icon_size=action_icon_size,
+        )
+
     return ft.Container(
-        width=450,
+        width=numpad_width,
         content=ft.Column(
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            spacing=20,
+            spacing=row_spacing,
             controls=[
                 ft.Row(
                     alignment=ft.MainAxisAlignment.SPACE_EVENLY,
                     controls=[
-                        DigitButton("1", handle_digit),
-                        DigitButton("2", handle_digit),
-                        DigitButton("3", handle_digit),
+                        digit("1"),
+                        digit("2"),
+                        digit("3"),
                     ],
                 ),
                 ft.Row(
                     alignment=ft.MainAxisAlignment.SPACE_EVENLY,
                     controls=[
-                        DigitButton("4", handle_digit),
-                        DigitButton("5", handle_digit),
-                        DigitButton("6", handle_digit),
+                        digit("4"),
+                        digit("5"),
+                        digit("6"),
                     ],
                 ),
                 ft.Row(
                     alignment=ft.MainAxisAlignment.SPACE_EVENLY,
                     controls=[
-                        DigitButton("7", handle_digit),
-                        DigitButton("8", handle_digit),
-                        DigitButton("9", handle_digit),
+                        digit("7"),
+                        digit("8"),
+                        digit("9"),
                     ],
                 ),
                 ft.Row(
                     alignment=ft.MainAxisAlignment.SPACE_EVENLY,
                     controls=[
-                        ft.IconButton(
-                            icon=ft.Icons.BACKSPACE_OUTLINED,
-                            on_click=handle_backspace,
-                            icon_size=48,
-                        ),
-                        DigitButton("0", handle_digit),
-                        ft.IconButton(
-                            icon=ft.Icons.CLEAR_ALL,
-                            on_click=handle_clear,
-                            icon_size=48,
-                        ),
+                        action_button(ft.Icons.BACKSPACE_OUTLINED, handle_backspace),
+                        digit("0"),
+                        action_button(ft.Icons.CLEAR_ALL, handle_clear),
                     ],
                 ),
             ],

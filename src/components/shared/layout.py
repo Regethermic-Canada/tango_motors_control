@@ -1,5 +1,6 @@
 import flet as ft
 from models.app_model import AppModel
+from utils.ui_scale import get_viewport_metrics
 from .navigation import (
     LanguageSelector,
     ThemeModeToggle,
@@ -14,6 +15,12 @@ from utils.config import config
 def Layout(app_model: AppModel, content: ft.Control) -> ft.Control:
     ASSET_LOGO = config.asset_logo
     ASSET_SCREENSAVER = config.asset_screensaver
+    metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
+
+    logo_bottom_padding = int(round(60 * metrics.scale))
+    logo_width = int(round((280 if metrics.compact else 400) * metrics.scale))
+    header_top = int(round(20 * metrics.scale))
+    header_right = int(round(20 * metrics.scale))
 
     return ft.Container(
         expand=True,
@@ -25,9 +32,13 @@ def Layout(app_model: AppModel, content: ft.Control) -> ft.Control:
                 ft.Container(
                     expand=True,
                     alignment=ft.Alignment.BOTTOM_CENTER,
-                    padding=ft.Padding(0, 0, 0, 60),
+                    padding=ft.Padding(0, 0, 0, logo_bottom_padding),
                     opacity=0.1,
-                    content=ft.Image(src=ASSET_LOGO, width=400, fit=ft.BoxFit.CONTAIN),
+                    content=ft.Image(
+                        src=ASSET_LOGO,
+                        width=logo_width,
+                        fit=ft.BoxFit.CONTAIN,
+                    ),
                 ),
                 # 2. Page Content
                 ft.Container(
@@ -45,8 +56,8 @@ def Layout(app_model: AppModel, content: ft.Control) -> ft.Control:
                         ],
                         alignment=ft.MainAxisAlignment.END,
                     ),
-                    top=20,
-                    right=20,
+                    top=header_top,
+                    right=header_right,
                 ),
                 # 4. Global Screensaver Overlay
                 *(

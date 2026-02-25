@@ -3,12 +3,32 @@ import flet as ft
 from models.app_model import AppModel, MotorAction
 from contexts.locale import LocaleContext
 from components.shared.toast import ToastType, show_toast
+from utils.ui_scale import get_viewport_metrics
 
 
 @ft.component
 def MotorsView(model: AppModel) -> ft.Control:
     loc = ft.use_context(LocaleContext)
+    metrics = get_viewport_metrics(ft.context.page, min_scale=0.68)
     is_running = model.is_motors_running
+
+    content_spacing = int(round((10 if metrics.compact else 14) * metrics.scale))
+    speed_label_size = int(round((16 if metrics.compact else 20) * metrics.scale))
+    speed_value_size = int(round((58 if metrics.compact else 80) * metrics.scale))
+    speed_percent_size = int(round((18 if metrics.compact else 22) * metrics.scale))
+    status_size = int(round((12 if metrics.compact else 14) * metrics.scale))
+    button_text_size = int(round((16 if metrics.compact else 18) * metrics.scale))
+    button_h_pad = int(round((18 if metrics.compact else 24) * metrics.scale))
+    button_v_pad = int(round((12 if metrics.compact else 14) * metrics.scale))
+    button_width = min(
+        420,
+        max(
+            240 if metrics.compact else 280,
+            int(metrics.width * (0.72 if metrics.compact else 0.5)),
+        ),
+    )
+    step_icon_size = int(round((34 if metrics.compact else 40) * metrics.scale))
+    step_spacing = int(round((24 if metrics.compact else 40) * metrics.scale))
 
     def on_toggle_click(_: Any) -> None:
         result = model.toggle_motors()
@@ -39,26 +59,43 @@ def MotorsView(model: AppModel) -> ft.Control:
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         alignment=ft.MainAxisAlignment.CENTER,
         tight=True,
+        spacing=content_spacing,
         controls=[
             ft.Text(
                 loc.t("speed"),
-                size=20,
+                size=speed_label_size,
                 color=ft.Colors.ON_SURFACE_VARIANT,
             ),
             ft.Text(
                 value=str(model.speed_level),
-                size=80,
+                size=speed_value_size,
                 weight=ft.FontWeight.BOLD,
             ),
             ft.Text(
                 value=f"{model.speed_percent}%",
-                size=22,
+                size=speed_percent_size,
                 color=ft.Colors.ON_SURFACE_VARIANT,
             ),
-            ft.FilledButton(
-                content=loc.t("stop_motors") if is_running else loc.t("start_motors"),
-                icon=ft.Icons.STOP if is_running else ft.Icons.PLAY_ARROW,
-                on_click=on_toggle_click,
+            ft.Container(
+                width=button_width,
+                content=ft.FilledButton(
+                    expand=True,
+                    content=ft.Text(
+                        loc.t("stop_motors") if is_running else loc.t("start_motors"),
+                        size=button_text_size,
+                        text_align=ft.TextAlign.CENTER,
+                    ),
+                    icon=ft.Icons.STOP if is_running else ft.Icons.PLAY_ARROW,
+                    on_click=on_toggle_click,
+                    style=ft.ButtonStyle(
+                        padding=ft.Padding(
+                            button_h_pad,
+                            button_v_pad,
+                            button_h_pad,
+                            button_v_pad,
+                        )
+                    ),
+                ),
             ),
             ft.Text(
                 value=(
@@ -66,26 +103,26 @@ def MotorsView(model: AppModel) -> ft.Control:
                     if is_running
                     else loc.t("motor_status_stopped")
                 ),
-                size=14,
+                size=status_size,
                 color=ft.Colors.ON_SURFACE_VARIANT,
             ),
             ft.Row(
                 controls=[
                     ft.IconButton(
                         icon=ft.Icons.REMOVE,
-                        icon_size=40,
+                        icon_size=step_icon_size,
                         on_click=lambda _: model.decrement(),
                         tooltip=loc.t("decrement"),
                     ),
                     ft.IconButton(
                         icon=ft.Icons.ADD,
-                        icon_size=40,
+                        icon_size=step_icon_size,
                         on_click=lambda _: model.increment(),
                         tooltip=loc.t("increment"),
                     ),
                 ],
                 alignment=ft.MainAxisAlignment.CENTER,
-                spacing=40,
+                spacing=step_spacing,
             ),
         ],
     )
