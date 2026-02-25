@@ -5,7 +5,6 @@ set -euo pipefail
 # kill_kiosk.sh -> Revert labwc kiosk autostart for tango_motors_control
 #  - removes ~/.config/labwc/autostart
 #  - switches LightDM session from labwc to rpd-labwc
-#  - keeps installed packages (libmpv2, uv) untouched
 ###############################################################################
 
 # Configuration
@@ -37,10 +36,6 @@ echo "  ${AUTOSTART_FILE}"
 echo
 echo "LightDM session updated in:"
 echo "  ${LIGHTDM_CONF}"
-echo
-echo "Installed packages were left unchanged:"
-echo "  - libmpv2"
-echo "  - uv"
 echo
 
 echo "The system will shut down in:"
