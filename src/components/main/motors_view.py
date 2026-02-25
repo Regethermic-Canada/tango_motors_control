@@ -25,20 +25,12 @@ def MotorsView(model: AppModel) -> ft.Control:
     button_text_size = int(round((20 if metrics.compact else 18) * metrics.scale))
     button_h_pad = int(round((22 if metrics.compact else 24) * metrics.scale))
     button_v_pad = int(round((14 if metrics.compact else 14) * metrics.scale))
-    button_height = max(
-        int(round((58 if metrics.compact else 54) * metrics.scale)),
-        int(round(button_text_size * 1.4)) + (button_v_pad * 2),
-    )
     button_width = min(
         460,
         max(
             300 if metrics.compact else 280,
             int(metrics.width * (0.82 if metrics.compact else 0.5)),
         ),
-    )
-    status_line_height = max(
-        int(round((26 if metrics.compact else 22) * metrics.scale)),
-        int(round(status_size * 1.4)),
     )
     step_icon_size = int(round((46 if metrics.compact else 40) * metrics.scale))
     step_spacing = int(round((32 if metrics.compact else 40) * metrics.scale))
@@ -91,15 +83,12 @@ def MotorsView(model: AppModel) -> ft.Control:
             ),
             ft.Container(
                 width=button_width,
-                height=button_height,
-                alignment=ft.Alignment.CENTER,
                 content=ft.FilledButton(
                     expand=True,
                     content=ft.Text(
                         loc.t("stop_motors") if is_running else loc.t("start_motors"),
                         size=button_text_size,
                         text_align=ft.TextAlign.CENTER,
-                        no_wrap=True,
                     ),
                     icon=ft.Icons.STOP if is_running else ft.Icons.PLAY_ARROW,
                     on_click=on_toggle_click,
@@ -113,21 +102,14 @@ def MotorsView(model: AppModel) -> ft.Control:
                     ),
                 ),
             ),
-            ft.Container(
-                width=button_width,
-                height=status_line_height,
-                alignment=ft.Alignment.CENTER,
-                content=ft.Text(
-                    value=(
-                        loc.t("motor_status_running")
-                        if is_running
-                        else loc.t("motor_status_stopped")
-                    ),
-                    size=status_size,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
-                    text_align=ft.TextAlign.CENTER,
-                    no_wrap=True,
+            ft.Text(
+                value=(
+                    loc.t("motor_status_running")
+                    if is_running
+                    else loc.t("motor_status_stopped")
                 ),
+                size=status_size,
+                color=ft.Colors.ON_SURFACE_VARIANT,
             ),
             ft.Row(
                 controls=[

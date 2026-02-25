@@ -85,28 +85,73 @@ def App() -> ft.Control:
     async def shutdown_motors_task() -> None:
         await asyncio.to_thread(app.shutdown_motors)
 
-    def sync_viewport_size() -> None:
-        set_viewport_size(
-            (
-                float(getattr(ft.context.page, "width", 0) or 0),
-                float(getattr(ft.context.page, "height", 0) or 0),
-            )
+    def get_current_viewport_size() -> tuple[float, float]:
+        return (
+            float(getattr(ft.context.page, "width", 0) or 0),
+            float(getattr(ft.context.page, "height", 0) or 0),
         )
+
+    def sync_viewport_size(*, force: bool = False) -> None:
+        size = get_current_viewport_size()
+        previous = getattr(ft.context.page, "_last_synced_viewport_size", None)
+        if not force and previous == size:
+            return
+        setattr(ft.context.page, "_last_synced_viewport_size", size)
+        set_viewport_size(size)
+
+    async def wait_for_viewport_stable(
+        *,
+        timeout_s: float = 2.0,
+        poll_s: float = 0.12,
+        stable_samples: int = 3,
+    ) -> None:
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + timeout_s
+        previous: tuple[float, float] | None = None
+        stable_count = 0
+
+        while True:
+            current = get_current_viewport_size()
+            if (
+                previous is not None
+                and current != (0.0, 0.0)
+                and abs(current[0] - previous[0]) < 0.5
+                and abs(current[1] - previous[1]) < 0.5
+            ):
+                stable_count += 1
+            else:
+                stable_count = 0
+            previous = current
+
+            if stable_count >= stable_samples or loop.time() >= deadline:
+                return
+
+            await asyncio.sleep(poll_s)
+
+    async def warmup_first_frame_update_task() -> None:
+        # Delay the visible "first reflow" until the window size settles,
+        # then force it before the user's first interaction.
+        await wait_for_viewport_stable()
+        ft.context.page.update()
+        await wait_for_viewport_stable(timeout_s=0.8, stable_samples=2)
+        sync_viewport_size()
+
+    def on_page_resized(_: object) -> None:
+        sync_viewport_size()
 
     def on_mounted() -> None:
         ft.context.page.title = "Tango Motors Control"
         ft.context.page.window.maximized = True
         ft.context.page.window.full_screen = True
         ft.context.page.window.frameless = True
-        ft.context.page.on_resized = lambda _e: sync_viewport_size()  # type: ignore[attr-defined]
-        # Flush native window changes now to avoid a visible jump on the first toast update.
-        ft.context.page.update()
-        sync_viewport_size()
+        ft.context.page.on_resized = on_page_resized  # type: ignore[attr-defined]
+        sync_viewport_size(force=True)
         # Global interaction tracking
         ft.context.page.on_pointer_down = lambda _: app.reset_timer()  # type: ignore[attr-defined]
         ft.context.page.on_keyboard_event = lambda _: app.reset_timer()
         ft.context.page.run_task(initialize_motors_task)
         ft.context.page.run_task(monitor_loop)
+        ft.context.page.run_task(warmup_first_frame_update_task)
 
     ft.on_mounted(on_mounted)
     ft.on_unmounted(shutdown_motors_task)
