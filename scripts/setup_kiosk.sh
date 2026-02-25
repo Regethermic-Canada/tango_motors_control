@@ -30,9 +30,10 @@ fi
 
 # TODO:
 # Automate : 
-# 1) make the boot silent + plymouth custom logo
-# 2) /boot/firmware/config.txt overlay for can0
-# 2) systemd root service to up can0
+# 1) find a reliable simple way to hide cursor
+# 2) make the boot silent + plymouth custom logo
+# 3) /boot/firmware/config.txt overlay for can0
+# 4) systemd root service to up can0
 
 # 1) Prepare labwc config directory
 echo "Preparing labwc config directory..."
