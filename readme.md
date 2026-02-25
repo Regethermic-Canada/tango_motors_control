@@ -2,18 +2,10 @@
 
 ---
 
-## Using a raspberrypi 3 (weak support for openGL -> force cpu rendering)
+## For all raspberrypi (debian based distro) -> for rendering
 
 ```
-export LIBGL_ALWAYS_SOFTWARE=1
-```
-
----
-
-## For all raspberrypi (debian based distro)
-
-```
-sudo apt install libmpv2
+sudo apt install libmpv2 libavcodec-extra
 ```
 
 ---
