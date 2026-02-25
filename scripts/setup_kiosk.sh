@@ -55,3 +55,12 @@ echo "  ${AUTOSTART_FILE}"
 echo
 echo "LightDM session updated in:"
 echo "  ${LIGHTDM_CONF}"
+echo
+
+echo "The system will shut down in:"
+for i in {5..1}; do
+  echo "  -> ${i} s"
+  sleep 1
+done
+
+sudo poweroff
