@@ -86,21 +86,12 @@ def App() -> ft.Control:
         await asyncio.to_thread(app.shutdown_motors)
 
     def sync_viewport_size() -> None:
-        next_size = (
-            float(getattr(ft.context.page, "width", 0) or 0),
-            float(getattr(ft.context.page, "height", 0) or 0),
+        set_viewport_size(
+            (
+                float(getattr(ft.context.page, "width", 0) or 0),
+                float(getattr(ft.context.page, "height", 0) or 0),
+            )
         )
-        prev_size = getattr(ft.context.page, "_last_synced_viewport_size", None)
-        if (
-            isinstance(prev_size, tuple)
-            and len(prev_size) == 2
-            and abs(float(prev_size[0]) - next_size[0]) <= 4
-            and abs(float(prev_size[1]) - next_size[1]) <= 4
-        ):
-            return
-
-        setattr(ft.context.page, "_last_synced_viewport_size", next_size)
-        set_viewport_size(next_size)
 
     def on_mounted() -> None:
         ft.context.page.title = "Tango Motors Control"
