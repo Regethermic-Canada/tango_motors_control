@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ###############################################################################
-# setup_kiosk.sh — Configure labwc kiosk autostart for tango_motors_control
+# setup_kiosk.sh -> Configure labwc kiosk autostart for tango_motors_control
 #  - ensures libmpv2 is installed
 #  - writes ~/.config/labwc/autostart
 #  - starts app from ${HOME}/tango_motors_control
