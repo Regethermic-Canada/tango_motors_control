@@ -4,6 +4,7 @@ import flet as ft
 
 from components.shared.layout import Layout
 from components.shared.app_body import AppBody
+from components.shared.loading_spinner import LoadingSpinner
 from contexts.locale import LocaleContext, LocaleContextValue
 from contexts.route import RouteContext, RouteContextValue
 from contexts.theme import ThemeContext, ThemeContextValue
@@ -18,6 +19,7 @@ def App() -> ft.Control:
     app: AppModel
     app, _ = ft.use_state(lambda: AppModel(route=ft.context.page.route))  # type: ignore
     viewport_size, set_viewport_size = ft.use_state((0.0, 0.0))
+    ui_ready, set_ui_ready = ft.use_state(False)
 
     # Explicitly subscribe to observable properties used in build or contexts
     _ = app.locale
@@ -104,7 +106,7 @@ def App() -> ft.Control:
         timeout_s: float = 2.0,
         poll_s: float = 0.12,
         stable_samples: int = 3,
-    ) -> None:
+    ) -> bool:
         loop = asyncio.get_running_loop()
         deadline = loop.time() + timeout_s
         previous: tuple[float, float] | None = None
@@ -123,18 +125,45 @@ def App() -> ft.Control:
                 stable_count = 0
             previous = current
 
-            if stable_count >= stable_samples or loop.time() >= deadline:
-                return
+            if stable_count >= stable_samples:
+                return True
+            if loop.time() >= deadline:
+                return False
 
             await asyncio.sleep(poll_s)
 
     async def warmup_first_frame_update_task() -> None:
         # Delay the visible "first reflow" until the window size settles,
         # then force it before the user's first interaction.
-        await wait_for_viewport_stable()
-        ft.context.page.update()
-        await wait_for_viewport_stable(timeout_s=0.8, stable_samples=2)
-        sync_viewport_size()
+        logger.info("Viewport warmup started")
+        try:
+            stable_before = await wait_for_viewport_stable()
+            if not stable_before:
+                width, height = get_current_viewport_size()
+                logger.info(
+                    "Viewport warmup pre-update timed out at %.0fx%.0f",
+                    width,
+                    height,
+                )
+
+            ft.context.page.update()
+
+            stable_after = await wait_for_viewport_stable(
+                timeout_s=0.8, stable_samples=2
+            )
+            sync_viewport_size()
+            width, height = get_current_viewport_size()
+            logger.info(
+                "Viewport warmup completed (pre_stable=%s, post_stable=%s, size=%.0fx%.0f)",
+                stable_before,
+                stable_after,
+                width,
+                height,
+            )
+        except Exception:
+            logger.exception("Viewport warmup failed")
+        finally:
+            set_ui_ready(True)
 
     def on_page_resized(_: object) -> None:
         sync_viewport_size()
@@ -173,7 +202,27 @@ def App() -> ft.Control:
                 lambda: ft.View(
                     route="/",
                     padding=0,
-                    controls=[Layout(app, AppBody(app))],
+                    controls=[
+                        ft.AnimatedSwitcher(
+                            expand=True,
+                            transition=ft.AnimatedSwitcherTransition.FADE,
+                            duration=220,
+                            reverse_duration=220,
+                            content=(
+                                ft.Container(
+                                    key="app-ready",
+                                    expand=True,
+                                    content=Layout(app, AppBody(app)),
+                                )
+                                if ui_ready
+                                else ft.Container(
+                                    key="app-loading-shell",
+                                    expand=True,
+                                    content=LoadingSpinner(size=56),
+                                )
+                            ),
+                        )
+                    ],
                 ),
             ),
         ),

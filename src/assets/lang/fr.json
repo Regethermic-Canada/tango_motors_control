@@ -53,5 +53,6 @@
   "passcode_mismatch": "Les codes ne correspondent pas",
   "passcode_updated": "Code mis à jour avec succès",
   "save": "Enregistrer",
+  "loading_interface": "Chargement de l'interface",
   "close": "Fermer"
 }

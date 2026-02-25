@@ -53,5 +53,6 @@
   "passcode_mismatch": "Passcodes do not match",
   "passcode_updated": "Passcode updated successfully",
   "save": "Save",
+  "loading_interface": "Loading interface",
   "close": "Close"
 }
