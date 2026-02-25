@@ -17,6 +17,10 @@ readonly LABWC_DIR="${HOME_DIR}/.config/labwc"
 readonly AUTOSTART_FILE="${LABWC_DIR}/autostart"
 readonly LIGHTDM_CONF="/etc/lightdm/lightdm.conf"
 
+echo
+echo "Starting kiosk setup for tango_motors_control..."
+echo
+
 # 0) Ensure libmpv2 is present
 if ! dpkg -s libmpv2 >/dev/null 2>&1; then
 	echo "Installing libmpv2..."
