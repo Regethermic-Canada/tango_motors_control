@@ -5,7 +5,7 @@
 ## For all raspberrypi (debian based distro) -> for rendering
 
 ```
-sudo apt install libmpv2 libavcodec-extra
+sudo apt install libmpv2
 ```
 
 ---
