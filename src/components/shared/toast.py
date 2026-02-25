@@ -22,6 +22,19 @@ class _ToastRuntime:
 
 _active_toasts: dict[int, _ToastRuntime] = {}
 _last_toast_at: dict[tuple[int, str], float] = {}
+_toast_hosts: dict[int, ft.Stack] = {}
+
+
+def ensure_toast_overlay_host(page: ft.Page) -> ft.Stack:
+    page_key = id(page)
+    host = _toast_hosts.get(page_key)
+    if host is not None and host in page.overlay:
+        return host
+
+    host = ft.Stack(expand=True, controls=[])
+    _toast_hosts[page_key] = host
+    page.overlay.append(host)
+    return host
 
 
 def show_toast(
@@ -36,6 +49,7 @@ def show_toast(
 ) -> None:
     metrics = get_viewport_metrics(page, min_scale=0.66)
     compact = metrics.compact
+    host = ensure_toast_overlay_host(page)
 
     toast_width = min(
         280 if compact else 400,
@@ -72,8 +86,8 @@ def show_toast(
     bg_color, icon = colors.get(type, colors[ToastType.INFO])
 
     existing = _active_toasts.get(page_key)
-    if existing and existing.container in page.overlay:
-        page.overlay.remove(existing.container)
+    if existing and existing.container in host.controls:
+        host.controls.remove(existing.container)
 
     close_token = int(time.monotonic_ns())
 
@@ -82,7 +96,7 @@ def show_toast(
         if current is None or current.close_token != close_token:
             return
         toast_container = current.container
-        if toast_container not in page.overlay:
+        if toast_container not in host.controls:
             return
 
         toast_container.opacity = 0
@@ -94,8 +108,8 @@ def show_toast(
             still_current = _active_toasts.get(page_key)
             if still_current is None or still_current.close_token != close_token:
                 return
-            if toast_container in page.overlay:
-                page.overlay.remove(toast_container)
+            if toast_container in host.controls:
+                host.controls.remove(toast_container)
                 page.update()
             _active_toasts.pop(page_key, None)
 
@@ -149,7 +163,7 @@ def show_toast(
         container=toast_container,
         close_token=close_token,
     )
-    page.overlay.append(toast_container)
+    host.controls.append(toast_container)
     page.update()
     toast_container.opacity = 1
     toast_container.offset = ft.Offset(0, 0)

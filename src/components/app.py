@@ -4,6 +4,7 @@ import flet as ft
 
 from components.shared.layout import Layout
 from components.shared.app_body import AppBody
+from components.shared.toast import ensure_toast_overlay_host
 from contexts.locale import LocaleContext, LocaleContextValue
 from contexts.route import RouteContext, RouteContextValue
 from contexts.theme import ThemeContext, ThemeContextValue
@@ -85,19 +86,24 @@ def App() -> ft.Control:
     async def shutdown_motors_task() -> None:
         await asyncio.to_thread(app.shutdown_motors)
 
-    def on_mounted() -> None:
-        ft.context.page.title = "Tango Motors Control"
-        ft.context.page.window.maximized = True
-        ft.context.page.window.full_screen = True
-        ft.context.page.window.frameless = True
-        ft.context.page.on_resized = lambda _e: set_viewport_size(  # type: ignore[attr-defined]
+    def sync_viewport_size() -> None:
+        set_viewport_size(
             (
                 float(getattr(ft.context.page, "width", 0) or 0),
                 float(getattr(ft.context.page, "height", 0) or 0),
             )
         )
+
+    def on_mounted() -> None:
+        ft.context.page.title = "Tango Motors Control"
+        ft.context.page.window.maximized = True
+        ft.context.page.window.full_screen = True
+        ft.context.page.window.frameless = True
+        ft.context.page.on_resized = lambda _e: sync_viewport_size()  # type: ignore[attr-defined]
+        ensure_toast_overlay_host(ft.context.page)
         # Flush native window changes now to avoid a visible jump on the first toast update.
         ft.context.page.update()
+        sync_viewport_size()
         # Global interaction tracking
         ft.context.page.on_pointer_down = lambda _: app.reset_timer()  # type: ignore[attr-defined]
         ft.context.page.on_keyboard_event = lambda _: app.reset_timer()
