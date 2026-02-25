@@ -4,7 +4,6 @@ import flet as ft
 
 from components.shared.layout import Layout
 from components.shared.app_body import AppBody
-from components.shared.toast import ensure_toast_overlay_host
 from contexts.locale import LocaleContext, LocaleContextValue
 from contexts.route import RouteContext, RouteContextValue
 from contexts.theme import ThemeContext, ThemeContextValue
@@ -87,12 +86,21 @@ def App() -> ft.Control:
         await asyncio.to_thread(app.shutdown_motors)
 
     def sync_viewport_size() -> None:
-        set_viewport_size(
-            (
-                float(getattr(ft.context.page, "width", 0) or 0),
-                float(getattr(ft.context.page, "height", 0) or 0),
-            )
+        next_size = (
+            float(getattr(ft.context.page, "width", 0) or 0),
+            float(getattr(ft.context.page, "height", 0) or 0),
         )
+        prev_size = getattr(ft.context.page, "_last_synced_viewport_size", None)
+        if (
+            isinstance(prev_size, tuple)
+            and len(prev_size) == 2
+            and abs(float(prev_size[0]) - next_size[0]) <= 4
+            and abs(float(prev_size[1]) - next_size[1]) <= 4
+        ):
+            return
+
+        setattr(ft.context.page, "_last_synced_viewport_size", next_size)
+        set_viewport_size(next_size)
 
     def on_mounted() -> None:
         ft.context.page.title = "Tango Motors Control"
@@ -100,7 +108,6 @@ def App() -> ft.Control:
         ft.context.page.window.full_screen = True
         ft.context.page.window.frameless = True
         ft.context.page.on_resized = lambda _e: sync_viewport_size()  # type: ignore[attr-defined]
-        ensure_toast_overlay_host(ft.context.page)
         # Flush native window changes now to avoid a visible jump on the first toast update.
         ft.context.page.update()
         sync_viewport_size()
