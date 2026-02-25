@@ -89,12 +89,15 @@ def App() -> ft.Control:
         ft.context.page.title = "Tango Motors Control"
         ft.context.page.window.maximized = True
         ft.context.page.window.full_screen = True
+        ft.context.page.window.frameless = True
         ft.context.page.on_resized = lambda _e: set_viewport_size(  # type: ignore[attr-defined]
             (
                 float(getattr(ft.context.page, "width", 0) or 0),
                 float(getattr(ft.context.page, "height", 0) or 0),
             )
         )
+        # Flush native window changes now to avoid a visible jump on the first toast update.
+        ft.context.page.update()
         # Global interaction tracking
         ft.context.page.on_pointer_down = lambda _: app.reset_timer()  # type: ignore[attr-defined]
         ft.context.page.on_keyboard_event = lambda _: app.reset_timer()
