@@ -29,7 +29,10 @@ if ! dpkg -s libmpv2 >/dev/null 2>&1; then
 fi
 
 # TODO:
-# here i should also automate the steps to make the boot silent + plymouth custom logo, but for now let's just do the kiosk setup
+# Automate : 
+# 1) make the boot silent + plymouth custom logo
+# 2) /boot/firmware/config.txt overlay for can0
+# 2) systemd root service to up can0
 
 # 1) Prepare labwc config directory
 echo "Preparing labwc config directory..."
