@@ -34,23 +34,25 @@ def show_toast(
     close_tooltip: str = "Close",
     dedupe_window_s: float = 1.5,
 ) -> None:
-    metrics = get_viewport_metrics(page, min_scale=0.7)
+    metrics = get_viewport_metrics(page, min_scale=0.66)
+    compact = metrics.compact
 
     toast_width = min(
-        340 if metrics.compact else 400,
-        max(260, int(metrics.width - (position_right * 2) - 8)),
+        280 if compact else 400,
+        max(220, int(metrics.width - (position_right * 2) - 8)),
     )
-    toast_icon_size = int(round(28 * metrics.scale))
-    toast_text_size = int(round(18 * metrics.scale))
-    close_icon_size = int(round(24 * metrics.scale))
-    row_spacing = int(round(15 * metrics.scale))
-    pad_h_left = int(round(25 * metrics.scale))
-    pad_v = int(round(15 * metrics.scale))
-    pad_h_right = int(round(20 * metrics.scale))
-    border_radius = int(round(12 * metrics.scale))
+    toast_icon_size = int(round((22 if compact else 28) * metrics.scale))
+    toast_text_size = int(round((15 if compact else 18) * metrics.scale))
+    close_icon_size = int(round((18 if compact else 24) * metrics.scale))
+    row_spacing = int(round((8 if compact else 15) * metrics.scale))
+    pad_h_left = int(round((12 if compact else 25) * metrics.scale))
+    pad_v = int(round((8 if compact else 15) * metrics.scale))
+    pad_h_right = int(round((8 if compact else 20) * metrics.scale))
+    border_radius = int(round((10 if compact else 12) * metrics.scale))
     shadow_blur = int(round(15 * metrics.scale))
     top_offset = int(round(position_top * metrics.scale))
     right_offset = int(round(position_right * metrics.scale))
+    close_button_padding = int(round((2 if compact else 8) * metrics.scale))
 
     page_key = id(page)
     toast_key = f"{type.value}:{message}"
@@ -117,6 +119,14 @@ def show_toast(
                     icon_size=close_icon_size,
                     tooltip=close_tooltip,
                     on_click=close_toast,
+                    style=ft.ButtonStyle(
+                        padding=ft.Padding(
+                            close_button_padding,
+                            close_button_padding,
+                            close_button_padding,
+                            close_button_padding,
+                        )
+                    ),
                 ),
             ],
             tight=True,

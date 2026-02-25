@@ -17,11 +17,13 @@ def App() -> ft.Control:
     # Use a lambda to ensure AppModel is only instantiated once
     app: AppModel
     app, _ = ft.use_state(lambda: AppModel(route=ft.context.page.route))  # type: ignore
+    viewport_size, set_viewport_size = ft.use_state((0.0, 0.0))
 
     # Explicitly subscribe to observable properties used in build or contexts
     _ = app.locale
     _ = app.translations
     _ = app.route
+    _ = viewport_size
 
     # subscribe to page events as soon as possible
     ft.context.page.on_route_change = app.route_change
@@ -87,6 +89,12 @@ def App() -> ft.Control:
         ft.context.page.title = "Tango Motors Control"
         ft.context.page.window.maximized = True
         ft.context.page.window.full_screen = True
+        ft.context.page.on_resized = lambda _e: set_viewport_size(  # type: ignore[attr-defined]
+            (
+                float(getattr(ft.context.page, "width", 0) or 0),
+                float(getattr(ft.context.page, "height", 0) or 0),
+            )
+        )
         # Global interaction tracking
         ft.context.page.on_pointer_down = lambda _: app.reset_timer()  # type: ignore[attr-defined]
         ft.context.page.on_keyboard_event = lambda _: app.reset_timer()

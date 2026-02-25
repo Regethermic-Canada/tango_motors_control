@@ -9,26 +9,31 @@ from utils.ui_scale import get_viewport_metrics
 @ft.component
 def MotorsView(model: AppModel) -> ft.Control:
     loc = ft.use_context(LocaleContext)
-    metrics = get_viewport_metrics(ft.context.page, min_scale=0.68)
+    metrics = get_viewport_metrics(
+        ft.context.page,
+        base_width=960,
+        base_height=540,
+        min_scale=0.8,
+    )
     is_running = model.is_motors_running
 
-    content_spacing = int(round((10 if metrics.compact else 14) * metrics.scale))
-    speed_label_size = int(round((16 if metrics.compact else 20) * metrics.scale))
-    speed_value_size = int(round((58 if metrics.compact else 80) * metrics.scale))
-    speed_percent_size = int(round((18 if metrics.compact else 22) * metrics.scale))
-    status_size = int(round((12 if metrics.compact else 14) * metrics.scale))
-    button_text_size = int(round((16 if metrics.compact else 18) * metrics.scale))
-    button_h_pad = int(round((18 if metrics.compact else 24) * metrics.scale))
-    button_v_pad = int(round((12 if metrics.compact else 14) * metrics.scale))
+    content_spacing = int(round((12 if metrics.compact else 14) * metrics.scale))
+    speed_label_size = int(round((20 if metrics.compact else 20) * metrics.scale))
+    speed_value_size = int(round((88 if metrics.compact else 80) * metrics.scale))
+    speed_percent_size = int(round((24 if metrics.compact else 22) * metrics.scale))
+    status_size = int(round((16 if metrics.compact else 14) * metrics.scale))
+    button_text_size = int(round((20 if metrics.compact else 18) * metrics.scale))
+    button_h_pad = int(round((22 if metrics.compact else 24) * metrics.scale))
+    button_v_pad = int(round((14 if metrics.compact else 14) * metrics.scale))
     button_width = min(
-        420,
+        460,
         max(
-            240 if metrics.compact else 280,
-            int(metrics.width * (0.72 if metrics.compact else 0.5)),
+            300 if metrics.compact else 280,
+            int(metrics.width * (0.82 if metrics.compact else 0.5)),
         ),
     )
-    step_icon_size = int(round((34 if metrics.compact else 40) * metrics.scale))
-    step_spacing = int(round((24 if metrics.compact else 40) * metrics.scale))
+    step_icon_size = int(round((46 if metrics.compact else 40) * metrics.scale))
+    step_spacing = int(round((32 if metrics.compact else 40) * metrics.scale))
 
     def on_toggle_click(_: Any) -> None:
         result = model.toggle_motors()
