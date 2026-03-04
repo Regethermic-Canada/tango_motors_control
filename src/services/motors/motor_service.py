@@ -12,7 +12,7 @@ from .speed_ramp import SpeedRamp
 from utils.config import Config
 
 logger = logging.getLogger(__name__)
-_TEMP_MONITOR_INTERVAL_S = 5.0
+_TEMP_MONITOR_INTERVAL_S = 1.0
 
 
 @dataclass(frozen=True)
