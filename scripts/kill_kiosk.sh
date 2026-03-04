@@ -38,7 +38,7 @@ echo "LightDM session updated in:"
 echo "  ${LIGHTDM_CONF}"
 echo
 
-echo "The system will shut down in:"
+echo "The system will reboot in:"
 for i in {5..1}; do
 	echo "  -> ${i} s"
 	sleep 1

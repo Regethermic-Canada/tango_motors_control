@@ -60,6 +60,7 @@ class Config:
     motor_directions: List[int]
     motor_command_hz: float
     motor_ramp_time_s: float
+    motor_hold_release_timeout_s: float
     motor_max_step_speed: int
     motor_max_speed: int
     motor_max_temp_c: float
@@ -162,6 +163,9 @@ class Config:
             "motor_directions": motor_directions,
             "motor_command_hz": float(get_env("MOTOR_COMMAND_HZ", "2.0")),
             "motor_ramp_time_s": max(0.0, float(get_env("MOTOR_RAMP_TIME_S", "1.0"))),
+            "motor_hold_release_timeout_s": max(
+                0.0, float(get_env("MOTOR_HOLD_RELEASE_TIMEOUT_S", "5.0"))
+            ),
             "motor_max_step_speed": int(get_env("MOTOR_MAX_STEP_SPEED", "10")),
             "motor_max_speed": int(get_env("MOTOR_MAX_SPEED", "100")),
             "motor_max_temp_c": float(get_env("MOTOR_MAX_TEMP_C", "70.0")),

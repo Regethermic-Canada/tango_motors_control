@@ -24,6 +24,7 @@ class MotorServiceConfig:
     motor_directions: tuple[int, ...]
     command_hz: float
     ramp_time_s: float
+    hold_release_timeout_s: float
     max_speed_percent: int
     max_mosfet_temp_c: float
 
@@ -50,6 +51,7 @@ class MotorServiceConfig:
             motor_directions=tuple(directions),
             command_hz=max(1.0, app_config.motor_command_hz),
             ramp_time_s=max(0.0, app_config.motor_ramp_time_s),
+            hold_release_timeout_s=max(0.0, app_config.motor_hold_release_timeout_s),
             max_speed_percent=min(100, max(0, abs(app_config.motor_max_speed))),
             max_mosfet_temp_c=app_config.motor_max_temp_c,
         )
@@ -107,6 +109,7 @@ class MotorService:
         self._keepalive_stop = Event()
         self._keepalive_thread: Thread | None = None
         self._next_temp_log_at_s = 0.0
+        self._holding_since_s: float | None = None
 
     def initialize(self) -> None:
         if not self._cfg.enabled:
@@ -125,6 +128,7 @@ class MotorService:
         with self._lock:
             if self._is_service_active_locked():
                 self._state = _ServiceState.RUNNING
+                self._holding_since_s = None
                 self._speed_ramp.set_target(initial_speed_percent)
                 try:
                     self._drive_toward_target_locked()
@@ -144,6 +148,7 @@ class MotorService:
             self._motors = list(self._connected)
             self._state = _ServiceState.RUNNING
             self._next_temp_log_at_s = 0.0
+            self._holding_since_s = None
             self._speed_ramp.reset()
             self._speed_ramp.set_target(initial_speed_percent)
             try:
@@ -170,6 +175,7 @@ class MotorService:
             if not self._is_service_active_locked() and not self._motors:
                 return
             self._state = _ServiceState.HOLDING
+            self._holding_since_s = None
             self._speed_ramp.set_target(0)
             timeout_s = self._speed_ramp.stop_timeout_s()
 
@@ -186,11 +192,13 @@ class MotorService:
                 self._send_speed_command_locked(0.0)
                 self._speed_ramp.set_target(0)
                 self._speed_ramp.set_commanded(0.0)
+                self._holding_since_s = time.monotonic()
             except Exception:
                 logger.exception("Final zero-speed command failed during stop")
 
             logger.info(
-                "Motor service stopped (holding 0 rad/s; call shutdown to release motors)"
+                "Motor service stopped (holding 0 rad/s; auto-release in %.1fs)",
+                self._cfg.hold_release_timeout_s,
             )
 
     def shutdown(self) -> None:
@@ -289,6 +297,8 @@ class MotorService:
                 try:
                     self._drive_toward_target_locked()
                     self._maybe_log_motor_temperatures_locked(now_s)
+                    if self._maybe_auto_release_hold_locked(now_s):
+                        return
                 except Exception:
                     logger.exception(
                         "Motor keepalive command failed; attempting full auto-reconnect"
@@ -390,6 +400,9 @@ class MotorService:
         self._motors = list(self._connected)
         self._state = previous_state
         self._next_temp_log_at_s = 0.0
+        self._holding_since_s = (
+            time.monotonic() if previous_state is _ServiceState.HOLDING else None
+        )
         self._speed_ramp.set_target(target_speed_percent)
         self._speed_ramp.set_commanded(commanded_speed_percent)
         self._send_speed_command_locked(self._speed_ramp.commanded_speed_percent)
@@ -441,6 +454,7 @@ class MotorService:
         self._initialized = False
         self._max_motor_velocity_rad_s = 0.0
         self._next_temp_log_at_s = 0.0
+        self._holding_since_s = None
         self._speed_ramp.reset()
 
     def _drive_toward_target_locked(self) -> None:
@@ -474,6 +488,27 @@ class MotorService:
         )
         logger.info("Motor temperatures: %s", temperature_samples)
         self._next_temp_log_at_s = now_s + _TEMP_MONITOR_INTERVAL_S
+
+    def _maybe_auto_release_hold_locked(self, now_s: float) -> bool:
+        if self._state is not _ServiceState.HOLDING:
+            return False
+        if self._holding_since_s is None:
+            return False
+        if (now_s - self._holding_since_s) < self._cfg.hold_release_timeout_s:
+            return False
+
+        logger.info(
+            "Motor hold timeout reached (%.1fs); releasing motors",
+            self._cfg.hold_release_timeout_s,
+        )
+        self._release_all_motors_locked()
+        return True
+
+    def _release_all_motors_locked(self) -> None:
+        self._state = _ServiceState.OFF
+        self._teardown_all_motors_locked()
+        self._keepalive_thread = None
+        self._keepalive_stop = Event()
 
     def _is_service_active_locked(self) -> bool:
         return self._state is not _ServiceState.OFF
