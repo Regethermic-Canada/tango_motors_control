@@ -12,6 +12,7 @@ from .speed_ramp import SpeedRamp
 from utils.config import Config
 
 logger = logging.getLogger(__name__)
+_TEMP_MONITOR_INTERVAL_S = 1.0
 
 
 @dataclass(frozen=True)
@@ -105,6 +106,7 @@ class MotorService:
         )
         self._keepalive_stop = Event()
         self._keepalive_thread: Thread | None = None
+        self._next_temp_log_at_s = 0.0
 
     def initialize(self) -> None:
         if not self._cfg.enabled:
@@ -141,6 +143,7 @@ class MotorService:
 
             self._motors = list(self._connected)
             self._state = _ServiceState.RUNNING
+            self._next_temp_log_at_s = 0.0
             self._speed_ramp.reset()
             self._speed_ramp.set_target(initial_speed_percent)
             try:
@@ -279,11 +282,13 @@ class MotorService:
     def _keepalive_loop(self) -> None:
         period_s = self._speed_ramp.command_period_s()
         while True:
+            now_s = time.monotonic()
             with self._lock:
                 if not self._is_service_active_locked():
                     return
                 try:
                     self._drive_toward_target_locked()
+                    self._maybe_log_motor_temperatures_locked(now_s)
                 except Exception:
                     logger.exception(
                         "Motor keepalive command failed; attempting full auto-reconnect"
@@ -384,6 +389,7 @@ class MotorService:
 
         self._motors = list(self._connected)
         self._state = previous_state
+        self._next_temp_log_at_s = 0.0
         self._speed_ramp.set_target(target_speed_percent)
         self._speed_ramp.set_commanded(commanded_speed_percent)
         self._send_speed_command_locked(self._speed_ramp.commanded_speed_percent)
@@ -434,6 +440,7 @@ class MotorService:
         self._failed_start_ids.clear()
         self._initialized = False
         self._max_motor_velocity_rad_s = 0.0
+        self._next_temp_log_at_s = 0.0
         self._speed_ramp.reset()
 
     def _drive_toward_target_locked(self) -> None:
@@ -452,6 +459,21 @@ class MotorService:
                     return True
             time.sleep(period_s)
         return False
+
+    def _maybe_log_motor_temperatures_locked(self, now_s: float) -> None:
+        if not logger.isEnabledFor(logging.DEBUG):
+            return
+        if not self._motors:
+            return
+        if now_s < self._next_temp_log_at_s:
+            return
+
+        temperature_samples = ", ".join(
+            f"{item.motor_id}={item.motor.get_temperature_celsius():.1f}C"
+            for item in self._motors
+        )
+        logger.debug("Motor temperatures: %s", temperature_samples)
+        self._next_temp_log_at_s = now_s + _TEMP_MONITOR_INTERVAL_S
 
     def _is_service_active_locked(self) -> bool:
         return self._state is not _ServiceState.OFF
