@@ -36,7 +36,6 @@ readonly LIGHTDM_CONF="/etc/lightdm/lightdm.conf"
 
 echo
 echo "Starting kiosk setup for tango_motors_control..."
-echo
 
 # 0a) Ensure libmpv2 is present (required for flet media support)
 if ! dpkg -s libmpv2 >/dev/null 2>&1; then

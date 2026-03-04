@@ -27,7 +27,6 @@ readonly LIGHTDM_CONF="/etc/lightdm/lightdm.conf"
 
 echo
 echo "Reverting kiosk setup for tango_motors_control..."
-echo
 
 # 0) Remove CAN overlay entries from boot config
 echo "Removing CAN overlay entries from ${BOOT_CONFIG}..."
