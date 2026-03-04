@@ -3,8 +3,8 @@ set -euo pipefail
 
 ###############################################################################
 # kill_kiosk.sh -> Revert labwc kiosk autostart for tango_motors_control
-#  - removes ~/.config/labwc/autostart
 #  - removes ~/.config/labwc/rc.xml
+#  - removes ~/.config/labwc/autostart
 #  - switches LightDM session from labwc to rpd-labwc
 ###############################################################################
 
@@ -19,16 +19,7 @@ echo
 echo "Reverting kiosk setup for tango_motors_control..."
 echo
 
-# 0) Remove labwc autostart script
-echo "Removing kiosk autostart..."
-if [[ -f "${AUTOSTART_FILE}" ]]; then
-	rm -f "${AUTOSTART_FILE}"
-	echo "Removed: ${AUTOSTART_FILE}"
-else
-	echo "Autostart not found: ${AUTOSTART_FILE}"
-fi
-
-# 1) Remove labwc kiosk rc.xml
+# 0) Remove labwc kiosk rc.xml
 echo "Removing kiosk rc.xml..."
 if [[ -f "${RC_FILE}" ]]; then
 	rm -f "${RC_FILE}"
@@ -37,16 +28,25 @@ else
 	echo "rc.xml not found: ${RC_FILE}"
 fi
 
+# 1) Remove labwc autostart script
+echo "Removing kiosk autostart..."
+if [[ -f "${AUTOSTART_FILE}" ]]; then
+	rm -f "${AUTOSTART_FILE}"
+	echo "Removed: ${AUTOSTART_FILE}"
+else
+	echo "Autostart not found: ${AUTOSTART_FILE}"
+fi
+
 # 2) Switch LightDM session from labwc -> rpd-labwc
 echo "Updating LightDM session (labwc -> rpd-labwc)..."
 sudo sed -i 's/\<labwc\>/rpd-labwc/g' "${LIGHTDM_CONF}"
 
 # 3) Final summary
-echo "Kiosk autostart removed (if present):"
-echo "  ${AUTOSTART_FILE}"
-echo
 echo "Kiosk rc.xml removed (if present):"
 echo "  ${RC_FILE}"
+echo
+echo "Kiosk autostart removed (if present):"
+echo "  ${AUTOSTART_FILE}"
 echo
 echo "LightDM session updated in:"
 echo "  ${LIGHTDM_CONF}"

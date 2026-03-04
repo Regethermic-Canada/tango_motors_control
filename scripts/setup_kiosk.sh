@@ -38,7 +38,7 @@ if ! dpkg -s wtype >/dev/null 2>&1; then
 fi
 
 # TODO:
-# Automate : 
+# Automate :
 # 1) make the boot silent + plymouth custom logo
 # 2) /boot/firmware/config.txt overlay for can0
 # 3) systemd root service to up can0
@@ -89,9 +89,14 @@ cat >"${AUTOSTART_FILE}" <<EOF
 
 export NO_AT_BRIDGE=1
 
-# Trigger the labwc hide-cursor binding once during startup.
+# Trigger the labwc hide-cursor binding a few times during startup.
+# This reduces brief cursor flashes while session/app surfaces initialize.
 if command -v wtype >/dev/null 2>&1; then
-  wtype -s 300 -M logo -k F12 -m logo || true
+  (
+    wtype -M logo -k F12 -m logo || true
+    wtype -s 200 -M logo -k F12 -m logo || true
+    wtype -s 500 -M logo -k F12 -m logo || true
+  ) >/dev/null 2>&1 &
 fi
 
 cd "${APP_DIR}"
