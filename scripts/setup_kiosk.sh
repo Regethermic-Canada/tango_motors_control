@@ -15,8 +15,10 @@ set -euo pipefail
 
 # Configuration
 readonly HOME_DIR="${HOME}"
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly PROJECT_DIR_NAME="$(basename "$(dirname "${SCRIPT_DIR}")")"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
+PROJECT_DIR_NAME="$(basename "$(dirname "${SCRIPT_DIR}")")"
+readonly PROJECT_DIR_NAME
 readonly APP_DIR="${HOME_DIR}/${PROJECT_DIR_NAME}"
 readonly BOOT_CONFIG="/boot/firmware/config.txt"
 readonly CAN_SPI_LINE="dtparam=spi=on"
