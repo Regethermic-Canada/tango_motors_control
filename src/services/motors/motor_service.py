@@ -171,7 +171,7 @@ class MotorService:
             if not self._active and not self._motors:
                 return
             motors = list(self._motors)
-            # Rely on library shutdown semantics (__exit__ sends 0.0A).
+            # Use the library's public shutdown API for final motor stop.
             for item in motors:
                 _safe_exit(item.motor)
 
@@ -464,21 +464,21 @@ class MotorService:
 
 def _safe_exit(motor: CubeMarsServoCAN) -> None:
     try:
-        motor.__exit__(None, None, None)
+        motor.close()
     except Exception:
         logger.exception("Motor shutdown error")
 
 
 def _detach_motor_listener(motor: CubeMarsServoCAN) -> None:
     try:
-        motor._canman.remove_motor(motor)
+        motor.detach_listener()
     except Exception:
         logger.debug("Failed to detach motor listener for motor ID %s", motor.ID)
 
 
 def _close_can_manager(motor: CubeMarsServoCAN) -> None:
     try:
-        motor._canman.close()
+        motor.close_shared_can_manager()
     except Exception:
         logger.debug("Failed to close CAN manager")
 
