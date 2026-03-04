@@ -170,19 +170,12 @@ class MotorService:
         with self._lock:
             if not self._active and not self._motors:
                 return
-            motors = list(self._motors)
-            # Use the library's public shutdown API for final motor stop.
-            for item in motors:
-                _safe_exit(item.motor)
-
+            self._hold_zero_after_stop_locked()
             self._motors = []
-            self._connected = []
             self._active = False
-            self._max_motor_velocity_rad_s = 0.0
-            self._speed_ramp.reset()
             self._keepalive_thread = None
             self._keepalive_stop = Event()
-            logger.info("Motor service stopped")
+            logger.info("Motor service stopped at zero speed and left connected")
 
     def shutdown(self) -> None:
         if not self._cfg.enabled:
@@ -454,9 +447,20 @@ class MotorService:
             time.sleep(self._speed_ramp.command_period_s())
 
         logger.warning(
-            "Timed out waiting for motor ramp-down after %.2fs; continuing shutdown",
+            "Timed out waiting for motor ramp-down after %.2fs; forcing zero-speed hold",
             timeout_s,
         )
+
+    def _hold_zero_after_stop_locked(self) -> None:
+        if not self._motors:
+            return
+
+        self._speed_ramp.set_target(0)
+        try:
+            self._send_speed_command_locked(0.0)
+            self._speed_ramp.set_commanded(0.0)
+        except Exception:
+            logger.exception("Failed to apply final zero-speed hold during stop")
 
     def _keepalive_join_timeout_s(self) -> float:
         return max(1.0, 2.0 * self._speed_ramp.command_period_s())
