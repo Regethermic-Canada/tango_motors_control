@@ -52,6 +52,8 @@ else
 	echo "CAN overlay entries already absent in ${BOOT_CONFIG}."
 fi
 
+echo
+
 # 1) Disable/remove CAN boot service
 echo "Stopping and Disabling ${CAN_SERVICE_NAME}..."
 sudo systemctl stop "${CAN_SERVICE_NAME}" >/dev/null 2>&1 || true
@@ -68,6 +70,8 @@ fi
 echo "Reloading systemd daemon..."
 sudo systemctl daemon-reload
 
+echo
+
 # 2) Restore Plymouth splash screen from backup
 echo "Restoring Plymouth splash screen from backup..."
 if [[ -f "${PLYMOUTH_SPLASH_BACKUP}" ]]; then
@@ -78,6 +82,8 @@ else
 	echo "Backup not found, skipping splash restore: ${PLYMOUTH_SPLASH_BACKUP}"
 fi
 
+echo
+
 # 3) Remove labwc kiosk rc.xml
 echo "Removing kiosk rc.xml..."
 if [[ -f "${RC_FILE}" ]]; then
@@ -87,6 +93,8 @@ else
 	echo "rc.xml not found: ${RC_FILE}"
 fi
 
+echo
+
 # 4) Remove labwc autostart script
 echo "Removing kiosk autostart..."
 if [[ -f "${AUTOSTART_FILE}" ]]; then
@@ -95,6 +103,8 @@ if [[ -f "${AUTOSTART_FILE}" ]]; then
 else
 	echo "Autostart not found: ${AUTOSTART_FILE}"
 fi
+
+echo
 
 # 5) Switch LightDM session from labwc -> rpd-labwc
 echo "Updating LightDM session (labwc -> rpd-labwc)..."

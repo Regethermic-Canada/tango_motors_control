@@ -52,6 +52,8 @@ if ! dpkg -s wtype >/dev/null 2>&1; then
 	sudo apt install -y wtype
 fi
 
+echo
+
 # TODO:
 # Automate :
 # 1) make the boot silent
@@ -79,6 +81,8 @@ else
 	echo "CAN overlay entries already present in ${BOOT_CONFIG}."
 fi
 
+echo
+
 # 2) Install systemd can0.service
 echo "Writing ${UNIT_DIR}/${CAN_SERVICE_NAME}..."
 sudo tee "${UNIT_DIR}/${CAN_SERVICE_NAME}" >/dev/null <<'EOF'
@@ -102,10 +106,12 @@ EOF
 
 echo "Reloading systemd and enabling can0.service..."
 sudo systemctl daemon-reload
-sudo systemctl enable --now "${CAN_SERVICE_NAME}"
+sudo systemctl enable "${CAN_SERVICE_NAME}"
 
 echo "CAN link details (if interface is already available):"
 ip -details link show can0 || true
+
+echo
 
 # 3) Backup and update Plymouth splash screen
 echo "Updating Plymouth splash screen..."
@@ -126,9 +132,13 @@ fi
 sudo cp "${SPLASH_SRC}" "${PLYMOUTH_SPLASH_DST}"
 sudo update-initramfs -u
 
+echo
+
 # 4) Prepare labwc config directory
 echo "Preparing labwc config directory..."
 mkdir -p "${LABWC_DIR}"
+
+echo
 
 # 5) Write labwc rc.xml (disable desktop context menu + define hide-cursor bind)
 echo "Writing labwc kiosk rc.xml..."
@@ -165,6 +175,8 @@ cat >"${RC_FILE}" <<'EOF'
 </labwc_config>
 EOF
 
+echo
+
 # 6) Write labwc autostart script
 echo "Writing kiosk autostart..."
 cat >"${AUTOSTART_FILE}" <<EOF
@@ -186,6 +198,8 @@ cd "${APP_DIR}"
 exec /usr/bin/env bash -lc $(printf '%q' "${APP_CMD}")
 EOF
 chmod +x "${AUTOSTART_FILE}"
+
+echo
 
 # 7) Switch LightDM session from rpd-labwc -> labwc
 echo "Updating LightDM session (rpd-labwc -> labwc)..."
