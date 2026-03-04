@@ -109,6 +109,7 @@ echo "Updating LightDM session (rpd-labwc -> labwc)..."
 sudo sed -i 's/\<rpd-labwc\>/labwc/g' "${LIGHTDM_CONF}"
 
 # 5) Final summary
+echo
 echo "Required media packages checked:"
 echo "  - libmpv2"
 echo "  - wtype"
