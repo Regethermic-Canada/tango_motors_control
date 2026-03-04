@@ -42,6 +42,7 @@ echo "Updating LightDM session (labwc -> rpd-labwc)..."
 sudo sed -i 's/\<labwc\>/rpd-labwc/g' "${LIGHTDM_CONF}"
 
 # 3) Final summary
+echo
 echo "Kiosk rc.xml removed (if present):"
 echo "  ${RC_FILE}"
 echo
