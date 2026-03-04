@@ -117,7 +117,7 @@ class Config:
     def _load_identity() -> Dict[str, Any]:
         return {
             "app_title": get_env("APP_TITLE", "Tango Motors Control"),
-            "app_version": get_env("APP_VERSION", "0.1.7"),
+            "app_version": get_env("APP_VERSION", "0.1.8"),
             "app_admin_default_passcode": get_env("APP_ADMIN_DEFAULT_PASSCODE", "1010"),
         }
 
@@ -162,7 +162,7 @@ class Config:
             "motor_ids": motor_ids,
             "motor_directions": motor_directions,
             "motor_command_hz": float(get_env("MOTOR_COMMAND_HZ", "2.0")),
-            "motor_ramp_time_s": max(0.0, float(get_env("MOTOR_RAMP_TIME_S", "1.0"))),
+            "motor_ramp_time_s": max(0.0, float(get_env("MOTOR_RAMP_TIME_S", "0.5"))),
             "motor_hold_release_timeout_s": max(
                 0.0, float(get_env("MOTOR_HOLD_RELEASE_TIMEOUT_S", "5.0"))
             ),
