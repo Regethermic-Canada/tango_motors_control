@@ -12,7 +12,7 @@ from .speed_ramp import SpeedRamp
 from utils.config import Config
 
 logger = logging.getLogger(__name__)
-_TEMP_MONITOR_INTERVAL_S = 1.0
+_TEMP_MONITOR_INTERVAL_S = 5.0
 
 
 @dataclass(frozen=True)
@@ -461,7 +461,7 @@ class MotorService:
         return False
 
     def _maybe_log_motor_temperatures_locked(self, now_s: float) -> None:
-        if not logger.isEnabledFor(logging.DEBUG):
+        if not logger.isEnabledFor(logging.INFO):
             return
         if not self._motors:
             return
@@ -472,7 +472,7 @@ class MotorService:
             f"{item.motor_id}={item.motor.get_temperature_celsius():.1f}C"
             for item in self._motors
         )
-        logger.debug("Motor temperatures: %s", temperature_samples)
+        logger.info("Motor temperatures: %s", temperature_samples)
         self._next_temp_log_at_s = now_s + _TEMP_MONITOR_INTERVAL_S
 
     def _is_service_active_locked(self) -> bool:

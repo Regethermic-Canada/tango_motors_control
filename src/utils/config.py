@@ -116,7 +116,7 @@ class Config:
     def _load_identity() -> Dict[str, Any]:
         return {
             "app_title": get_env("APP_TITLE", "Tango Motors Control"),
-            "app_version": get_env("APP_VERSION", "0.1.5"),
+            "app_version": get_env("APP_VERSION", "0.1.6"),
             "app_admin_default_passcode": get_env("APP_ADMIN_DEFAULT_PASSCODE", "1010"),
         }
 
