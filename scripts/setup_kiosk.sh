@@ -4,6 +4,8 @@ set -euo pipefail
 ###############################################################################
 # setup_kiosk.sh -> Configure labwc kiosk autostart for tango_motors_control
 #  - ensures required packages are installed
+#  - configures CAN overlay in /boot/firmware/config.txt
+#  - installs/enable systemd can0.service at boot
 #  - writes ~/.config/labwc/rc.xml for kiosk hardening
 #  - writes ~/.config/labwc/autostart
 #  - starts app from ${HOME}/tango_motors_control
@@ -12,11 +14,16 @@ set -euo pipefail
 
 # Configuration
 readonly HOME_DIR="${HOME}"
+readonly BOOT_CONFIG="/boot/firmware/config.txt"
+readonly CAN_SPI_LINE="dtparam=spi=on"
+readonly CAN_OVERLAY_LINE="dtoverlay=mcp2515-can0,oscillator=12000000,interrupt=25,spimaxfrequency=2000000"
+readonly UNIT_DIR="/etc/systemd/system"
+readonly CAN_SERVICE_NAME="can0.service"
+readonly LABWC_DIR="${HOME_DIR}/.config/labwc"
+readonly RC_FILE="${LABWC_DIR}/rc.xml"
+readonly AUTOSTART_FILE="${LABWC_DIR}/autostart"
 readonly APP_DIR="${HOME_DIR}/tango_motors_control"
 readonly APP_CMD="${HOME_DIR}/.local/bin/uv run flet run"
-readonly LABWC_DIR="${HOME_DIR}/.config/labwc"
-readonly AUTOSTART_FILE="${LABWC_DIR}/autostart"
-readonly RC_FILE="${LABWC_DIR}/rc.xml"
 readonly LIGHTDM_CONF="/etc/lightdm/lightdm.conf"
 
 echo
@@ -40,14 +47,63 @@ fi
 # TODO:
 # Automate :
 # 1) make the boot silent + plymouth custom logo
-# 2) /boot/firmware/config.txt overlay for can0
-# 3) systemd root service to up can0
 
-# 1) Prepare labwc config directory
+# 1) Configure CAN overlay in /boot/firmware/config.txt
+echo "Configuring CAN overlay in ${BOOT_CONFIG}..."
+if [[ ! -f "${BOOT_CONFIG}" ]]; then
+	echo "ERROR: Missing boot config file: ${BOOT_CONFIG}"
+	exit 1
+fi
+
+boot_config_changed=0
+if ! sudo grep -Fxq "${CAN_SPI_LINE}" "${BOOT_CONFIG}"; then
+	echo "${CAN_SPI_LINE}" | sudo tee -a "${BOOT_CONFIG}" >/dev/null
+	boot_config_changed=1
+fi
+if ! sudo grep -Fxq "${CAN_OVERLAY_LINE}" "${BOOT_CONFIG}"; then
+	echo "${CAN_OVERLAY_LINE}" | sudo tee -a "${BOOT_CONFIG}" >/dev/null
+	boot_config_changed=1
+fi
+
+if [[ "${boot_config_changed}" -eq 1 ]]; then
+	echo "CAN overlay entries added to ${BOOT_CONFIG}."
+else
+	echo "CAN overlay entries already present in ${BOOT_CONFIG}."
+fi
+
+# 2) Install systemd can0.service
+echo "Writing ${UNIT_DIR}/${CAN_SERVICE_NAME}..."
+sudo tee "${UNIT_DIR}/${CAN_SERVICE_NAME}" >/dev/null <<'EOF'
+[Unit]
+Description=Bring up SocketCAN can0
+After=network-pre.target
+Before=network.target
+Wants=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'ip link set can0 down || true'
+ExecStart=/bin/sh -c 'ip link set can0 up type can bitrate 1000000 restart-ms 100'
+ExecStart=/bin/sh -c 'ip link set can0 txqueuelen 65536'
+ExecStop=/bin/sh -c 'ip link set can0 down'
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+echo "Reloading systemd and enabling can0.service..."
+sudo systemctl daemon-reload
+sudo systemctl enable --now "${CAN_SERVICE_NAME}"
+
+echo "CAN link details (if interface is already available):"
+ip -details link show can0 || true
+
+# 3) Prepare labwc config directory
 echo "Preparing labwc config directory..."
 mkdir -p "${LABWC_DIR}"
 
-# 2) Write labwc rc.xml (disable desktop context menu + define hide-cursor bind)
+# 4) Write labwc rc.xml (disable desktop context menu + define hide-cursor bind)
 echo "Writing labwc kiosk rc.xml..."
 cat >"${RC_FILE}" <<'EOF'
 <?xml version="1.0"?>
@@ -82,7 +138,7 @@ cat >"${RC_FILE}" <<'EOF'
 </labwc_config>
 EOF
 
-# 3) Write labwc autostart script
+# 5) Write labwc autostart script
 echo "Writing kiosk autostart..."
 cat >"${AUTOSTART_FILE}" <<EOF
 #!/usr/bin/env bash
@@ -104,15 +160,23 @@ exec /usr/bin/env bash -lc $(printf '%q' "${APP_CMD}")
 EOF
 chmod +x "${AUTOSTART_FILE}"
 
-# 4) Switch LightDM session from rpd-labwc -> labwc
+# 6) Switch LightDM session from rpd-labwc -> labwc
 echo "Updating LightDM session (rpd-labwc -> labwc)..."
 sudo sed -i 's/\<rpd-labwc\>/labwc/g' "${LIGHTDM_CONF}"
 
-# 5) Final summary
+# 7) Final summary
 echo
 echo "Required media packages checked:"
 echo "  - libmpv2"
 echo "  - wtype"
+echo
+echo "CAN overlay configured in:"
+echo "  ${BOOT_CONFIG}"
+echo "  - ${CAN_SPI_LINE}"
+echo "  - ${CAN_OVERLAY_LINE}"
+echo
+echo "CAN boot service written/enabled:"
+echo "  ${UNIT_DIR}/${CAN_SERVICE_NAME}"
 echo
 echo "Kiosk rc.xml written:"
 echo "  ${RC_FILE}"
