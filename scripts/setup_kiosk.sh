@@ -8,21 +8,27 @@ set -euo pipefail
 #  - installs/enable systemd can0.service at boot
 #  - writes ~/.config/labwc/rc.xml for kiosk hardening
 #  - writes ~/.config/labwc/autostart
-#  - starts app from ${HOME}/tango_motors_control
+#  - backs up and updates Plymouth splash screen from project assets
+#  - starts app from ${APP_DIR}
 #  - switches LightDM session from rpd-labwc to labwc
 ###############################################################################
 
 # Configuration
 readonly HOME_DIR="${HOME}"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly PROJECT_DIR_NAME="$(basename "$(dirname "${SCRIPT_DIR}")")"
+readonly APP_DIR="${HOME_DIR}/${PROJECT_DIR_NAME}"
 readonly BOOT_CONFIG="/boot/firmware/config.txt"
 readonly CAN_SPI_LINE="dtparam=spi=on"
 readonly CAN_OVERLAY_LINE="dtoverlay=mcp2515-can0,oscillator=12000000,interrupt=25,spimaxfrequency=2000000"
 readonly UNIT_DIR="/etc/systemd/system"
 readonly CAN_SERVICE_NAME="can0.service"
+readonly SPLASH_SRC="${APP_DIR}/src/assets/regethermic_screensaver.png"
+readonly PLYMOUTH_SPLASH_DST="/usr/share/plymouth/themes/pix/splash.png"
+readonly PLYMOUTH_SPLASH_BACKUP="/usr/share/plymouth/themes/pix/splash.png.bak"
 readonly LABWC_DIR="${HOME_DIR}/.config/labwc"
 readonly RC_FILE="${LABWC_DIR}/rc.xml"
 readonly AUTOSTART_FILE="${LABWC_DIR}/autostart"
-readonly APP_DIR="${HOME_DIR}/tango_motors_control"
 readonly APP_CMD="${HOME_DIR}/.local/bin/uv run flet run"
 readonly LIGHTDM_CONF="/etc/lightdm/lightdm.conf"
 
@@ -46,7 +52,7 @@ fi
 
 # TODO:
 # Automate :
-# 1) make the boot silent + plymouth custom logo
+# 1) make the boot silent
 
 # 1) Configure CAN overlay in /boot/firmware/config.txt
 echo "Configuring CAN overlay in ${BOOT_CONFIG}..."
@@ -99,11 +105,30 @@ sudo systemctl enable --now "${CAN_SERVICE_NAME}"
 echo "CAN link details (if interface is already available):"
 ip -details link show can0 || true
 
-# 3) Prepare labwc config directory
+# 3) Backup and update Plymouth splash screen
+echo "Updating Plymouth splash screen..."
+if [[ ! -f "${SPLASH_SRC}" ]]; then
+	echo "ERROR: Splash source not found: ${SPLASH_SRC}"
+	exit 1
+fi
+if [[ ! -f "${PLYMOUTH_SPLASH_DST}" ]]; then
+	echo "ERROR: Plymouth splash destination not found: ${PLYMOUTH_SPLASH_DST}"
+	exit 1
+fi
+if [[ ! -f "${PLYMOUTH_SPLASH_BACKUP}" ]]; then
+	echo "Creating Plymouth splash backup..."
+	sudo cp "${PLYMOUTH_SPLASH_DST}" "${PLYMOUTH_SPLASH_BACKUP}"
+else
+	echo "Plymouth splash backup already exists: ${PLYMOUTH_SPLASH_BACKUP}"
+fi
+sudo cp "${SPLASH_SRC}" "${PLYMOUTH_SPLASH_DST}"
+sudo update-initramfs -u
+
+# 4) Prepare labwc config directory
 echo "Preparing labwc config directory..."
 mkdir -p "${LABWC_DIR}"
 
-# 4) Write labwc rc.xml (disable desktop context menu + define hide-cursor bind)
+# 5) Write labwc rc.xml (disable desktop context menu + define hide-cursor bind)
 echo "Writing labwc kiosk rc.xml..."
 cat >"${RC_FILE}" <<'EOF'
 <?xml version="1.0"?>
@@ -138,7 +163,7 @@ cat >"${RC_FILE}" <<'EOF'
 </labwc_config>
 EOF
 
-# 5) Write labwc autostart script
+# 6) Write labwc autostart script
 echo "Writing kiosk autostart..."
 cat >"${AUTOSTART_FILE}" <<EOF
 #!/usr/bin/env bash
@@ -160,11 +185,11 @@ exec /usr/bin/env bash -lc $(printf '%q' "${APP_CMD}")
 EOF
 chmod +x "${AUTOSTART_FILE}"
 
-# 6) Switch LightDM session from rpd-labwc -> labwc
+# 7) Switch LightDM session from rpd-labwc -> labwc
 echo "Updating LightDM session (rpd-labwc -> labwc)..."
 sudo sed -i 's/\<rpd-labwc\>/labwc/g' "${LIGHTDM_CONF}"
 
-# 7) Final summary
+# 8) Final summary
 echo
 echo "Required media packages checked:"
 echo "  - libmpv2"
@@ -177,6 +202,12 @@ echo "  - ${CAN_OVERLAY_LINE}"
 echo
 echo "CAN boot service written/enabled:"
 echo "  ${UNIT_DIR}/${CAN_SERVICE_NAME}"
+echo
+echo "Plymouth splash updated:"
+echo "  ${PLYMOUTH_SPLASH_DST}"
+echo "  (source: ${SPLASH_SRC})"
+echo "Plymouth splash backup:"
+echo "  ${PLYMOUTH_SPLASH_BACKUP}"
 echo
 echo "Kiosk rc.xml written:"
 echo "  ${RC_FILE}"
