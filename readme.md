@@ -42,9 +42,13 @@ MOTOR_CAN_CHANNEL=can0
 MOTOR_IDS=1,2
 MOTOR_DIRECTIONS=1,-1
 MOTOR_COMMAND_HZ=2
+MOTOR_RAMP_TIME_S=1.0
 MOTOR_MAX_STEP_SPEED=10
 MOTOR_MAX_SPEED=100
 ```
+
+`MOTOR_RAMP_TIME_S` is the time used to slew from `0%` to `MOTOR_MAX_SPEED%`.
+Start, stop, and live speed changes use the same ramp so the motors do not step abruptly.
 
 `MOTOR_IDS` and `MOTOR_DIRECTIONS` must have the same number of entries.
 Example: `MOTOR_IDS=1,2,3,4` with `MOTOR_DIRECTIONS=1,-1,1,-1`.

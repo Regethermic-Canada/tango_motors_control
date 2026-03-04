@@ -59,6 +59,7 @@ class Config:
     motor_ids: List[int]
     motor_directions: List[int]
     motor_command_hz: float
+    motor_ramp_time_s: float
     motor_max_step_speed: int
     motor_max_speed: int
     motor_max_temp_c: float
@@ -115,7 +116,7 @@ class Config:
     def _load_identity() -> Dict[str, Any]:
         return {
             "app_title": get_env("APP_TITLE", "Tango Motors Control"),
-            "app_version": get_env("APP_VERSION", "0.1.0"),
+            "app_version": get_env("APP_VERSION", "0.1.1"),
             "app_admin_default_passcode": get_env("APP_ADMIN_DEFAULT_PASSCODE", "1010"),
         }
 
@@ -160,6 +161,7 @@ class Config:
             "motor_ids": motor_ids,
             "motor_directions": motor_directions,
             "motor_command_hz": float(get_env("MOTOR_COMMAND_HZ", "2.0")),
+            "motor_ramp_time_s": max(0.0, float(get_env("MOTOR_RAMP_TIME_S", "1.0"))),
             "motor_max_step_speed": int(get_env("MOTOR_MAX_STEP_SPEED", "10")),
             "motor_max_speed": int(get_env("MOTOR_MAX_SPEED", "100")),
             "motor_max_temp_c": float(get_env("MOTOR_MAX_TEMP_C", "70.0")),

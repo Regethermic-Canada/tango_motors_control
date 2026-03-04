@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass
 from threading import Event, RLock, Thread
 
 from cubemars_servo_can import CubeMarsServoCAN
 
+from .speed_ramp import SpeedRamp
 from utils.config import Config
 
 logger = logging.getLogger(__name__)
@@ -19,6 +21,7 @@ class MotorServiceConfig:
     motor_ids: tuple[int, ...]
     motor_directions: tuple[int, ...]
     command_hz: float
+    ramp_time_s: float
     max_speed_percent: int
     max_mosfet_temp_c: float
 
@@ -44,6 +47,7 @@ class MotorServiceConfig:
             motor_ids=tuple(ids),
             motor_directions=tuple(directions),
             command_hz=max(1.0, app_config.motor_command_hz),
+            ramp_time_s=max(0.0, app_config.motor_ramp_time_s),
             max_speed_percent=min(100, max(0, abs(app_config.motor_max_speed))),
             max_mosfet_temp_c=app_config.motor_max_temp_c,
         )
@@ -87,7 +91,11 @@ class MotorService:
         self._motors: list[_ManagedMotor] = []
         self._failed_start_ids: set[int] = set()
         self._max_motor_velocity_rad_s = 0.0
-        self._target_speed_percent = 0
+        self._speed_ramp = SpeedRamp(
+            max_speed_percent=self._cfg.max_speed_percent,
+            command_hz=self._cfg.command_hz,
+            ramp_time_s=self._cfg.ramp_time_s,
+        )
         self._keepalive_stop = Event()
         self._keepalive_thread: Thread | None = None
 
@@ -107,7 +115,14 @@ class MotorService:
 
         with self._lock:
             if self._active:
-                self.set_speed_percent(initial_speed_percent)
+                self._speed_ramp.set_target(initial_speed_percent)
+                try:
+                    self._drive_toward_target_locked()
+                except Exception:
+                    logger.exception(
+                        "Speed command failed; attempting full auto-reconnect"
+                    )
+                    self._reconnect_all_runtime_locked()
                 return
 
             self._ensure_initialized_locked()
@@ -118,9 +133,12 @@ class MotorService:
 
             self._motors = list(self._connected)
             self._active = True
-            self._target_speed_percent = self._clamp_speed(initial_speed_percent)
+            self._speed_ramp.reset()
+            self._speed_ramp.set_target(initial_speed_percent)
             try:
-                self._apply_speed_locked(self._target_speed_percent)
+                self._send_speed_command_locked(
+                    self._speed_ramp.commanded_speed_percent
+                )
             except Exception:
                 logger.exception(
                     "Initial motor command failed; attempting full auto-reconnect"
@@ -139,16 +157,18 @@ class MotorService:
 
         keepalive_thread: Thread | None = None
         with self._lock:
-            if not self._active:
+            if not self._active and not self._motors:
                 return
-            self._target_speed_percent = 0
+            self._speed_ramp.set_target(0)
             keepalive_thread = self._signal_keepalive_stop_locked()
 
         if keepalive_thread is not None:
-            keepalive_thread.join(timeout=1.0)
+            keepalive_thread.join(timeout=self._keepalive_join_timeout_s())
+
+        self._ramp_to_zero_before_stop()
 
         with self._lock:
-            if not self._active:
+            if not self._active and not self._motors:
                 return
             motors = list(self._motors)
             # Rely on library shutdown semantics (__exit__ sends 0.0A).
@@ -159,7 +179,7 @@ class MotorService:
             self._connected = []
             self._active = False
             self._max_motor_velocity_rad_s = 0.0
-            self._target_speed_percent = 0
+            self._speed_ramp.reset()
             self._keepalive_thread = None
             self._keepalive_stop = Event()
             logger.info("Motor service stopped")
@@ -177,11 +197,10 @@ class MotorService:
         if not self._cfg.enabled:
             return False
 
-        target_speed_percent = 0
         was_running = False
         with self._lock:
             was_running = self._active
-            target_speed_percent = self._target_speed_percent
+            target_speed_percent = self._speed_ramp.target_speed_percent
 
         self.shutdown()
         self.initialize()
@@ -195,30 +214,24 @@ class MotorService:
             return speed_percent
 
         with self._lock:
-            clamped_speed = self._clamp_speed(speed_percent)
-            self._target_speed_percent = clamped_speed
+            clamped_speed = self._speed_ramp.set_target(speed_percent)
             if not self._active:
                 logger.debug("Speed updated while motor service inactive")
                 return clamped_speed
             try:
-                return self._apply_speed_locked(clamped_speed)
+                self._drive_toward_target_locked()
+                return clamped_speed
             except Exception:
                 logger.exception("Speed command failed; attempting full auto-reconnect")
                 self._reconnect_all_runtime_locked()
-                return self._target_speed_percent
+                return self._speed_ramp.target_speed_percent
 
-    def _clamp_speed(self, speed_percent: int) -> int:
-        return max(
-            -self._cfg.max_speed_percent,
-            min(speed_percent, self._cfg.max_speed_percent),
-        )
-
-    def _apply_speed_locked(self, speed_percent: int) -> int:
+    def _send_speed_command_locked(self, speed_percent: float) -> float:
+        clamped_speed = self._speed_ramp.clamp_float(speed_percent)
         if not self._motors:
-            return self._clamp_speed(speed_percent)
+            return clamped_speed
 
-        clamped_speed = self._clamp_speed(speed_percent)
-        speed_ratio = float(clamped_speed) / 100.0
+        speed_ratio = clamped_speed / 100.0
         base_velocity = speed_ratio * self._max_motor_velocity_rad_s
 
         failed: list[_ManagedMotor] = []
@@ -258,13 +271,13 @@ class MotorService:
         self._keepalive_thread.start()
 
     def _keepalive_loop(self) -> None:
-        period_s = 1.0 / max(1.0, self._cfg.command_hz)
-        while not self._keepalive_stop.wait(period_s):
+        period_s = self._speed_ramp.command_period_s()
+        while True:
             with self._lock:
                 if not self._active:
                     return
                 try:
-                    self._apply_speed_locked(self._target_speed_percent)
+                    self._drive_toward_target_locked()
                 except Exception:
                     logger.exception(
                         "Motor keepalive command failed; attempting full auto-reconnect"
@@ -275,6 +288,8 @@ class MotorService:
                         logger.exception("Auto-reconnect failed; motor service stopped")
                         self._active = False
                         return
+            if self._keepalive_stop.wait(period_s):
+                return
 
     def _build_pool_locked(self) -> None:
         pool: list[_ManagedMotor] = []
@@ -347,7 +362,8 @@ class MotorService:
             )
 
     def _reconnect_all_runtime_locked(self) -> None:
-        target_speed_percent = self._clamp_speed(self._target_speed_percent)
+        target_speed_percent = self._speed_ramp.target_speed_percent
+        commanded_speed_percent = self._speed_ramp.commanded_speed_percent
         self._teardown_all_motors_locked()
         self._build_pool_locked()
         self._connect_available_locked()
@@ -355,15 +371,15 @@ class MotorService:
         if not self._connected:
             self._active = False
             self._motors = []
-            self._target_speed_percent = 0
             raise RuntimeError(
                 "Automatic reconnect failed: no configured motors are connected"
             )
 
         self._motors = list(self._connected)
         self._active = True
-        self._target_speed_percent = target_speed_percent
-        self._apply_speed_locked(self._target_speed_percent)
+        self._speed_ramp.set_target(target_speed_percent)
+        self._speed_ramp.set_commanded(commanded_speed_percent)
+        self._send_speed_command_locked(self._speed_ramp.commanded_speed_percent)
         logger.info(
             "Motor service auto-reconnected on %s with active IDs: %s",
             self._cfg.can_channel,
@@ -411,7 +427,39 @@ class MotorService:
         self._failed_start_ids.clear()
         self._initialized = False
         self._max_motor_velocity_rad_s = 0.0
-        self._target_speed_percent = 0
+        self._speed_ramp.reset()
+
+    def _drive_toward_target_locked(self) -> None:
+        next_speed = self._speed_ramp.next_commanded_speed()
+        self._send_speed_command_locked(next_speed)
+        self._speed_ramp.set_commanded(next_speed)
+
+    def _ramp_to_zero_before_stop(self) -> None:
+        timeout_s = self._speed_ramp.stop_timeout_s()
+        deadline = time.monotonic() + timeout_s
+        while time.monotonic() < deadline:
+            with self._lock:
+                if not self._motors or not self._active:
+                    return
+                self._speed_ramp.set_target(0)
+                if self._speed_ramp.is_commanded_zero():
+                    return
+                try:
+                    self._drive_toward_target_locked()
+                except Exception:
+                    logger.exception(
+                        "Ramp-down command failed during stop; continuing shutdown"
+                    )
+                    return
+            time.sleep(self._speed_ramp.command_period_s())
+
+        logger.warning(
+            "Timed out waiting for motor ramp-down after %.2fs; continuing shutdown",
+            timeout_s,
+        )
+
+    def _keepalive_join_timeout_s(self) -> float:
+        return max(1.0, 2.0 * self._speed_ramp.command_period_s())
 
 
 def _safe_exit(motor: CubeMarsServoCAN) -> None:
