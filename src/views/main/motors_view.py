@@ -67,7 +67,6 @@ def MotorsView() -> ft.Control:
             page=ft.context.page,
             message=loc.t(message_key),
             type=ToastType.WARNING,
-            close_tooltip=loc.t("close"),
         )
 
     def on_toggle_click(_: Event[Button]) -> None:
@@ -92,7 +91,6 @@ def MotorsView() -> ft.Control:
             page=ft.context.page,
             message=loc.t(message_key),
             type=toast_type,
-            close_tooltip=loc.t("close"),
         )
 
     def on_increment_click(_: Event[ft.IconButton]) -> None:

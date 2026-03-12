@@ -34,6 +34,11 @@ def AuthView() -> ft.Control:
 
         if authenticated:
             set_passcode("")
+            show_toast(
+                page=ft.context.page,
+                message=loc.t("admin_access_granted"),
+                type=ToastType.SUCCESS,
+            )
             route_ctx.navigate("/admin")
         else:
             # Show toast simultaneously with shake
@@ -41,7 +46,6 @@ def AuthView() -> ft.Control:
                 page=ft.context.page,
                 message=loc.t("invalid_passcode"),
                 type=ToastType.ERROR,
-                close_tooltip=loc.t("close"),
             )
 
             # Multi-directional shake animation (More complex 4-point sequence)

@@ -23,6 +23,7 @@
   "default_speed": "Vitesse par défaut",
   "seconds": "secondes",
   "admin_access": "Accès Admin",
+  "admin_access_granted": "Accès admin autorisé",
   "enter_passcode": "Entrer le code",
   "invalid_passcode": "Code invalide",
   "loading_interface": "Chargement de l'interface",

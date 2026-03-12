@@ -23,6 +23,7 @@
   "default_speed": "Default Speed",
   "seconds": "seconds",
   "admin_access": "Admin Access",
+  "admin_access_granted": "Admin access granted",
   "enter_passcode": "Enter Passcode",
   "invalid_passcode": "Invalid Passcode",
   "loading_interface": "Loading interface",

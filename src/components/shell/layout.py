@@ -36,6 +36,7 @@ def Layout(content: ft.Control) -> ft.Control:
 
     setattr(ft.context.page, "_tango_toast_top_offset", toast_top_offset)
     setattr(ft.context.page, "_tango_toast_right_offset", header_right)
+    setattr(ft.context.page, "_tango_toast_close_tooltip", loc.t("close"))
 
     title_key = "motors_control"
     subtitle_key: str | None = None

@@ -102,7 +102,7 @@ def show_toast(
     duration: float = 3.0,
     position_top: int = 80,
     position_right: int = 20,
-    close_tooltip: str = "Close",
+    close_tooltip: str | None = None,
     dedupe_window_s: float = 1.5,
 ) -> None:
     metrics = get_viewport_metrics(page, min_scale=0.66)
@@ -122,6 +122,11 @@ def show_toast(
         int(resolved_right)
         if isinstance(resolved_right, int | float)
         else int(round(position_right * metrics.scale))
+    )
+    resolved_close_tooltip = (
+        close_tooltip
+        if close_tooltip is not None
+        else getattr(page, "_tango_toast_close_tooltip", "Close")
     )
 
     page_key = id(page)
@@ -165,7 +170,7 @@ def show_toast(
     toast_container = TangoToast(
         message=message,
         type=type,
-        close_tooltip=close_tooltip,
+        close_tooltip=resolved_close_tooltip,
         compact=compact,
         metrics_scale=metrics.scale,
         width=toast_width,
