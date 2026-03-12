@@ -31,14 +31,24 @@ def MotorsView(model: AppModel) -> ft.Control:
     speed_percent_size = int(round((18 if metrics.compact else 20) * metrics.scale))
     button_text_size = int(round((16 if metrics.compact else 17) * metrics.scale))
     panel_width = min(
-        560,
+        640,
         max(
-            340 if metrics.compact else 420,
-            int(metrics.width * (0.76 if metrics.compact else 0.46)),
+            360 if metrics.compact else 500,
+            int(metrics.width * (0.8 if metrics.compact else 0.52)),
         ),
     )
-    step_icon_size = int(round((18 if metrics.compact else 20) * metrics.scale))
-    step_spacing = int(round(spacing.MD * metrics.scale))
+    step_button_size = int(round((40 if metrics.compact else 48) * metrics.scale))
+    step_icon_size = int(round((20 if metrics.compact else 22) * metrics.scale))
+    step_spacing = int(
+        round((spacing.SM if metrics.compact else spacing.LG) * metrics.scale)
+    )
+    speed_control_gap = int(
+        round((spacing.XS if metrics.compact else spacing.SM) * metrics.scale)
+    )
+    speed_value_width = int(round((112 if metrics.compact else 144) * metrics.scale))
+    speed_control_width = (step_button_size * 2) + speed_value_width + (
+        step_spacing * 2
+    )
     card_padding = int(
         round((spacing.LG if metrics.compact else spacing.XL) * metrics.scale)
     )
@@ -93,16 +103,55 @@ def MotorsView(model: AppModel) -> ft.Control:
                             size=speed_label_size,
                             color=colors.TEXT_SOFT,
                         ),
-                        TangoText(
-                            str(model.speed_level),
-                            variant="display",
-                            size=speed_value_size,
-                        ),
-                        TangoText(
-                            f"{model.speed_percent}%",
-                            variant="subtitle",
-                            size=speed_percent_size,
-                            color=colors.TEXT_MUTED,
+                        ft.Container(
+                            width=speed_control_width,
+                            alignment=ft.Alignment.CENTER,
+                            content=ft.Row(
+                                alignment=ft.MainAxisAlignment.CENTER,
+                                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                                spacing=step_spacing,
+                                controls=[
+                                    TangoIconButton(
+                                        icon=ft.Icons.REMOVE,
+                                        icon_size=step_icon_size,
+                                        on_click=lambda _: model.decrement(),
+                                        tooltip=loc.t("decrement"),
+                                        variant="surface",
+                                        size="lg" if not metrics.compact else "md",
+                                    ),
+                                    ft.Container(
+                                        width=speed_value_width,
+                                        alignment=ft.Alignment.CENTER,
+                                        content=ft.Column(
+                                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                            spacing=speed_control_gap,
+                                            controls=[
+                                                TangoText(
+                                                    str(model.speed_level),
+                                                    variant="display",
+                                                    size=speed_value_size,
+                                                    text_align=ft.TextAlign.CENTER,
+                                                ),
+                                                TangoText(
+                                                    f"{model.speed_percent}%",
+                                                    variant="subtitle",
+                                                    size=speed_percent_size,
+                                                    color=colors.TEXT_MUTED,
+                                                    text_align=ft.TextAlign.CENTER,
+                                                ),
+                                            ],
+                                        ),
+                                    ),
+                                    TangoIconButton(
+                                        icon=ft.Icons.ADD,
+                                        icon_size=step_icon_size,
+                                        on_click=lambda _: model.increment(),
+                                        tooltip=loc.t("increment"),
+                                        variant="primary",
+                                        size="lg" if not metrics.compact else "md",
+                                    ),
+                                ],
+                            ),
                         ),
                     ],
                 ),
@@ -116,33 +165,16 @@ def MotorsView(model: AppModel) -> ft.Control:
                         ),
                         expand=True,
                         icon=ft.Icons.STOP if is_running else ft.Icons.PLAY_ARROW,
+                        tooltip=(
+                            loc.t("stop_motors")
+                            if is_running
+                            else loc.t("start_motors")
+                        ),
                         on_click=on_toggle_click,
                         size="lg" if not metrics.compact else "md",
                         text_size=button_text_size,
                         variant="surface" if is_running else "primary",
                     ),
-                ),
-                ft.Row(
-                    controls=[
-                        TangoIconButton(
-                            icon=ft.Icons.REMOVE,
-                            icon_size=step_icon_size,
-                            on_click=lambda _: model.decrement(),
-                            tooltip=loc.t("decrement"),
-                            variant="surface",
-                            size="md",
-                        ),
-                        TangoIconButton(
-                            icon=ft.Icons.ADD,
-                            icon_size=step_icon_size,
-                            on_click=lambda _: model.increment(),
-                            tooltip=loc.t("increment"),
-                            variant="primary",
-                            size="md",
-                        ),
-                    ],
-                    alignment=ft.MainAxisAlignment.CENTER,
-                    spacing=step_spacing,
                 ),
             ],
         ),

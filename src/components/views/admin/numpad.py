@@ -46,8 +46,8 @@ def NumericNumpad(
     metrics = get_viewport_metrics(ft.context.page, min_scale=0.62)
 
     numpad_width = min(
-        450,
-        max(320 if metrics.compact else 360, int(metrics.width * 0.48)),
+        520,
+        max(320 if metrics.compact else 440, int(metrics.width * 0.4)),
     )
     row_spacing = int(round(spacing.MD * metrics.scale))
     digit_font_size = int(round(30 * metrics.scale))

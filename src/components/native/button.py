@@ -38,6 +38,7 @@ def TangoButton(
     size: ButtonSize = "md",
     expand: bool = False,
     icon: ft.IconData | None = None,
+    tooltip: str | None = None,
     disabled: bool = False,
     width: int | None = None,
     text_size: int | None = None,
@@ -49,6 +50,7 @@ def TangoButton(
         expand=expand,
         width=width,
         icon=icon,
+        tooltip=tooltip,
         disabled=disabled,
         on_click=on_click,
         style=ft.ButtonStyle(
