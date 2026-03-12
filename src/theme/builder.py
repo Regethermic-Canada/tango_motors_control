@@ -5,31 +5,178 @@ import flet as ft
 from . import colors, radius, typography
 
 
+def _button_shape(corner_radius: int) -> ft.RoundedRectangleBorder:
+    return ft.RoundedRectangleBorder(radius=corner_radius)
+
+
+def _color_scheme() -> ft.ColorScheme:
+    return ft.ColorScheme(
+        primary=colors.PRIMARY,
+        on_primary=colors.TEXT_INVERSE,
+        primary_container=colors.PRIMARY_SOFT,
+        on_primary_container=colors.PRIMARY,
+        secondary=colors.PRIMARY_DARK,
+        on_secondary=colors.TEXT_INVERSE,
+        secondary_container=colors.PRIMARY_SOFT,
+        on_secondary_container=colors.PRIMARY,
+        error=colors.ERROR,
+        on_error=colors.TEXT_INVERSE,
+        error_container=colors.ERROR_SOFT,
+        on_error_container=colors.ERROR,
+        surface=colors.SURFACE,
+        on_surface=colors.TEXT,
+        on_surface_variant=colors.TEXT_MUTED,
+        outline=colors.OUTLINE,
+        outline_variant=colors.OUTLINE_STRONG,
+        shadow="#140B264F",
+        surface_tint=colors.PRIMARY,
+    )
+
+
+def _text_theme() -> ft.TextTheme:
+    return ft.TextTheme(
+        display_large=typography.text_style("display"),
+        display_medium=typography.text_style("headline"),
+        headline_medium=typography.text_style("title"),
+        title_large=typography.text_style("subtitle"),
+        body_large=typography.text_style("body"),
+        body_medium=typography.text_style("body"),
+        label_large=typography.text_style("label"),
+        label_medium=typography.text_style("caption"),
+    )
+
+
+def _filled_button_style() -> ft.ButtonStyle:
+    return ft.ButtonStyle(
+        bgcolor=colors.PRIMARY,
+        color=colors.TEXT_INVERSE,
+        icon_color=colors.TEXT_INVERSE,
+        text_style=typography.text_style("label", color=colors.TEXT_INVERSE),
+        side=ft.BorderSide(1, colors.PRIMARY),
+        padding=ft.Padding(16, 10, 16, 10),
+        shape=_button_shape(radius.BUTTON),
+        elevation=0,
+        overlay_color="#142069D8",
+    )
+
+
+def _icon_button_style() -> ft.ButtonStyle:
+    return ft.ButtonStyle(
+        bgcolor=colors.SURFACE,
+        icon_color=colors.TEXT,
+        side=ft.BorderSide(1, colors.OUTLINE),
+        shape=_button_shape(radius.BUTTON),
+        elevation=0,
+        padding=ft.Padding(0, 0, 0, 0),
+        overlay_color="#102069D8",
+    )
+
+
+def _outlined_button_style() -> ft.ButtonStyle:
+    return ft.ButtonStyle(
+        bgcolor=colors.SURFACE,
+        color=colors.TEXT,
+        icon_color=colors.TEXT,
+        text_style=typography.text_style("label"),
+        side=ft.BorderSide(1, colors.OUTLINE_STRONG),
+        padding=ft.Padding(16, 10, 16, 10),
+        shape=_button_shape(radius.BUTTON),
+        elevation=0,
+        overlay_color="#0F2069D8",
+    )
+
+
+def _text_button_style() -> ft.ButtonStyle:
+    return ft.ButtonStyle(
+        color=colors.PRIMARY,
+        icon_color=colors.PRIMARY,
+        text_style=typography.text_style("label", color=colors.PRIMARY),
+        padding=ft.Padding(12, 8, 12, 8),
+        shape=_button_shape(radius.BUTTON),
+        overlay_color="#102069D8",
+    )
+
+
+def _card_theme() -> ft.CardTheme:
+    return ft.CardTheme(
+        color=colors.SURFACE,
+        shadow_color="#140B264F",
+        elevation=0,
+        shape=_button_shape(radius.PANEL),
+        clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
+        margin=0,
+    )
+
+
+def _progress_indicator_theme() -> ft.ProgressIndicatorTheme:
+    return ft.ProgressIndicatorTheme(
+        color=colors.PRIMARY,
+        circular_track_color=colors.PRIMARY_BORDER,
+        linear_track_color=colors.PRIMARY_BORDER,
+        border_radius=radius.FULL,
+        track_gap=0,
+        circular_track_padding=2,
+        stroke_cap=ft.StrokeCap.ROUND,
+        stroke_width=6,
+        year_2023=False,
+    )
+
+
+def _slider_theme() -> ft.SliderTheme:
+    return ft.SliderTheme(
+        active_track_color=colors.PRIMARY,
+        inactive_track_color=colors.PRIMARY_BORDER,
+        active_tick_mark_color=colors.PRIMARY_BORDER,
+        inactive_tick_mark_color=colors.PRIMARY_BORDER,
+        disabled_active_track_color=colors.OUTLINE_STRONG,
+        disabled_inactive_track_color=colors.OUTLINE,
+        disabled_thumb_color=colors.OUTLINE_STRONG,
+        thumb_color=colors.PRIMARY,
+        overlay_color="#102069D8",
+        value_indicator_color=colors.PRIMARY_DARK,
+        value_indicator_stroke_color=colors.PRIMARY_DARK,
+        value_indicator_text_style=typography.text_style(
+            "caption", color=colors.TEXT_INVERSE
+        ),
+        track_height=3,
+        track_gap=0,
+        thumb_size=ft.Size(18, 18),
+        year_2023=False,
+    )
+
+
+def _popup_menu_theme() -> ft.PopupMenuTheme:
+    return ft.PopupMenuTheme(
+        color=colors.SURFACE,
+        shadow_color="#140B264F",
+        icon_color=colors.TEXT,
+        label_text_style=typography.text_style("body"),
+        elevation=0,
+        shape=_button_shape(radius.PANEL),
+        menu_padding=8,
+    )
+
+
+def _tooltip_theme() -> ft.TooltipTheme:
+    return ft.TooltipTheme(
+        wait_duration=250,
+        show_duration=4000,
+        prefer_below=False,
+        vertical_offset=20,
+        padding=ft.Padding(10, 6, 10, 6),
+        text_style=typography.text_style("caption", color=colors.TEXT_INVERSE),
+        decoration=ft.BoxDecoration(
+            bgcolor=colors.PRIMARY_DARK,
+            border_radius=radius.SM,
+        ),
+    )
+
+
 def build_theme() -> ft.Theme:
     return ft.Theme(
         font_family=typography.FONT_FAMILY,
         use_material3=True,
-        color_scheme=ft.ColorScheme(
-            primary=colors.PRIMARY,
-            on_primary=colors.TEXT_INVERSE,
-            primary_container=colors.PRIMARY_SOFT,
-            on_primary_container=colors.PRIMARY,
-            secondary=colors.PRIMARY_DARK,
-            on_secondary=colors.TEXT_INVERSE,
-            secondary_container=colors.PRIMARY_SOFT,
-            on_secondary_container=colors.PRIMARY,
-            error=colors.ERROR,
-            on_error=colors.TEXT_INVERSE,
-            error_container=colors.ERROR_SOFT,
-            on_error_container=colors.ERROR,
-            surface=colors.SURFACE,
-            on_surface=colors.TEXT,
-            on_surface_variant=colors.TEXT_MUTED,
-            outline=colors.OUTLINE,
-            outline_variant=colors.OUTLINE_STRONG,
-            shadow="#140B264F",
-            surface_tint=colors.PRIMARY,
-        ),
+        color_scheme=_color_scheme(),
         scaffold_bgcolor=colors.APP_BACKGROUND,
         card_bgcolor=colors.SURFACE,
         divider_color=colors.OUTLINE,
@@ -37,70 +184,16 @@ def build_theme() -> ft.Theme:
         hover_color="#0F2069D8",
         highlight_color="#142069D8",
         focus_color="#142069D8",
-        text_theme=ft.TextTheme(
-            display_large=typography.text_style("display"),
-            display_medium=typography.text_style("headline"),
-            headline_medium=typography.text_style("title"),
-            title_large=typography.text_style("subtitle"),
-            body_large=typography.text_style("body"),
-            body_medium=typography.text_style("body"),
-            label_large=typography.text_style("label"),
-            label_medium=typography.text_style("caption"),
-        ),
-        card_theme=ft.CardTheme(
-            color=colors.SURFACE,
-            shadow_color="#140B264F",
-            elevation=0,
-            shape=ft.RoundedRectangleBorder(radius=radius.PANEL),
-        ),
-        progress_indicator_theme=ft.ProgressIndicatorTheme(
-            color=colors.PRIMARY,
-            circular_track_color=colors.PRIMARY_BORDER,
-            linear_track_color=colors.PRIMARY_BORDER,
-            stroke_width=6,
-        ),
-        slider_theme=ft.SliderTheme(
-            active_track_color=colors.PRIMARY,
-            inactive_track_color=colors.PRIMARY_BORDER,
-            active_tick_mark_color=colors.PRIMARY_BORDER,
-            inactive_tick_mark_color=colors.PRIMARY_BORDER,
-            thumb_color=colors.PRIMARY_DARK,
-            overlay_color="#142069D8",
-            value_indicator_color=colors.PRIMARY_DARK,
-            value_indicator_text_style=typography.text_style(
-                "caption", color=colors.TEXT_INVERSE
-            ),
-            track_height=4,
-        ),
-        filled_button_theme=ft.FilledButtonTheme(
-            style=ft.ButtonStyle(
-                bgcolor=colors.PRIMARY,
-                color=colors.TEXT_INVERSE,
-                side=ft.BorderSide(1, colors.PRIMARY),
-                padding=ft.Padding(16, 10, 16, 10),
-                shape=ft.RoundedRectangleBorder(radius=radius.BUTTON),
-            )
-        ),
-        icon_button_theme=ft.IconButtonTheme(
-            style=ft.ButtonStyle(
-                bgcolor=colors.SURFACE,
-                icon_color=colors.TEXT,
-                side=ft.BorderSide(1, colors.OUTLINE),
-                shape=ft.RoundedRectangleBorder(radius=radius.BUTTON),
-            )
-        ),
-        tooltip_theme=ft.TooltipTheme(
-            wait_duration=250,
-            show_duration=4000,
-            prefer_below=False,
-            vertical_offset=20,
-            padding=ft.Padding(10, 6, 10, 6),
-            text_style=typography.text_style("caption", color=colors.TEXT_INVERSE),
-            decoration=ft.BoxDecoration(
-                bgcolor=colors.PRIMARY_DARK,
-                border_radius=radius.SM,
-            ),
-        ),
+        text_theme=_text_theme(),
+        card_theme=_card_theme(),
+        progress_indicator_theme=_progress_indicator_theme(),
+        slider_theme=_slider_theme(),
+        filled_button_theme=ft.FilledButtonTheme(style=_filled_button_style()),
+        icon_button_theme=ft.IconButtonTheme(style=_icon_button_style()),
+        outlined_button_theme=ft.OutlinedButtonTheme(style=_outlined_button_style()),
+        text_button_theme=ft.TextButtonTheme(style=_text_button_style()),
+        popup_menu_theme=_popup_menu_theme(),
+        tooltip_theme=_tooltip_theme(),
     )
 
 
