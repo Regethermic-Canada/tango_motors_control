@@ -40,6 +40,8 @@ class AppModel:
         self.is_motors_running = False
         self._motors_armed = False
         self.locale = "en"
+        self.locale_version = 0
+        self.default_translations: dict[str, str] = {}
         self.translations: dict[str, str] = {}
         self.last_interaction = time.time()
         self.is_screensaver_active = False
@@ -47,8 +49,9 @@ class AppModel:
 
         # Load persisted preferences
         self.inactivity_limit = config.inactivity_timeout
+        self.default_translations = self._read_translations_file("en")
         self.locale = config.locale
-        self.load_translations()
+        self.translations = self._build_translations(self.locale)
         self.speed_max = abs(config.motor_max_step_speed)
         self.speed_min = -self.speed_max
         self.speed_percent_max = min(100, abs(config.motor_max_speed))
@@ -60,21 +63,36 @@ class AppModel:
             f"App Refreshed. Locale: {self.locale}, Timeout: {self.inactivity_limit}s"
         )
 
-    def load_translations(self) -> None:
+    def _read_translations_file(self, locale: str) -> dict[str, str]:
         project_root: Path = Path(__file__).resolve().parent.parent
-        lang_file = project_root / "assets" / "lang" / f"{self.locale}.json"
+        lang_file = project_root / "assets" / "lang" / f"{locale}.json"
         if lang_file.exists():
             with open(lang_file, "r", encoding="utf-8") as f:
-                self.translations = json.load(f)
-        else:
-            logger.error(f"Translation file not found: {lang_file}")
-            self.translations = {}
+                data = json.load(f)
+            if isinstance(data, dict):
+                return {
+                    str(key): str(value)
+                    for key, value in data.items()
+                    if isinstance(key, str) and isinstance(value, str)
+                }
+
+        logger.error(f"Translation file not found: {lang_file}")
+        return {}
+
+    def _build_translations(self, locale: str) -> dict[str, str]:
+        if locale == "en":
+            return dict(self.default_translations)
+
+        translations = dict(self.default_translations)
+        translations.update(self._read_translations_file(locale))
+        return translations
 
     def set_locale(self, locale: str) -> None:
         if self.locale != locale:
             self.locale = locale
+            self.translations = self._build_translations(locale)
+            self.locale_version += 1
             config.set("LOCALE", locale)
-            self.load_translations()
             logger.info(f"Locale changed to {self.locale}")
 
     def route_change(self, e: ft.RouteChangeEvent) -> None:

@@ -24,8 +24,7 @@ def App() -> ft.Control:
     entry_animation_started, set_entry_animation_started = ft.use_state(False)
     entry_animation_done, set_entry_animation_done = ft.use_state(False)
 
-    _ = app.locale
-    _ = app.translations
+    _ = app.locale_version
     _ = app.route
     _ = viewport_size
 
@@ -44,7 +43,7 @@ def App() -> ft.Control:
     )
 
     set_locale = ft.use_callback(
-        lambda loc: app.set_locale(loc), dependencies=[app.locale]
+        lambda loc: app.set_locale(loc), dependencies=[app.locale_version]
     )
     locale_value = ft.use_memo(
         lambda: LocaleContextValue(
@@ -52,7 +51,7 @@ def App() -> ft.Control:
             translations=app.translations,
             set_locale=set_locale,
         ),
-        dependencies=[app.locale, app.translations, set_locale],
+        dependencies=[app.locale_version, set_locale],
     )
 
     async def monitor_loop() -> None:
