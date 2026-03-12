@@ -37,6 +37,11 @@ def AdminView() -> ft.Control:
         if isinstance(value, int | float):
             settings_service.set_inactivity_timeout(float(value))
 
+    def on_default_speed_change(e: Event[Slider]) -> None:
+        value = e.control.value if e.control else None
+        if isinstance(value, int | float):
+            settings_service.set_default_speed(int(round(value)))
+
     timeout_label = TangoText(
         loc.t("inactivity_timeout"),
         variant="subtitle",
@@ -44,6 +49,17 @@ def AdminView() -> ft.Control:
     )
     timeout_value = TangoText(
         f"{int(settings_service.inactivity_timeout)} {loc.t('seconds')}",
+        variant="caption",
+        size=value_size,
+        color=colors.TEXT_MUTED,
+    )
+    default_speed_label = TangoText(
+        loc.t("default_speed"),
+        variant="subtitle",
+        size=section_title_size,
+    )
+    default_speed_value = TangoText(
+        str(settings_service.default_speed),
         variant="caption",
         size=value_size,
         color=colors.TEXT_MUTED,
@@ -60,6 +76,19 @@ def AdminView() -> ft.Control:
         timeout_header = ft.Row(
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             controls=[timeout_label, timeout_value],
+        )
+
+    default_speed_header: ft.Control
+    if metrics.compact:
+        default_speed_header = ft.Column(
+            spacing=max(2, int(round(4 * metrics.scale))),
+            horizontal_alignment=ft.CrossAxisAlignment.START,
+            controls=[default_speed_label, default_speed_value],
+        )
+    else:
+        default_speed_header = ft.Row(
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            controls=[default_speed_label, default_speed_value],
         )
 
     return TangoPage(
@@ -89,6 +118,18 @@ def AdminView() -> ft.Control:
                                     label="{value}s",
                                     value=settings_service.inactivity_timeout,
                                     on_change=on_timeout_change,
+                                    expand=True,
+                                    scale=slider_scale,
+                                ),
+                                ft.Divider(height=section_spacing),
+                                default_speed_header,
+                                ft.Slider(
+                                    min=settings_service.default_speed_min,
+                                    max=settings_service.default_speed_max,
+                                    divisions=settings_service.default_speed_max * 2,
+                                    label="{value}",
+                                    value=settings_service.default_speed,
+                                    on_change=on_default_speed_change,
                                     expand=True,
                                     scale=slider_scale,
                                 ),

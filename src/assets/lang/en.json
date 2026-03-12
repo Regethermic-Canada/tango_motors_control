@@ -20,6 +20,7 @@
   "motors_control": "Motors Control",
   "application_config": "Application Configuration",
   "inactivity_timeout": "Inactivity Timeout",
+  "default_speed": "Default Speed",
   "seconds": "seconds",
   "admin_access": "Admin Access",
   "enter_passcode": "Enter Passcode",

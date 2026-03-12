@@ -20,6 +20,7 @@
   "motors_control": "Contrôle moteurs",
   "application_config": "Configuration de l'application",
   "inactivity_timeout": "Délai d'inactivité",
+  "default_speed": "Vitesse par défaut",
   "seconds": "secondes",
   "admin_access": "Accès Admin",
   "enter_passcode": "Entrer le code",
