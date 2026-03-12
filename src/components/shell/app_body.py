@@ -5,13 +5,28 @@ from views.admin.admin_view import AdminView
 from views.admin.auth_view import AuthView
 from views.main.main_view import MainView
 
-
 @ft.component
 def AppBody(app_model: AppModel) -> ft.Control:
     route_ctx = ft.use_context(RouteContext)
+    active_route = route_ctx.route
 
-    if route_ctx.route == "/admin":
-        return AdminView(app_model)
-    elif route_ctx.route == "/auth":
-        return AuthView(app_model)
-    return MainView(app_model)
+    def route_layer(route: str, content: ft.Control) -> ft.Container:
+        is_active = route == active_route
+        return ft.Container(
+            key=f"route-layer:{route}",
+            expand=True,
+            opacity=1 if is_active else 0,
+            ignore_interactions=not is_active,
+            animate_opacity=ft.Animation(300, ft.AnimationCurve.EASE_IN_OUT),
+            content=content,
+        )
+
+    return ft.Stack(
+        expand=True,
+        fit=ft.StackFit.EXPAND,
+        controls=[
+            route_layer("/", MainView(app_model)),
+            route_layer("/auth", AuthView(app_model)),
+            route_layer("/admin", AdminView(app_model)),
+        ],
+    )

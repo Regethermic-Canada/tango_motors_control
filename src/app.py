@@ -204,7 +204,7 @@ def App() -> ft.Control:
                         else ft.AnimatedSwitcher(
                             expand=True,
                             transition=ft.AnimatedSwitcherTransition.FADE,
-                            duration=240,
+                            duration=300,
                             reverse_duration=0,
                             content=(
                                 build_app_shell(key="app-ready")

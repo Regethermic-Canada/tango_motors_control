@@ -148,7 +148,7 @@ def show_toast(
 
         toast_container.opacity = 0
         toast_container.offset = ft.Offset(0, -1)
-        page.update()
+        toast_container.update()
 
         async def remove() -> None:
             await asyncio.sleep(0.3)
@@ -180,12 +180,19 @@ def show_toast(
     )
     page.overlay.append(toast_container)
     page.update()
-    toast_container.opacity = 1
-    toast_container.offset = ft.Offset(0, 0)
-    page.update()
+
+    async def animate_in() -> None:
+        await asyncio.sleep(0)
+        current = _active_toasts.get(page_key)
+        if current is None or current.close_token != close_token:
+            return
+        toast_container.opacity = 1
+        toast_container.offset = ft.Offset(0, 0)
+        toast_container.update()
 
     async def auto_hide() -> None:
         await asyncio.sleep(duration)
         close_toast()
 
+    asyncio.create_task(animate_in())
     asyncio.create_task(auto_hide())
