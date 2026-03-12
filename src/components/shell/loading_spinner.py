@@ -1,6 +1,7 @@
 import flet as ft
 
 from contexts.locale import LocaleContext
+from theme import colors
 
 
 @ft.component
@@ -13,6 +14,9 @@ def LoadingSpinner(size: int = 56) -> ft.Control:
         content=ft.ProgressRing(
             width=size,
             height=size,
+            color=colors.PRIMARY,
+            bgcolor=colors.PRIMARY_BORDER,
+            stroke_width=6,
             semantics_label=loc.t("loading_interface", "Loading"),
         ),
     )
