@@ -13,6 +13,8 @@
   "motors_start_failed": "Échec du démarrage des moteurs",
   "motors_stop_failed": "Échec de l'arrêt des moteurs",
   "motors_action_failed": "Action moteur échouée",
+  "max_speed_reached": "Vitesse maximale atteinte",
+  "min_speed_reached": "Vitesse minimale en marche arrière atteinte",
   "admin_settings": "Paramètres Admin",
   "main_view": "Vue Principale",
   "motors_control": "Contrôle moteurs",

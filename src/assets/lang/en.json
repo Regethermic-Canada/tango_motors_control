@@ -13,6 +13,8 @@
   "motors_start_failed": "Failed to start motors",
   "motors_stop_failed": "Failed to stop motors",
   "motors_action_failed": "Motor action failed",
+  "max_speed_reached": "Max speed reached",
+  "min_speed_reached": "Min reverse speed reached",
   "admin_settings": "Admin Settings",
   "main_view": "Main View",
   "motors_control": "Motors Control",

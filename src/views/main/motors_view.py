@@ -23,6 +23,8 @@ def MotorsView(model: AppModel) -> ft.Control:
         min_scale=0.8,
     )
     is_running = model.is_motors_running
+    can_increment = model.can_increment()
+    can_decrement = model.can_decrement()
 
     content_spacing = int(round(spacing.SM * metrics.scale))
     panel_spacing = int(round(spacing.LG * metrics.scale))
@@ -58,6 +60,14 @@ def MotorsView(model: AppModel) -> ft.Control:
         loc.t("motor_status_running") if is_running else loc.t("motor_status_stopped")
     )
 
+    def show_limit_toast(message_key: str) -> None:
+        show_toast(
+            page=ft.context.page,
+            message=loc.t(message_key),
+            type=ToastType.WARNING,
+            close_tooltip=loc.t("close"),
+        )
+
     def on_toggle_click(_: Event[Button]) -> None:
         result = model.toggle_motors()
 
@@ -82,6 +92,16 @@ def MotorsView(model: AppModel) -> ft.Control:
             type=toast_type,
             close_tooltip=loc.t("close"),
         )
+
+    def on_increment_click(_: Event[ft.IconButton]) -> None:
+        changed = model.increment()
+        if changed and not model.can_increment():
+            show_limit_toast("max_speed_reached")
+
+    def on_decrement_click(_: Event[ft.IconButton]) -> None:
+        changed = model.decrement()
+        if changed and not model.can_decrement():
+            show_limit_toast("min_speed_reached")
 
     return TangoCard(
         width=panel_width,
@@ -114,10 +134,11 @@ def MotorsView(model: AppModel) -> ft.Control:
                                     TangoIconButton(
                                         icon=ft.Icons.REMOVE,
                                         icon_size=step_icon_size,
-                                        on_click=lambda _: model.decrement(),
+                                        on_click=on_decrement_click,
                                         tooltip=loc.t("decrement"),
                                         variant="surface",
                                         size="lg" if not metrics.compact else "md",
+                                        disabled=not can_decrement,
                                     ),
                                     ft.Container(
                                         width=speed_value_width,
@@ -145,10 +166,11 @@ def MotorsView(model: AppModel) -> ft.Control:
                                     TangoIconButton(
                                         icon=ft.Icons.ADD,
                                         icon_size=step_icon_size,
-                                        on_click=lambda _: model.increment(),
+                                        on_click=on_increment_click,
                                         tooltip=loc.t("increment"),
                                         variant="primary",
                                         size="lg" if not metrics.compact else "md",
+                                        disabled=not can_increment,
                                     ),
                                 ],
                             ),

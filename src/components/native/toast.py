@@ -74,7 +74,7 @@ def TangoToast(
                     tooltip=close_tooltip,
                     on_click=on_close,
                     icon_size=int(round((14 if compact else 16) * metrics_scale)),
-                    variant="secondary",
+                    variant="inverse",
                     size="sm",
                 ),
             ],

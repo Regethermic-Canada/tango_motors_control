@@ -110,23 +110,37 @@ class AppModel:
         if len(views) > 1:
             await ft.context.page.push_route(views[-2].route)
 
-    def increment(self) -> None:
+    def increment(self) -> bool:
+        previous_speed = self.speed_level
         self.speed_level = self._clamp_speed(self.speed_level + 1)
+        if self.speed_level == previous_speed:
+            return False
         self._apply_speed_to_motors()
         logger.info(
             "Speed level incremented to %s (target=%s%%)",
             self.speed_level,
             self.speed_percent,
         )
+        return True
 
-    def decrement(self) -> None:
+    def decrement(self) -> bool:
+        previous_speed = self.speed_level
         self.speed_level = self._clamp_speed(self.speed_level - 1)
+        if self.speed_level == previous_speed:
+            return False
         self._apply_speed_to_motors()
         logger.info(
             "Speed level decremented to %s (target=%s%%)",
             self.speed_level,
             self.speed_percent,
         )
+        return True
+
+    def can_increment(self) -> bool:
+        return self.speed_level < max(self.speed_min, self.speed_max)
+
+    def can_decrement(self) -> bool:
+        return self.speed_level > min(self.speed_min, self.speed_max)
 
     def set_inactivity_timeout(self, seconds: float) -> None:
         if self.inactivity_limit != seconds:
