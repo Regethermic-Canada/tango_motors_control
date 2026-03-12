@@ -164,7 +164,7 @@ def App() -> ft.Control:
         return ft.Container(
             key="app-loading-shell",
             expand=True,
-            content=LoadingSpinner(size=56),
+            content=LoadingSpinner(size=80),
         )
 
     def on_mounted() -> None:

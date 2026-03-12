@@ -52,7 +52,7 @@ def NumericNumpad(
     row_spacing = int(round(spacing.MD * metrics.scale))
     digit_font_size = int(round(30 * metrics.scale))
     digit_diameter = int(round(64 * metrics.scale))
-    action_icon_size = int(round(24 * metrics.scale))
+    action_icon_size = int(round(22 * metrics.scale))
 
     def handle_digit(digit: str) -> ContainerHandler:
         return lambda _: on_digit_click(digit)
@@ -79,7 +79,7 @@ def NumericNumpad(
             on_click=on_click,
             icon_size=action_icon_size,
             variant="surface",
-            size="md",
+            size="lg",
         )
 
     return ft.Container(

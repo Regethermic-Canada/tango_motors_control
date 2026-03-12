@@ -103,8 +103,8 @@ def AuthView(app_model: AppModel) -> ft.Control:
     content_spacing = int(
         round((spacing.MD if metrics.compact else spacing.LG) * metrics.scale)
     )
-    dots_font_size = int(round((30 if metrics.compact else 40) * metrics.scale))
-    dots_letter_spacing = int(round((7 if metrics.compact else 10) * metrics.scale))
+    dots_font_size = int(round((22 if metrics.compact else 28) * metrics.scale))
+    dots_letter_spacing = int(round((5 if metrics.compact else 7) * metrics.scale))
     card_width = min(
         680,
         max(360 if metrics.compact else 520, int(metrics.width * 0.54)),
