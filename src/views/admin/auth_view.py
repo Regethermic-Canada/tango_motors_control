@@ -100,14 +100,9 @@ def AuthView(app_model: AppModel) -> ft.Control:
 
     metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
 
-    root_spacing = int(round(spacing.LG * metrics.scale))
-    header_spacing = int(round(spacing.XS * metrics.scale))
     content_spacing = int(
         round((spacing.MD if metrics.compact else spacing.LG) * metrics.scale)
     )
-    lock_icon_size = int(round((40 if metrics.compact else 44) * metrics.scale))
-    title_font_size = int(round((26 if metrics.compact else 32) * metrics.scale))
-    subtitle_font_size = int(round((14 if metrics.compact else 16) * metrics.scale))
     dots_font_size = int(round((30 if metrics.compact else 40) * metrics.scale))
     dots_letter_spacing = int(round((7 if metrics.compact else 10) * metrics.scale))
     card_width = min(
@@ -124,30 +119,7 @@ def AuthView(app_model: AppModel) -> ft.Control:
         content=ft.Column(
             alignment=ft.MainAxisAlignment.CENTER,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            spacing=root_spacing,
             controls=[
-                ft.Column(
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=header_spacing,
-                    controls=[
-                        ft.Icon(
-                            ft.Icons.LOCK_OUTLINED,
-                            size=lock_icon_size,
-                            color=colors.PRIMARY,
-                        ),
-                        TangoText(
-                            loc.t("admin_access"),
-                            variant="title",
-                            size=title_font_size,
-                        ),
-                        TangoText(
-                            loc.t("enter_passcode"),
-                            variant="body",
-                            size=subtitle_font_size,
-                            color=colors.TEXT_MUTED,
-                        ),
-                    ],
-                ),
                 TangoCard(
                     width=card_width,
                     padding=ft.Padding(

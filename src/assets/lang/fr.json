@@ -15,6 +15,7 @@
   "motors_action_failed": "Action moteur échouée",
   "admin_settings": "Paramètres Admin",
   "main_view": "Vue Principale",
+  "motors_control": "Contrôle moteurs",
   "application_config": "Configuration de l'application",
   "inactivity_timeout": "Délai d'inactivité",
   "seconds": "secondes",

@@ -1,5 +1,7 @@
 import flet as ft
 from components.native.card import TangoCard
+from components.native.text import TangoText
+from contexts.locale import LocaleContext
 from models.app_model import AppModel
 from theme import colors, radius, spacing
 from theme.scale import get_viewport_metrics
@@ -10,21 +12,60 @@ from utils.config import config
 
 @ft.component
 def Layout(app_model: AppModel, content: ft.Control) -> ft.Control:
+    loc = ft.use_context(LocaleContext)
     ASSET_LOGO = config.asset_logo
     ASSET_SCREENSAVER = config.asset_screensaver
     metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
 
     logo_bottom_padding = int(round((spacing.XL + spacing.XS) * metrics.scale))
     logo_width = int(round((240 if metrics.compact else 320) * metrics.scale))
-    header_top = int(round(spacing.XS * metrics.scale))
+    header_side_padding = int(round((spacing.MD if metrics.compact else spacing.LG) * metrics.scale))
     header_right = int(round(spacing.MD * metrics.scale))
     header_gap = int(round(spacing.XS * metrics.scale))
     header_card_padding = int(round(4 * metrics.scale))
     top_band_height = int(round((68 if metrics.compact else 76) * metrics.scale))
     toast_top_offset = top_band_height + int(round(spacing.SM * metrics.scale))
+    title_spacing = int(round(2 * metrics.scale))
+    title_size = int(round((18 if metrics.compact else 22) * metrics.scale))
+    subtitle_size = int(round((11 if metrics.compact else 13) * metrics.scale))
 
     setattr(ft.context.page, "_tango_toast_top_offset", toast_top_offset)
     setattr(ft.context.page, "_tango_toast_right_offset", header_right)
+
+    title_key = "motors_control"
+    subtitle_key: str | None = None
+    if app_model.route == "/auth":
+        title_key = "admin_access"
+        subtitle_key = "enter_passcode"
+    elif app_model.route == "/admin":
+        title_key = "admin_settings"
+        subtitle_key = "application_config"
+
+    title_block = ft.Column(
+        spacing=title_spacing,
+        alignment=ft.MainAxisAlignment.CENTER,
+        horizontal_alignment=ft.CrossAxisAlignment.START,
+        controls=[
+            TangoText(
+                loc.t(title_key),
+                variant="title",
+                size=title_size,
+                color=colors.TEXT_INVERSE,
+            ),
+            *(
+                [
+                    TangoText(
+                        loc.t(subtitle_key),
+                        variant="caption",
+                        size=subtitle_size,
+                        color="#DCE9FF",
+                    )
+                ]
+                if subtitle_key
+                else []
+            ),
+        ],
+    )
 
     return ft.Container(
         expand=True,
@@ -53,25 +94,42 @@ def Layout(app_model: AppModel, content: ft.Control) -> ft.Control:
                     content=content,
                 ),
                 ft.Container(
-                    top=header_top,
-                    right=header_right,
-                    content=TangoCard(
-                        padding=ft.Padding(
-                            header_card_padding,
-                            header_card_padding,
-                            header_card_padding,
-                            header_card_padding,
-                        ),
-                        border_radius=radius.SHELL,
-                        content=ft.Row(
-                            controls=[
-                                AdminModeToggle(app_model),
-                                LanguageSelector(),
-                            ],
-                            spacing=header_gap,
-                            tight=True,
-                            alignment=ft.MainAxisAlignment.END,
-                        ),
+                    top=0,
+                    left=0,
+                    right=0,
+                    height=top_band_height,
+                    padding=ft.Padding(
+                        header_side_padding,
+                        0,
+                        header_side_padding,
+                        0,
+                    ),
+                    alignment=ft.Alignment.CENTER,
+                    content=ft.Row(
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        controls=[
+                            title_block,
+                            TangoCard(
+                                padding=ft.Padding(
+                                    header_card_padding,
+                                    header_card_padding,
+                                    header_card_padding,
+                                    header_card_padding,
+                                ),
+                                border_radius=radius.SHELL,
+                                content=ft.Row(
+                                    controls=[
+                                        AdminModeToggle(app_model),
+                                        LanguageSelector(),
+                                    ],
+                                    spacing=header_gap,
+                                    tight=True,
+                                    alignment=ft.MainAxisAlignment.END,
+                                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                                ),
+                            ),
+                        ],
                     ),
                 ),
                 *(

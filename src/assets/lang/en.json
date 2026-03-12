@@ -15,6 +15,7 @@
   "motors_action_failed": "Motor action failed",
   "admin_settings": "Admin Settings",
   "main_view": "Main View",
+  "motors_control": "Motors Control",
   "application_config": "Application Configuration",
   "inactivity_timeout": "Inactivity Timeout",
   "seconds": "seconds",
