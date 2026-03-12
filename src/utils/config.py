@@ -4,7 +4,7 @@ import shutil
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List
+
 from dotenv import load_dotenv
 
 
@@ -20,7 +20,7 @@ def get_env_bool(key: str, default: bool) -> bool:
     return value in {"1", "true", "yes", "on"}
 
 
-def parse_int_csv(value: str) -> List[int]:
+def parse_int_csv(value: str) -> list[int]:
     tokens = [token.strip() for token in value.split(",") if token.strip()]
     return [int(token) for token in tokens]
 
@@ -38,8 +38,6 @@ class Config:
     app_admin_default_passcode: str
 
     # User Preferences
-    theme_mode: str
-    theme_color: str
     locale: str
     default_speed: int
     admin_passcode_hash: str
@@ -56,8 +54,8 @@ class Config:
     motor_enabled: bool
     motor_type: str
     motor_can_channel: str
-    motor_ids: List[int]
-    motor_directions: List[int]
+    motor_ids: list[int]
+    motor_directions: list[int]
     motor_command_hz: float
     motor_ramp_time_s: float
     motor_hold_release_timeout_s: float
@@ -104,81 +102,49 @@ class Config:
         if storage_path.exists():
             load_dotenv(dotenv_path=storage_path, override=True)
 
-        return cls(
-            _storage_path=storage_path,
-            **cls._load_identity(),
-            **cls._load_preferences(),
-            **cls._load_assets(),
-            **cls._load_behavior(),
-            **cls._load_motor_control(),
-        )
-
-    @staticmethod
-    def _load_identity() -> Dict[str, Any]:
-        return {
-            "app_title": get_env("APP_TITLE", "Tango Motors Control"),
-            "app_version": get_env("APP_VERSION", "0.1.9"),
-            "app_admin_default_passcode": get_env("APP_ADMIN_DEFAULT_PASSCODE", "1010"),
-        }
-
-    @staticmethod
-    def _load_preferences() -> Dict[str, Any]:
-        return {
-            "theme_mode": get_env("THEME_MODE", "DARK").upper(),
-            "theme_color": get_env("THEME_COLOR", "BLUE").upper(),
-            "locale": get_env("LOCALE", "fr").lower(),
-            "default_speed": int(get_env("DEFAULT_SPEED", "0")),
-            "admin_passcode_hash": get_env("ADMIN_PASSCODE_HASH", ""),
-        }
-
-    @staticmethod
-    def _load_assets() -> Dict[str, Any]:
-        return {
-            "asset_logo": get_env("ASSET_LOGO", "tango_logo.png"),
-            "asset_screensaver": get_env(
-                "ASSET_SCREENSAVER", "regethermic_screensaver.png"
-            ),
-        }
-
-    @staticmethod
-    def _load_behavior() -> Dict[str, Any]:
-        return {
-            "inactivity_timeout": float(get_env("INACTIVITY_TIMEOUT", "30.0")),
-            "log_level": get_env("LOG_LEVEL", "INFO").upper(),
-        }
-
-    @staticmethod
-    def _load_motor_control() -> Dict[str, Any]:
         motor_ids = parse_int_csv(get_env("MOTOR_IDS", "1,2"))
         motor_directions = parse_int_csv(get_env("MOTOR_DIRECTIONS", "1,-1"))
 
         if not motor_ids:
             motor_ids = [1]
 
-        return {
-            "motor_enabled": get_env_bool("MOTOR_ENABLED", False),
-            "motor_type": get_env("MOTOR_TYPE", "AK40-10"),
-            "motor_can_channel": get_env("MOTOR_CAN_CHANNEL", "can0"),
-            "motor_ids": motor_ids,
-            "motor_directions": motor_directions,
-            "motor_command_hz": float(get_env("MOTOR_COMMAND_HZ", "2.0")),
-            "motor_ramp_time_s": max(0.0, float(get_env("MOTOR_RAMP_TIME_S", "0.5"))),
-            "motor_hold_release_timeout_s": max(
+        return cls(
+            _storage_path=storage_path,
+            app_title=get_env("APP_TITLE", "Tango Motors Control"),
+            app_version=get_env("APP_VERSION", "0.1.9"),
+            app_admin_default_passcode=get_env("APP_ADMIN_DEFAULT_PASSCODE", "1010"),
+            locale=get_env("LOCALE", "fr").lower(),
+            default_speed=int(get_env("DEFAULT_SPEED", "0")),
+            admin_passcode_hash=get_env("ADMIN_PASSCODE_HASH", ""),
+            asset_logo=get_env("ASSET_LOGO", "tango_logo.png"),
+            asset_screensaver=get_env(
+                "ASSET_SCREENSAVER", "regethermic_screensaver.png"
+            ),
+            inactivity_timeout=float(get_env("INACTIVITY_TIMEOUT", "30.0")),
+            log_level=get_env("LOG_LEVEL", "INFO").upper(),
+            motor_enabled=get_env_bool("MOTOR_ENABLED", False),
+            motor_type=get_env("MOTOR_TYPE", "AK40-10"),
+            motor_can_channel=get_env("MOTOR_CAN_CHANNEL", "can0"),
+            motor_ids=motor_ids,
+            motor_directions=motor_directions,
+            motor_command_hz=float(get_env("MOTOR_COMMAND_HZ", "2.0")),
+            motor_ramp_time_s=max(0.0, float(get_env("MOTOR_RAMP_TIME_S", "0.5"))),
+            motor_hold_release_timeout_s=max(
                 0.0, float(get_env("MOTOR_HOLD_RELEASE_TIMEOUT_S", "5.0"))
             ),
-            "motor_max_step_speed": int(get_env("MOTOR_MAX_STEP_SPEED", "10")),
-            "motor_max_speed": int(get_env("MOTOR_MAX_SPEED", "100")),
-            "motor_max_temp_c": float(get_env("MOTOR_MAX_TEMP_C", "70.0")),
-        }
+            motor_max_step_speed=int(get_env("MOTOR_MAX_STEP_SPEED", "10")),
+            motor_max_speed=int(get_env("MOTOR_MAX_SPEED", "100")),
+            motor_max_temp_c=float(get_env("MOTOR_MAX_TEMP_C", "70.0")),
+        )
 
-    def set(self, key: str, value: Any) -> None:
+    def set(self, key: str, value: object) -> None:
         """
         Updates a configuration value in memory and persists it to the storage file.
         """
         str_value: str = str(value)
         attr_name: str = key.lower()
         if hasattr(self, attr_name):
-            current_val: Any = getattr(self, attr_name)
+            current_val = getattr(self, attr_name)
             if isinstance(current_val, bool):
                 setattr(
                     self,
@@ -188,9 +154,9 @@ class Config:
             elif isinstance(current_val, list):
                 setattr(self, attr_name, parse_int_csv(str_value))
             elif isinstance(current_val, int):
-                setattr(self, attr_name, int(value))
+                setattr(self, attr_name, int(str_value))
             elif isinstance(current_val, float):
-                setattr(self, attr_name, float(value))
+                setattr(self, attr_name, float(str_value))
             else:
                 setattr(self, attr_name, str_value)
 
@@ -206,7 +172,7 @@ class Config:
         with open(self._storage_path, "r") as f:
             lines = f.readlines()
 
-        new_lines: List[str] = []
+        new_lines: list[str] = []
         key_found = False
         pattern = re.compile(rf"^\s*{re.escape(key)}\s*=")
 

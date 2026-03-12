@@ -8,7 +8,7 @@ from pathlib import Path
 
 import flet as ft
 
-from services.motors import MotorService, MotorServiceConfig
+from services.motors.motor_service import MotorService, MotorServiceConfig
 from utils.config import config
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -39,8 +39,6 @@ class AppModel:
         self.speed_percent_max = 100
         self.is_motors_running = False
         self._motors_armed = False
-        self.theme_mode = ft.ThemeMode.DARK
-        self.theme_color = ft.Colors.BLUE
         self.locale = "en"
         self.translations: dict[str, str] = {}
         self.last_interaction = time.time()
@@ -49,17 +47,6 @@ class AppModel:
 
         # Load persisted preferences
         self.inactivity_limit = config.inactivity_timeout
-        saved_mode = config.theme_mode
-        self.theme_mode = (
-            ft.ThemeMode.LIGHT if saved_mode == "LIGHT" else ft.ThemeMode.DARK
-        )
-
-        saved_color_name = config.theme_color.lower()
-        try:
-            self.theme_color = getattr(ft.Colors, saved_color_name.upper())
-        except AttributeError:
-            self.theme_color = ft.Colors.BLUE
-
         self.locale = config.locale
         self.load_translations()
         self.speed_max = abs(config.motor_max_step_speed)
@@ -70,7 +57,7 @@ class AppModel:
         self._motor_service = MotorService(MotorServiceConfig.from_app_config(config))
 
         logger.info(
-            f"App Refreshed. Theme: {self.theme_mode}, Color: {self.theme_color}, Locale: {self.locale}, Timeout: {self.inactivity_limit}s"
+            f"App Refreshed. Locale: {self.locale}, Timeout: {self.inactivity_limit}s"
         )
 
     def load_translations(self) -> None:
@@ -126,24 +113,6 @@ class AppModel:
             self.speed_level,
             self.speed_percent,
         )
-
-    def toggle_theme(self) -> None:
-        self.theme_mode = (
-            ft.ThemeMode.DARK
-            if self.theme_mode == ft.ThemeMode.LIGHT
-            else ft.ThemeMode.LIGHT
-        )
-        config_value = "LIGHT" if self.theme_mode == ft.ThemeMode.LIGHT else "DARK"
-        config.set("THEME_MODE", config_value)
-        self.reset_timer()
-        logger.info(f"Theme toggled to {self.theme_mode}")
-
-    def set_theme_color(self, color: ft.Colors) -> None:
-        self.theme_color = color
-        color_name = color.name if hasattr(color, "name") else str(color)
-        config.set("THEME_COLOR", color_name.upper())
-        self.reset_timer()
-        logger.info(f"Theme color changed to {self.theme_color}")
 
     def set_inactivity_timeout(self, seconds: float) -> None:
         if self.inactivity_limit != seconds:

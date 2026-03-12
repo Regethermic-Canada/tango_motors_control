@@ -1,9 +1,9 @@
 import flet as ft
-from components.admin.admin_view import AdminView
-from components.admin.auth_view import AuthView
-from components.main.main_view import MainView
 from contexts.route import RouteContext
 from models.app_model import AppModel
+from views.admin.admin_view import AdminView
+from views.admin.auth_view import AuthView
+from views.main.main_view import MainView
 
 
 @ft.component

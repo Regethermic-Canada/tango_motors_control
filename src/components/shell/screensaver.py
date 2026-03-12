@@ -1,9 +1,12 @@
 import flet as ft
-from typing import Callable, Any
+from flet.controls.control_event import ControlEventHandler
+from flet.controls.material.container import Container
+
+ClickHandler = ControlEventHandler[Container]
 
 
 @ft.component
-def Screensaver(asset_path: str, on_click: Callable[[Any], None]) -> ft.Control:
+def Screensaver(asset_path: str, on_click: ClickHandler) -> ft.Control:
     return ft.Container(
         expand=True,
         bgcolor=ft.Colors.BLACK,

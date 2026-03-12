@@ -1,58 +1,39 @@
 import asyncio
 import logging
+
 import flet as ft
 
-from components.shared.layout import Layout
-from components.shared.app_body import AppBody
-from components.shared.loading_spinner import LoadingSpinner
+from components.shell.app_body import AppBody
+from components.shell.layout import Layout
+from components.shell.loading_spinner import LoadingSpinner
 from contexts.locale import LocaleContext, LocaleContextValue
 from contexts.route import RouteContext, RouteContextValue
-from contexts.theme import ThemeContext, ThemeContextValue
 from models.app_model import AppModel
+from theme.builder import configure_page
 
 logger = logging.getLogger(__name__)
 
 
 @ft.component
 def App() -> ft.Control:
-    # Use a lambda to ensure AppModel is only instantiated once
     app: AppModel
     app, _ = ft.use_state(lambda: AppModel(route=ft.context.page.route))  # type: ignore
     viewport_size, set_viewport_size = ft.use_state((0.0, 0.0))
     ui_ready, set_ui_ready = ft.use_state(False)
+    entry_animation_started, set_entry_animation_started = ft.use_state(False)
+    entry_animation_done, set_entry_animation_done = ft.use_state(False)
 
-    # Explicitly subscribe to observable properties used in build or contexts
     _ = app.locale
     _ = app.translations
     _ = app.route
     _ = viewport_size
 
-    # subscribe to page events as soon as possible
     ft.context.page.on_route_change = app.route_change
     ft.context.page.on_view_pop = app.view_popped
-
-    # stable callbacks
-    toggle_mode = ft.use_callback(
-        lambda: app.toggle_theme(), dependencies=[app.theme_mode]
-    )
-    set_theme_color = ft.use_callback(
-        lambda color: app.set_theme_color(color), dependencies=[app.theme_color]
-    )
-
-    theme_value = ft.use_memo(
-        lambda: ThemeContextValue(
-            mode=app.theme_mode,
-            seed_color=app.theme_color,
-            toggle_mode=toggle_mode,
-            set_seed_color=set_theme_color,
-        ),
-        dependencies=[app.theme_mode, app.theme_color, toggle_mode, set_theme_color],
-    )
 
     navigate_callback = ft.use_callback(
         lambda new_route: app.navigate(new_route), dependencies=[app.route]
     )
-
     route_value = ft.use_memo(
         lambda: RouteContextValue(
             route=app.route,
@@ -64,7 +45,6 @@ def App() -> ft.Control:
     set_locale = ft.use_callback(
         lambda loc: app.set_locale(loc), dependencies=[app.locale]
     )
-
     locale_value = ft.use_memo(
         lambda: LocaleContextValue(
             locale=app.locale,
@@ -133,8 +113,6 @@ def App() -> ft.Control:
             await asyncio.sleep(poll_s)
 
     async def warmup_first_frame_update_task() -> None:
-        # Delay the visible "first reflow" until the window size settles,
-        # then force it before the user's first interaction.
         logger.info("Viewport warmup started")
         try:
             stable_before = await wait_for_viewport_stable()
@@ -165,6 +143,10 @@ def App() -> ft.Control:
         finally:
             set_ui_ready(True)
 
+    async def complete_entry_animation_task() -> None:
+        await asyncio.sleep(0.28)
+        set_entry_animation_done(True)
+
     def on_page_resized(_: object) -> None:
         sync_viewport_size()
 
@@ -173,9 +155,9 @@ def App() -> ft.Control:
         ft.context.page.window.maximized = True
         ft.context.page.window.full_screen = True
         ft.context.page.window.frameless = True
+        configure_page(ft.context.page)
         ft.context.page.on_resized = on_page_resized  # type: ignore[attr-defined]
         sync_viewport_size(force=True)
-        # Global interaction tracking
         ft.context.page.on_pointer_down = lambda _: app.reset_timer()  # type: ignore[attr-defined]
         ft.context.page.on_keyboard_event = lambda _: app.reset_timer()
         ft.context.page.run_task(initialize_motors_task)
@@ -185,29 +167,32 @@ def App() -> ft.Control:
     ft.on_mounted(on_mounted)
     ft.on_unmounted(shutdown_motors_task)
 
-    def update_theme() -> None:
-        ft.context.page.theme_mode = app.theme_mode
-        ft.context.page.theme = ft.context.page.dark_theme = ft.Theme(
-            color_scheme_seed=app.theme_color
-        )
+    def on_ui_ready_changed() -> None:
+        if ui_ready and not entry_animation_started and not entry_animation_done:
+            set_entry_animation_started(True)
+            ft.context.page.run_task(complete_entry_animation_task)
 
-    ft.on_updated(update_theme, [app.theme_mode, app.theme_color])
+    ft.on_updated(on_ui_ready_changed, [ui_ready])
 
     return LocaleContext(
         locale_value,
         lambda: RouteContext(
             route_value,
-            lambda: ThemeContext(
-                theme_value,
-                lambda: ft.View(
-                    route="/",
-                    padding=0,
-                    controls=[
-                        ft.AnimatedSwitcher(
+            lambda: ft.View(
+                route="/",
+                padding=0,
+                controls=[
+                    (
+                        ft.Container(
+                            expand=True,
+                            content=Layout(app, AppBody(app)),
+                        )
+                        if entry_animation_done
+                        else ft.AnimatedSwitcher(
                             expand=True,
                             transition=ft.AnimatedSwitcherTransition.FADE,
-                            duration=220,
-                            reverse_duration=220,
+                            duration=240,
+                            reverse_duration=0,
                             content=(
                                 ft.Container(
                                     key="app-ready",
@@ -222,8 +207,8 @@ def App() -> ft.Control:
                                 )
                             ),
                         )
-                    ],
-                ),
+                    )
+                ],
             ),
         ),
     )

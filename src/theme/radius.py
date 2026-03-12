@@ -1,0 +1,14 @@
+XS = 4
+SM = 8
+MD = 10
+LG = 12
+XL = 16
+XXL = 20
+FULL = 999
+
+PANEL = SM
+SHELL = MD
+TILE = LG
+TOAST = LG
+TAG = FULL
+BUTTON = FULL

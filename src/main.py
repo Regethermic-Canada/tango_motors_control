@@ -1,6 +1,6 @@
 import flet as ft
 
-from components.app import App
+from app import App
 from utils.config import config
 from utils.logging_config import setup_logging
 

@@ -4,12 +4,16 @@ import flet as ft
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 
+from components.native.card import TangoCard
+from components.native.page import TangoPage
+from components.native.text import TangoText
+from components.native.toast import ToastType, show_toast
 from models.app_model import AppModel
 from contexts.locale import LocaleContext
 from utils.config import config
-from utils.ui_scale import get_viewport_metrics
-from components.shared.numpad import NumericNumpad
-from components.shared.toast import show_toast, ToastType
+from theme import colors, spacing
+from theme.scale import get_viewport_metrics
+from components.views.admin.numpad import NumericNumpad
 
 logger = logging.getLogger(__name__)
 
@@ -96,16 +100,27 @@ def AuthView(app_model: AppModel) -> ft.Control:
 
     metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
 
-    root_spacing = int(round(20 * metrics.scale))
-    header_spacing = int(round(10 * metrics.scale))
-    content_spacing = int(round(20 * metrics.scale))
-    lock_icon_size = int(round(50 * metrics.scale))
+    root_spacing = int(round(spacing.LG * metrics.scale))
+    header_spacing = int(round(spacing.XS * metrics.scale))
+    content_spacing = int(
+        round((spacing.MD if metrics.compact else spacing.LG) * metrics.scale)
+    )
+    lock_icon_size = int(round((40 if metrics.compact else 44) * metrics.scale))
     title_font_size = int(round((26 if metrics.compact else 32) * metrics.scale))
+    subtitle_font_size = int(round((14 if metrics.compact else 16) * metrics.scale))
     dots_font_size = int(round((30 if metrics.compact else 40) * metrics.scale))
     dots_letter_spacing = int(round((7 if metrics.compact else 10) * metrics.scale))
+    card_width = min(
+        560,
+        max(340 if metrics.compact else 420, int(metrics.width * 0.46)),
+    )
+    card_padding = int(
+        round((spacing.LG if metrics.compact else spacing.XL) * metrics.scale)
+    )
 
-    return ft.Container(
+    return TangoPage(
         expand=True,
+        alignment=ft.Alignment.CENTER,
         content=ft.Column(
             alignment=ft.MainAxisAlignment.CENTER,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -118,41 +133,50 @@ def AuthView(app_model: AppModel) -> ft.Control:
                         ft.Icon(
                             ft.Icons.LOCK_OUTLINED,
                             size=lock_icon_size,
-                            color=ft.Colors.PRIMARY,
+                            color=colors.PRIMARY,
                         ),
-                        ft.Text(
+                        TangoText(
                             loc.t("admin_access"),
+                            variant="title",
                             size=title_font_size,
-                            weight=ft.FontWeight.BOLD,
+                        ),
+                        TangoText(
+                            loc.t("enter_passcode"),
+                            variant="body",
+                            size=subtitle_font_size,
+                            color=colors.TEXT_MUTED,
                         ),
                     ],
                 ),
-                ft.Container(
+                TangoCard(
+                    width=card_width,
+                    padding=ft.Padding(
+                        card_padding, card_padding, card_padding, card_padding
+                    ),
                     content=ft.Column(
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                         spacing=content_spacing,
                         controls=[
                             ft.Container(
-                                content=ft.Row(
-                                    alignment=ft.MainAxisAlignment.CENTER,
-                                    controls=[
-                                        ft.Text(
-                                            dots.strip(),
-                                            size=dots_font_size,
-                                            style=ft.TextStyle(
-                                                letter_spacing=dots_letter_spacing
-                                            ),
-                                            color=(
-                                                ft.Colors.PRIMARY
-                                                if passcode
-                                                else ft.Colors.OUTLINE
-                                            ),
-                                        )
-                                    ],
-                                ),
                                 offset=shake_offset,
                                 animate_offset=ft.Animation(
                                     40, ft.AnimationCurve.LINEAR
+                                ),
+                                content=ft.Row(
+                                    alignment=ft.MainAxisAlignment.CENTER,
+                                    controls=[
+                                        TangoText(
+                                            dots.strip(),
+                                            variant="headline",
+                                            size=dots_font_size,
+                                            letter_spacing=dots_letter_spacing,
+                                            color=(
+                                                colors.PRIMARY
+                                                if passcode
+                                                else colors.OUTLINE
+                                            ),
+                                        )
+                                    ],
                                 ),
                             ),
                             NumericNumpad(
