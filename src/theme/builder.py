@@ -13,7 +13,7 @@ def configure_page(page: ft.Page) -> None:
     if regular_font.exists() and medium_font.exists():
         page.fonts = {
             typography.FONT_FAMILY: "fonts/Manrope-Regular.ttf",
-            f"{typography.FONT_FAMILY} Medium": "fonts/Manrope-Medium.ttf",
+            typography.FONT_FAMILY_MEDIUM: "fonts/Manrope-Medium.ttf",
         }
 
     page.theme_mode = ft.ThemeMode.LIGHT

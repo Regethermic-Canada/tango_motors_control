@@ -6,6 +6,7 @@ import flet as ft
 from . import colors
 
 FONT_FAMILY = "Manrope"
+FONT_FAMILY_MEDIUM = "Manrope Medium"
 TextVariant = Literal[
     "display",
     "headline",
@@ -59,10 +60,15 @@ def text_style(
     letter_spacing: float | None = None,
 ) -> ft.TextStyle:
     spec = TEXT_VARIANTS[variant]
+    resolved_weight = weight or spec.weight
     return ft.TextStyle(
-        font_family=FONT_FAMILY,
+        font_family=(
+            FONT_FAMILY_MEDIUM
+            if resolved_weight == ft.FontWeight.W_500
+            else FONT_FAMILY
+        ),
         size=size or spec.size,
-        weight=weight or spec.weight,
+        weight=resolved_weight,
         color=color or spec.color,
         height=spec.height,
         letter_spacing=(
