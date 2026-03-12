@@ -23,7 +23,7 @@ def DigitButton(
         height=diameter,
         alignment=ft.Alignment.CENTER,
         bgcolor=colors.SURFACE,
-        border=ft.border.all(1, colors.OUTLINE),
+        border=ft.Border.all(1, colors.OUTLINE),
         border_radius=diameter / 2,
         ink=True,
         on_click=on_click,

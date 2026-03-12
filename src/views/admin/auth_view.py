@@ -1,16 +1,14 @@
 import logging
 import asyncio
 import flet as ft
-from argon2 import PasswordHasher
-from argon2.exceptions import VerifyMismatchError
 
 from components.native.card import TangoCard
 from components.native.page import TangoPage
 from components.native.text import TangoText
 from components.native.toast import ToastType, show_toast
-from models.app_model import AppModel
 from contexts.locale import LocaleContext
-from utils.config import config
+from contexts.route import RouteContext
+from contexts.settings import SettingsContext
 from theme import colors, spacing
 from theme.scale import get_viewport_metrics
 from components.views.admin.numpad import NumericNumpad
@@ -19,39 +17,24 @@ logger = logging.getLogger(__name__)
 
 
 @ft.component
-def AuthView(app_model: AppModel) -> ft.Control:
+def AuthView() -> ft.Control:
     loc = ft.use_context(LocaleContext)
+    route_ctx = ft.use_context(RouteContext)
+    settings_service = ft.use_context(SettingsContext).current()
     passcode, set_passcode = ft.use_state("")
     shake_offset, set_shake_offset = ft.use_state(ft.Offset(0, 0))
-    ph = PasswordHasher()
 
     async def verify_passcode(current_passcode: str) -> None:
-        stored_hash = config.admin_passcode_hash
-        default_passcode = config.app_admin_default_passcode
-        authenticated = False
-
         # Small delay to let the 4th dot render
         await asyncio.sleep(0.1)
-
-        try:
-            if not stored_hash:
-                if current_passcode == default_passcode:
-                    authenticated = True
-                    new_hash = ph.hash(current_passcode)
-                    config.set("ADMIN_PASSCODE_HASH", new_hash)
-                    set_passcode("")
-            else:
-                ph.verify(stored_hash, current_passcode)
-                authenticated = True
-                set_passcode("")
-        except VerifyMismatchError:
-            authenticated = False
-        except Exception as ex:
-            logger.error(f"Auth error: {ex}")
-            authenticated = False
+        authenticated = await asyncio.to_thread(
+            settings_service.verify_admin_passcode,
+            current_passcode,
+        )
 
         if authenticated:
-            app_model.navigate("/admin")
+            set_passcode("")
+            route_ctx.navigate("/admin")
         else:
             # Show toast simultaneously with shake
             show_toast(

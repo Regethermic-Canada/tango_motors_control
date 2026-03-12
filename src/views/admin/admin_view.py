@@ -4,15 +4,16 @@ from flet.controls.material.slider import Slider
 from components.native.card import TangoCard
 from components.native.page import TangoPage
 from components.native.text import TangoText
-from models.app_model import AppModel
 from contexts.locale import LocaleContext
+from contexts.settings import SettingsContext
 from theme import colors, spacing
 from theme.scale import get_viewport_metrics
 
 
 @ft.component
-def AdminView(app_model: AppModel) -> ft.Control:
+def AdminView() -> ft.Control:
     loc = ft.use_context(LocaleContext)
+    settings_service = ft.use_context(SettingsContext).current()
     metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
 
     outer_pad = int(
@@ -34,7 +35,7 @@ def AdminView(app_model: AppModel) -> ft.Control:
     def on_timeout_change(e: Event[Slider]) -> None:
         value = e.control.value if e.control else None
         if isinstance(value, int | float):
-            app_model.set_inactivity_timeout(float(value))
+            settings_service.set_inactivity_timeout(float(value))
 
     timeout_label = TangoText(
         loc.t("inactivity_timeout"),
@@ -42,7 +43,7 @@ def AdminView(app_model: AppModel) -> ft.Control:
         size=section_title_size,
     )
     timeout_value = TangoText(
-        f"{int(app_model.inactivity_limit)} {loc.t('seconds')}",
+        f"{int(settings_service.inactivity_timeout)} {loc.t('seconds')}",
         variant="caption",
         size=value_size,
         color=colors.TEXT_MUTED,
@@ -84,13 +85,13 @@ def AdminView(app_model: AppModel) -> ft.Control:
                                 ft.Slider(
                                     min=10,
                                     max=150,
-                                divisions=14,
-                                label="{value}s",
-                                value=app_model.inactivity_limit,
-                                on_change=on_timeout_change,
-                                expand=True,
-                                scale=slider_scale,
-                            ),
+                                    divisions=14,
+                                    label="{value}s",
+                                    value=settings_service.inactivity_timeout,
+                                    on_change=on_timeout_change,
+                                    expand=True,
+                                    scale=slider_scale,
+                                ),
                             ],
                         ),
                     ),

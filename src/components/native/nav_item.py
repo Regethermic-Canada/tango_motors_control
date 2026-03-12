@@ -26,7 +26,7 @@ def TangoNavItem(
         border_radius=radius.BUTTON,
         tooltip=tooltip,
         bgcolor=colors.PRIMARY if selected else colors.SURFACE,
-        border=ft.border.all(1, colors.PRIMARY if selected else colors.OUTLINE),
+        border=ft.Border.all(1, colors.PRIMARY if selected else colors.OUTLINE),
         shadow=shadows.soft_shadow(),
         content=ft.Row(
             [

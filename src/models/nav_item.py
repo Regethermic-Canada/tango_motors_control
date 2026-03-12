@@ -1,8 +1,9 @@
 from dataclasses import dataclass
+
 import flet as ft
 
 
-@dataclass
+@dataclass(frozen=True)
 class NavItem:
     name: str
     label: str

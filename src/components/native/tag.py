@@ -26,7 +26,7 @@ def TangoTag(
     return ft.Container(
         bgcolor=bgcolor,
         border_radius=radius.TAG,
-        border=ft.border.all(1, border_color),
+        border=ft.Border.all(1, border_color),
         padding=ft.Padding(8, 6, 8, 6),
         height=40,
         alignment=ft.Alignment.CENTER,

@@ -7,24 +7,26 @@ from components.native.icon_button import TangoIconButton
 from components.native.tag import TangoTag, TagVariant
 from components.native.text import TangoText
 from components.native.toast import ToastType, show_toast
-from models.app_model import AppModel, MotorAction
+from models.motor_types import MotorAction
 from contexts.locale import LocaleContext
+from contexts.motor import MotorContext
 from theme import colors, spacing
 from theme.scale import get_viewport_metrics
 
 
 @ft.component
-def MotorsView(model: AppModel) -> ft.Control:
+def MotorsView() -> ft.Control:
     loc = ft.use_context(LocaleContext)
+    motor = ft.use_context(MotorContext).current()
     metrics = get_viewport_metrics(
         ft.context.page,
         base_width=960,
         base_height=540,
         min_scale=0.8,
     )
-    is_running = model.is_motors_running
-    can_increment = model.can_increment()
-    can_decrement = model.can_decrement()
+    is_running = motor.is_motors_running
+    can_increment = motor.can_increment()
+    can_decrement = motor.can_decrement()
 
     content_spacing = int(round(spacing.SM * metrics.scale))
     panel_spacing = int(round(spacing.LG * metrics.scale))
@@ -48,8 +50,8 @@ def MotorsView(model: AppModel) -> ft.Control:
         round((spacing.XS if metrics.compact else spacing.SM) * metrics.scale)
     )
     speed_value_width = int(round((112 if metrics.compact else 144) * metrics.scale))
-    speed_control_width = (step_button_size * 2) + speed_value_width + (
-        step_spacing * 2
+    speed_control_width = (
+        (step_button_size * 2) + speed_value_width + (step_spacing * 2)
     )
     card_padding = int(
         round((spacing.LG if metrics.compact else spacing.XL) * metrics.scale)
@@ -69,7 +71,7 @@ def MotorsView(model: AppModel) -> ft.Control:
         )
 
     def on_toggle_click(_: Event[Button]) -> None:
-        result = model.toggle_motors()
+        result = motor.toggle_motors()
 
         message_key = "motors_action_failed"
         toast_type = ToastType.ERROR
@@ -94,13 +96,13 @@ def MotorsView(model: AppModel) -> ft.Control:
         )
 
     def on_increment_click(_: Event[ft.IconButton]) -> None:
-        changed = model.increment()
-        if changed and not model.can_increment():
+        changed = motor.increment()
+        if changed and not motor.can_increment():
             show_limit_toast("max_speed_reached")
 
     def on_decrement_click(_: Event[ft.IconButton]) -> None:
-        changed = model.decrement()
-        if changed and not model.can_decrement():
+        changed = motor.decrement()
+        if changed and not motor.can_decrement():
             show_limit_toast("min_speed_reached")
 
     return TangoCard(
@@ -148,13 +150,13 @@ def MotorsView(model: AppModel) -> ft.Control:
                                             spacing=speed_control_gap,
                                             controls=[
                                                 TangoText(
-                                                    str(model.speed_level),
+                                                    str(motor.speed_level),
                                                     variant="display",
                                                     size=speed_value_size,
                                                     text_align=ft.TextAlign.CENTER,
                                                 ),
                                                 TangoText(
-                                                    f"{model.speed_percent}%",
+                                                    f"{motor.speed_percent}%",
                                                     variant="subtitle",
                                                     size=speed_percent_size,
                                                     color=colors.TEXT_MUTED,

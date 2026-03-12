@@ -2,7 +2,8 @@ import flet as ft
 from components.native.card import TangoCard
 from components.native.text import TangoText
 from contexts.locale import LocaleContext
-from models.app_model import AppModel
+from contexts.route import RouteContext
+from contexts.shell import ShellContext
 from theme import colors, radius, spacing
 from theme.scale import get_viewport_metrics
 from .navigation import AdminModeToggle, LanguageSelector
@@ -11,15 +12,19 @@ from utils.config import config
 
 
 @ft.component
-def Layout(app_model: AppModel, content: ft.Control) -> ft.Control:
+def Layout(content: ft.Control) -> ft.Control:
     loc = ft.use_context(LocaleContext)
+    route_ctx = ft.use_context(RouteContext)
+    shell = ft.use_context(ShellContext).current()
     ASSET_LOGO = config.asset_logo
     ASSET_SCREENSAVER = config.asset_screensaver
     metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
 
     logo_bottom_padding = int(round((spacing.XL + spacing.XS) * metrics.scale))
     logo_width = int(round((240 if metrics.compact else 320) * metrics.scale))
-    header_side_padding = int(round((spacing.MD if metrics.compact else spacing.LG) * metrics.scale))
+    header_side_padding = int(
+        round((spacing.MD if metrics.compact else spacing.LG) * metrics.scale)
+    )
     header_right = int(round(spacing.MD * metrics.scale))
     header_gap = int(round(spacing.XS * metrics.scale))
     header_card_padding = int(round(4 * metrics.scale))
@@ -34,10 +39,10 @@ def Layout(app_model: AppModel, content: ft.Control) -> ft.Control:
 
     title_key = "motors_control"
     subtitle_key: str | None = None
-    if app_model.route == "/auth":
+    if route_ctx.route == "/auth":
         title_key = "admin_access"
         subtitle_key = "enter_passcode"
-    elif app_model.route == "/admin":
+    elif route_ctx.route == "/admin":
         title_key = "admin_settings"
         subtitle_key = "application_config"
 
@@ -120,7 +125,7 @@ def Layout(app_model: AppModel, content: ft.Control) -> ft.Control:
                                 border_radius=radius.SHELL,
                                 content=ft.Row(
                                     controls=[
-                                        AdminModeToggle(app_model),
+                                        AdminModeToggle(),
                                         LanguageSelector(),
                                     ],
                                     spacing=header_gap,
@@ -134,7 +139,7 @@ def Layout(app_model: AppModel, content: ft.Control) -> ft.Control:
                 ),
                 *(
                     [Screensaver(ASSET_SCREENSAVER)]
-                    if app_model.is_screensaver_active
+                    if shell.is_screensaver_active
                     else []
                 ),
             ],

@@ -8,8 +8,7 @@ from components.native.nav_item import TangoNavItem
 from components.native.text import TangoText
 from contexts.locale import LocaleContext
 from contexts.route import RouteContext
-from models.controls import NavItem
-from models.app_model import AppModel
+from models.nav_item import NavItem
 from theme import colors, shadows
 from theme.scale import get_viewport_metrics
 
@@ -32,7 +31,7 @@ def LanguageSelector() -> ft.Control:
         height=diameter,
         alignment=ft.Alignment.CENTER,
         bgcolor=colors.SURFACE,
-        border=ft.border.all(1, colors.OUTLINE),
+        border=ft.Border.all(1, colors.OUTLINE),
         border_radius=diameter / 2,
         shadow=shadows.soft_shadow(metrics.scale),
         ink=True,
@@ -79,16 +78,17 @@ def Groups(nav_items: list[NavItem], selected_name: str | None) -> ft.Control:
 
 
 @ft.component
-def AdminModeToggle(app_model: AppModel) -> ft.Control:
+def AdminModeToggle() -> ft.Control:
     loc = ft.use_context(LocaleContext)
+    route_context = ft.use_context(RouteContext)
     metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
-    is_admin = app_model.route in ["/admin", "/auth"]
+    is_admin = route_context.route in ["/admin", "/auth"]
 
     def on_admin_click(_: Event[IconButton]) -> None:
         if is_admin:
-            app_model.navigate("/")
+            route_context.navigate("/")
         else:
-            app_model.navigate("/auth")
+            route_context.navigate("/auth")
 
     return TangoIconButton(
         icon=ft.Icons.SETTINGS if not is_admin else ft.Icons.HOME,
