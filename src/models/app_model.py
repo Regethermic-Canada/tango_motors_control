@@ -75,13 +75,11 @@ class AppModel:
             self.locale = locale
             config.set("LOCALE", locale)
             self.load_translations()
-            self.reset_timer()
             logger.info(f"Locale changed to {self.locale}")
 
     def route_change(self, e: ft.RouteChangeEvent) -> None:
         logger.info(f"Route changed from: {self.route} to: {e.route}")
         self.route = e.route
-        self.reset_timer()
 
     def navigate(self, new_route: str) -> None:
         if new_route != self.route:
@@ -97,7 +95,6 @@ class AppModel:
     def increment(self) -> None:
         self.speed_level = self._clamp_speed(self.speed_level + 1)
         self._apply_speed_to_motors()
-        self.reset_timer()
         logger.info(
             "Speed level incremented to %s (target=%s%%)",
             self.speed_level,
@@ -107,7 +104,6 @@ class AppModel:
     def decrement(self) -> None:
         self.speed_level = self._clamp_speed(self.speed_level - 1)
         self._apply_speed_to_motors()
-        self.reset_timer()
         logger.info(
             "Speed level decremented to %s (target=%s%%)",
             self.speed_level,
@@ -118,7 +114,6 @@ class AppModel:
         if self.inactivity_limit != seconds:
             self.inactivity_limit = seconds
             config.set("INACTIVITY_TIMEOUT", seconds)
-            self.reset_timer()
             logger.info(f"Inactivity timeout changed to {self.inactivity_limit}s")
 
     def update_admin_passcode(self, new_passcode: str) -> None:
@@ -208,7 +203,6 @@ class AppModel:
             result = self.stop_motors()
         else:
             result = self.start_motors()
-        self.reset_timer()
         return result
 
     def _apply_speed_to_motors(self) -> None:

@@ -3,6 +3,7 @@ import logging
 
 import flet as ft
 
+from components.shell.activity_boundary import ActivityBoundary
 from components.shell.app_body import AppBody
 from components.shell.layout import Layout
 from components.shell.loading_spinner import LoadingSpinner
@@ -147,8 +148,25 @@ def App() -> ft.Control:
         await asyncio.sleep(0.28)
         set_entry_animation_done(True)
 
-    def on_page_resized(_: object) -> None:
+    def on_page_resize(_: object) -> None:
         sync_viewport_size()
+
+    def build_app_shell(*, key: str | None = None) -> ft.Container:
+        return ft.Container(
+            key=key,
+            expand=True,
+            content=ActivityBoundary(
+                on_activity=app.reset_timer,
+                content=Layout(app, AppBody(app)),
+            ),
+        )
+
+    def build_loading_shell() -> ft.Container:
+        return ft.Container(
+            key="app-loading-shell",
+            expand=True,
+            content=LoadingSpinner(size=56),
+        )
 
     def on_mounted() -> None:
         ft.context.page.title = "Tango Motors Control"
@@ -156,9 +174,8 @@ def App() -> ft.Control:
         ft.context.page.window.full_screen = True
         ft.context.page.window.frameless = True
         configure_page(ft.context.page)
-        ft.context.page.on_resized = on_page_resized  # type: ignore[attr-defined]
+        ft.context.page.on_resize = on_page_resize
         sync_viewport_size(force=True)
-        ft.context.page.on_pointer_down = lambda _: app.reset_timer()  # type: ignore[attr-defined]
         ft.context.page.on_keyboard_event = lambda _: app.reset_timer()
         ft.context.page.run_task(initialize_motors_task)
         ft.context.page.run_task(monitor_loop)
@@ -183,10 +200,7 @@ def App() -> ft.Control:
                 padding=0,
                 controls=[
                     (
-                        ft.Container(
-                            expand=True,
-                            content=Layout(app, AppBody(app)),
-                        )
+                        build_app_shell()
                         if entry_animation_done
                         else ft.AnimatedSwitcher(
                             expand=True,
@@ -194,17 +208,9 @@ def App() -> ft.Control:
                             duration=240,
                             reverse_duration=0,
                             content=(
-                                ft.Container(
-                                    key="app-ready",
-                                    expand=True,
-                                    content=Layout(app, AppBody(app)),
-                                )
+                                build_app_shell(key="app-ready")
                                 if ui_ready
-                                else ft.Container(
-                                    key="app-loading-shell",
-                                    expand=True,
-                                    content=LoadingSpinner(size=56),
-                                )
+                                else build_loading_shell()
                             ),
                         )
                     )

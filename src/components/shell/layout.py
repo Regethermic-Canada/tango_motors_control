@@ -133,7 +133,7 @@ def Layout(app_model: AppModel, content: ft.Control) -> ft.Control:
                     ),
                 ),
                 *(
-                    [Screensaver(ASSET_SCREENSAVER, lambda _: app_model.reset_timer())]
+                    [Screensaver(ASSET_SCREENSAVER)]
                     if app_model.is_screensaver_active
                     else []
                 ),
