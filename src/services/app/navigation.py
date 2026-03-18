@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 import flet as ft
@@ -19,10 +20,10 @@ class NavigationService:
             return
 
         logger.info("Navigating to: %s", new_route)
-        ft.context.page.go(new_route)
+        asyncio.create_task(ft.context.page.push_route(new_route))
 
     async def view_popped(self, e: ft.ViewPopEvent) -> None:
         logger.info("View popped")
         views = ft.unwrap_component(ft.context.page.views)
         if len(views) > 1:
-            ft.context.page.go(views[-2].route)
+            await ft.context.page.push_route(views[-2].route)

@@ -9,7 +9,7 @@ from components.ui.toast import ToastType, show_toast
 from contexts.locale import LocaleContext
 from contexts.route import RouteContext
 from contexts.settings import SettingsContext
-from theme import colors, spacing
+from theme import animation, colors, spacing
 from theme.scale import get_viewport_metrics
 from components.ui.numpad import TangoNumpad
 
@@ -124,8 +124,9 @@ def AuthView() -> ft.Control:
                         controls=[
                             ft.Container(
                                 offset=shake_offset,
-                                animate_offset=ft.Animation(
-                                    40, ft.AnimationCurve.LINEAR
+                                animate_offset=animation.make(
+                                    animation.AUTH_SHAKE_MS,
+                                    animation.AUTH_SHAKE_CURVE,
                                 ),
                                 content=ft.Row(
                                     alignment=ft.MainAxisAlignment.CENTER,

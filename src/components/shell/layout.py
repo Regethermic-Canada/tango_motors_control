@@ -64,7 +64,7 @@ def Layout(content: ft.Control) -> ft.Control:
                         loc.t(subtitle_key),
                         variant="caption",
                         size=subtitle_size,
-                        color="#DCE9FF",
+                        color=colors.APP_SHELL_SUBTITLE,
                     )
                 ]
                 if subtitle_key

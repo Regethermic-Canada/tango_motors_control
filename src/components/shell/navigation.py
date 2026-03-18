@@ -8,11 +8,18 @@ from components.ui.nav_item import TangoNavItem
 from components.ui.text import TangoText
 from contexts.locale import LocaleContext
 from contexts.route import RouteContext
+from services.app.overlay_registry import OverlayRole, get_overlay_close_callback
 from models.nav_item import NavItem
 from theme import colors, shadows
 from theme.scale import get_viewport_metrics
 
 ContainerHandler = ControlEventHandler[ft.Container] | None
+
+
+def _close_active_sheet() -> None:
+    close_sheet = get_overlay_close_callback(ft.context.page, OverlayRole.SHEET)
+    if callable(close_sheet):
+        close_sheet()
 
 
 @ft.component
@@ -86,6 +93,7 @@ def AdminModeToggle() -> ft.Control:
 
     def on_admin_click(_: Event[IconButton]) -> None:
         if is_admin:
+            _close_active_sheet()
             route_context.navigate("/")
         else:
             route_context.navigate("/auth")

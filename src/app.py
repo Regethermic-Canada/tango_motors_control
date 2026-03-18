@@ -17,6 +17,7 @@ from services.app.runtime import AppRuntime
 from services.app.settings import SettingsService
 from services.app.shell import ShellService
 from services.motors.controller import MotorController
+from theme import animation
 
 
 @ft.component
@@ -111,7 +112,7 @@ def App() -> ft.Control:
         )
 
     async def complete_entry_animation_task() -> None:
-        await asyncio.sleep(0.3)
+        await asyncio.sleep(animation.APP_SWITCHER_DURATION_MS / 1000)
         set_entry_animation_done(True)
 
     ft.on_mounted(runtime.on_mounted)
@@ -144,8 +145,8 @@ def App() -> ft.Control:
                                     else ft.AnimatedSwitcher(
                                         expand=True,
                                         transition=ft.AnimatedSwitcherTransition.FADE,
-                                        duration=300,
-                                        reverse_duration=0,
+                                        duration=animation.APP_SWITCHER_DURATION_MS,
+                                        reverse_duration=animation.APP_SWITCHER_REVERSE_DURATION_MS,
                                         content=(
                                             build_app_shell(key="app-ready")
                                             if ui_ready

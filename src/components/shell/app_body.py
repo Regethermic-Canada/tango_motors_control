@@ -1,5 +1,6 @@
 import flet as ft
 from contexts.route import RouteContext
+from theme import animation
 from views.admin.admin_view import AdminView
 from views.admin.auth_view import AuthView
 from views.main.main_view import MainView
@@ -17,7 +18,10 @@ def AppBody() -> ft.Control:
             expand=True,
             opacity=1 if is_active else 0,
             ignore_interactions=not is_active,
-            animate_opacity=ft.Animation(300, ft.AnimationCurve.EASE_IN_OUT),
+            animate_opacity=animation.make(
+                animation.ROUTE_FADE_MS,
+                animation.ROUTE_FADE_CURVE,
+            ),
             content=content,
         )
 

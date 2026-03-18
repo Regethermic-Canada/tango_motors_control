@@ -4,6 +4,7 @@ from flet.controls.material.icon_button import IconButton
 from typing import Literal
 
 from theme import colors, radius
+from theme.animation import ICON_BUTTON_STYLE_MS
 
 ControlHandler = ControlEventHandler[IconButton] | None
 IconButtonVariant = Literal["primary", "secondary", "surface", "inverse"]
@@ -19,7 +20,7 @@ _VARIANT_STYLES: dict[IconButtonVariant, tuple[str, str, str]] = {
     "primary": (colors.PRIMARY, colors.PRIMARY, colors.TEXT_INVERSE),
     "surface": (colors.SURFACE, colors.OUTLINE, colors.TEXT),
     "secondary": (colors.PRIMARY_SOFT, colors.PRIMARY_SOFT, colors.PRIMARY),
-    "inverse": ("#1FFFFFFF", "#33FFFFFF", colors.TEXT_INVERSE),
+    "inverse": (colors.INVERSE_SURFACE, colors.INVERSE_OUTLINE, colors.TEXT_INVERSE),
 }
 
 
@@ -61,6 +62,6 @@ def TangoIconButton(
                 ft.ControlState.DISABLED: ft.BorderSide(1, colors.OUTLINE),
             },
             shape=ft.RoundedRectangleBorder(radius=radius.BUTTON),
-            animation_duration=180,
+            animation_duration=ICON_BUTTON_STYLE_MS,
         ),
     )

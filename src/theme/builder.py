@@ -2,7 +2,7 @@ from pathlib import Path
 
 import flet as ft
 
-from . import colors, radius, typography
+from . import animation, colors, radius, typography
 
 
 def _button_shape(corner_radius: int) -> ft.RoundedRectangleBorder:
@@ -28,7 +28,7 @@ def _color_scheme() -> ft.ColorScheme:
         on_surface_variant=colors.TEXT_MUTED,
         outline=colors.OUTLINE,
         outline_variant=colors.OUTLINE_STRONG,
-        shadow="#140B264F",
+        shadow=colors.SHADOW_STRONG,
         surface_tint=colors.PRIMARY,
     )
 
@@ -56,7 +56,7 @@ def _filled_button_style() -> ft.ButtonStyle:
         padding=ft.Padding(16, 10, 16, 10),
         shape=_button_shape(radius.BUTTON),
         elevation=0,
-        overlay_color="#142069D8",
+        overlay_color=colors.PRIMARY_OVERLAY_STRONG,
     )
 
 
@@ -68,7 +68,7 @@ def _icon_button_style() -> ft.ButtonStyle:
         shape=_button_shape(radius.BUTTON),
         elevation=0,
         padding=ft.Padding(0, 0, 0, 0),
-        overlay_color="#102069D8",
+        overlay_color=colors.PRIMARY_OVERLAY,
     )
 
 
@@ -82,7 +82,7 @@ def _outlined_button_style() -> ft.ButtonStyle:
         padding=ft.Padding(16, 10, 16, 10),
         shape=_button_shape(radius.BUTTON),
         elevation=0,
-        overlay_color="#0F2069D8",
+        overlay_color=colors.PRIMARY_OVERLAY_SOFT,
     )
 
 
@@ -93,14 +93,14 @@ def _text_button_style() -> ft.ButtonStyle:
         text_style=typography.text_style("label", color=colors.PRIMARY),
         padding=ft.Padding(12, 8, 12, 8),
         shape=_button_shape(radius.BUTTON),
-        overlay_color="#102069D8",
+        overlay_color=colors.PRIMARY_OVERLAY,
     )
 
 
 def _card_theme() -> ft.CardTheme:
     return ft.CardTheme(
         color=colors.SURFACE,
-        shadow_color="#140B264F",
+        shadow_color=colors.SHADOW_STRONG,
         elevation=0,
         shape=_button_shape(radius.PANEL),
         clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
@@ -132,7 +132,7 @@ def _slider_theme() -> ft.SliderTheme:
         disabled_inactive_track_color=colors.OUTLINE,
         disabled_thumb_color=colors.OUTLINE_STRONG,
         thumb_color=colors.PRIMARY,
-        overlay_color="#102069D8",
+        overlay_color=colors.PRIMARY_OVERLAY,
         value_indicator_color=colors.PRIMARY_DARK,
         value_indicator_stroke_color=colors.PRIMARY_DARK,
         value_indicator_text_style=typography.text_style(
@@ -148,7 +148,7 @@ def _slider_theme() -> ft.SliderTheme:
 def _popup_menu_theme() -> ft.PopupMenuTheme:
     return ft.PopupMenuTheme(
         color=colors.SURFACE,
-        shadow_color="#140B264F",
+        shadow_color=colors.SHADOW_STRONG,
         icon_color=colors.TEXT,
         label_text_style=typography.text_style("body"),
         elevation=0,
@@ -159,8 +159,8 @@ def _popup_menu_theme() -> ft.PopupMenuTheme:
 
 def _tooltip_theme() -> ft.TooltipTheme:
     return ft.TooltipTheme(
-        wait_duration=250,
-        show_duration=4000,
+        wait_duration=animation.TOOLTIP_WAIT_DURATION_MS,
+        show_duration=animation.TOOLTIP_SHOW_DURATION_MS,
         prefer_below=False,
         vertical_offset=20,
         padding=ft.Padding(10, 6, 10, 6),
@@ -180,10 +180,10 @@ def build_theme() -> ft.Theme:
         scaffold_bgcolor=colors.APP_BACKGROUND,
         card_bgcolor=colors.SURFACE,
         divider_color=colors.OUTLINE,
-        splash_color="#142069D8",
-        hover_color="#0F2069D8",
-        highlight_color="#142069D8",
-        focus_color="#142069D8",
+        splash_color=colors.PRIMARY_OVERLAY_STRONG,
+        hover_color=colors.PRIMARY_OVERLAY_SOFT,
+        highlight_color=colors.PRIMARY_OVERLAY_STRONG,
+        focus_color=colors.PRIMARY_OVERLAY_STRONG,
         text_theme=_text_theme(),
         card_theme=_card_theme(),
         progress_indicator_theme=_progress_indicator_theme(),
