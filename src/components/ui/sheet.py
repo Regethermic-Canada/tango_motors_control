@@ -43,7 +43,8 @@ def TangoSheet(
         dismissible=dismissible,
         # We always allow dragging to close the sheet for a natural feel
         draggable=True,
-        # We hide the handle to prevent it from covering the app header
+        # We hide the native handle to prevent it from covering the app header
+        # and instead use our own custom one below.
         show_drag_handle=False,
         on_dismiss=on_dismiss,
         fullscreen=full_screen,
@@ -98,9 +99,19 @@ def TangoSheet(
         border=ft.Border(bottom=ft.BorderSide(1, colors.OUTLINE)),
     )
 
+    # Custom draggable indicator bar
+    drag_handle = ft.Container(
+        width=40,
+        height=4,
+        bgcolor=colors.OUTLINE_STRONG,
+        border_radius=2,
+        margin=ft.margin.only(top=12, bottom=0),
+    )
+
     sheet.content = ft.Container(
         content=ft.Column(
             controls=[
+                ft.Row([drag_handle], alignment=ft.MainAxisAlignment.CENTER),
                 header,
                 ft.Container(
                     content=content,
@@ -113,7 +124,7 @@ def TangoSheet(
             expand=expand,
         ),
         bgcolor=colors.SURFACE,
-        # Remove border radius to ensure a flat, integrated look when docked
+        # Flat look when docked
         border_radius=0,
         expand=expand,
         height=resolved_height,
