@@ -24,6 +24,12 @@ def AuthView() -> ft.Control:
     passcode, set_passcode = ft.use_state("")
     shake_offset, set_shake_offset = ft.use_state(ft.Offset(0, 0))
 
+    async def on_route_changed() -> None:
+        await asyncio.sleep(0.2)
+        set_passcode("")
+
+    ft.on_updated(on_route_changed, [route_ctx.route])
+
     async def verify_passcode(current_passcode: str) -> None:
         # Small delay to let the 4th dot render
         await asyncio.sleep(0.1)
