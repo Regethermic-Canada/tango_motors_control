@@ -4,6 +4,8 @@ from flet.controls.material.slider import Slider
 from components.ui.card import TangoCard
 from components.ui.page import TangoPage
 from components.ui.text import TangoText
+from components.ui.button import TangoButton
+from components.ui.sheet import show_tango_sheet
 from contexts.locale import LocaleContext
 from contexts.settings import SettingsContext
 from theme import colors, spacing
@@ -135,6 +137,20 @@ def AdminView() -> ft.Control:
                                     on_change=on_default_speed_change,
                                     expand=True,
                                     scale=slider_scale,
+                                ),
+                                ft.Divider(height=section_spacing),
+                                TangoButton(
+                                    text=loc.t("test_sheet"),
+                                    variant="secondary",
+                                    expand=True,
+                                    on_click=lambda e: show_tango_sheet(
+                                        e.page,
+                                        content=TangoText(
+                                            loc.t("test_content"),
+                                        ),
+                                        title=loc.t("test_sheet"),
+                                        expand=True,
+                                    ),
                                 ),
                             ],
                         ),

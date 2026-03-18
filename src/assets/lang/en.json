@@ -27,5 +27,7 @@
   "enter_passcode": "Enter Passcode",
   "invalid_passcode": "Invalid Passcode",
   "loading_interface": "Loading interface",
-  "close": "Close"
+  "close": "Close",
+  "test_sheet": "Test Bottom Sheet",
+  "test_content": "This is a test of the TangoSheet component with custom padding and header."
 }

@@ -27,5 +27,7 @@
   "enter_passcode": "Entrer le code",
   "invalid_passcode": "Code invalide",
   "loading_interface": "Chargement de l'interface",
-  "close": "Fermer"
+  "close": "Fermer",
+  "test_sheet": "Test Menu Coulissant",
+  "test_content": "Ceci est un test du composant TangoSheet avec un rembourrage et un en-tête personnalisés."
 }
