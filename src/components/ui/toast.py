@@ -8,7 +8,12 @@ import flet as ft
 from flet.controls.control_event import ControlEventHandler
 from flet.controls.material.icon_button import IconButton
 
-from services.app.overlay_registry import OverlayRole, cleanup_overlay, register_overlay
+from services.app.overlay_registry import (
+    OverlayRole,
+    cleanup_overlay,
+    get_overlay_close_callback,
+    register_overlay,
+)
 from theme import colors, radius, shadows
 from theme.animation import (
     OVERLAY_MOUNT_FRAME_DELAY_S,
@@ -57,7 +62,10 @@ class _ToastLayout:
 class _ToastRuntime:
     container: ft.Container
     close_token: int
+    hide_token: int
     expires_at: float | None
+    message: str
+    type: ToastType
 
 
 _active_toasts: dict[int, _ToastRuntime] = {}
@@ -169,6 +177,21 @@ def _is_active_toast(page_key: int, close_token: int) -> bool:
     return current is not None and current.close_token == close_token
 
 
+def _is_same_visible_toast(
+    *,
+    page: ft.Page,
+    page_key: int,
+    message: str,
+    type: ToastType,
+) -> bool:
+    current = _active_toasts.get(page_key)
+    if current is None:
+        return False
+    if current.container not in page.overlay:
+        return False
+    return current.message == message and current.type == type
+
+
 def _clear_existing_toast(page: ft.Page, page_key: int) -> None:
     existing = _active_toasts.get(page_key)
     if existing is None:
@@ -269,7 +292,10 @@ def _build_toast_runtime(
     return _ToastRuntime(
         container=container,
         close_token=0,
+        hide_token=0,
         expires_at=expires_at,
+        message=message,
+        type=type,
     )
 
 
@@ -278,6 +304,7 @@ def _schedule_toast_auto_hide(
     runtime: _ToastRuntime,
     page_key: int,
     close_token: int,
+    hide_token: int,
     close_toast: Callable[[], None],
 ) -> None:
     if runtime.expires_at is None:
@@ -288,7 +315,10 @@ def _schedule_toast_auto_hide(
     async def auto_hide() -> None:
         remaining_s = max(0.0, expires_at - time.monotonic())
         await asyncio.sleep(remaining_s)
-        if not _is_active_toast(page_key, close_token):
+        current = _active_toasts.get(page_key)
+        if current is None:
+            return
+        if current.close_token != close_token or current.hide_token != hide_token:
             return
         close_toast()
 
@@ -337,6 +367,7 @@ def _update_active_toast(
     close_tooltip: str | None,
     build: ToastBuild | None,
     expires_at: float | None,
+    animate_update: bool,
 ) -> None:
     layout = _resolve_toast_layout(
         page=page,
@@ -390,6 +421,7 @@ def _update_active_toast(
             close_tooltip=close_tooltip,
             build=build,
             expires_at=current.expires_at,
+            animate_update=False,
         )
 
     def apply_content_update() -> None:
@@ -402,7 +434,10 @@ def _update_active_toast(
         )
 
     runtime.close_token = close_token
+    runtime.hide_token = time.monotonic_ns()
     runtime.expires_at = resolved_expires_at
+    runtime.message = message
+    runtime.type = type
     _apply_open_state(runtime)
     register_overlay(
         page,
@@ -411,16 +446,42 @@ def _update_active_toast(
         close_toast,
         refresh_callback=refresh_toast if build is not None else None,
     )
-    _schedule_toast_update_animation(
-        runtime=runtime,
-        page_key=page_key,
-        close_token=close_token,
-        update_content=apply_content_update,
-    )
+    if animate_update:
+        _schedule_toast_update_animation(
+            runtime=runtime,
+            page_key=page_key,
+            close_token=close_token,
+            update_content=apply_content_update,
+        )
+    else:
+        apply_content_update()
+        runtime.container.update()
     _schedule_toast_auto_hide(
         runtime=runtime,
         page_key=page_key,
         close_token=close_token,
+        hide_token=runtime.hide_token,
+        close_toast=close_toast,
+    )
+
+
+def _reset_active_toast_duration(
+    *,
+    page: ft.Page,
+    runtime: _ToastRuntime,
+    page_key: int,
+    duration: float,
+) -> None:
+    runtime.expires_at = _resolve_expires_at(duration=duration, expires_at=None)
+    runtime.hide_token = time.monotonic_ns()
+    close_toast = get_overlay_close_callback(page, OverlayRole.TOAST)
+    if close_toast is None:
+        return
+    _schedule_toast_auto_hide(
+        runtime=runtime,
+        page_key=page_key,
+        close_token=runtime.close_token,
+        hide_token=runtime.hide_token,
         close_toast=close_toast,
     )
 
@@ -436,6 +497,7 @@ def _present_toast(
     close_tooltip: str | None,
     build: ToastBuild | None,
     animate_in: bool,
+    animate_update: bool,
     insert_at: int | None,
     expires_at: float | None = None,
 ) -> None:
@@ -454,6 +516,7 @@ def _present_toast(
             close_tooltip=close_tooltip,
             build=build,
             expires_at=expires_at,
+            animate_update=animate_update,
         )
         return
 
@@ -513,6 +576,7 @@ def _present_toast(
             close_tooltip=close_tooltip,
             build=build,
             animate_in=False,
+            animate_update=False,
             insert_at=next_insert_at,
             expires_at=(
                 current.expires_at if current is not None else resolved_expires_at
@@ -527,6 +591,7 @@ def _present_toast(
         expires_at=resolved_expires_at,
     )
     runtime.close_token = close_token
+    runtime.hide_token = time.monotonic_ns()
     _active_toasts[page_key] = runtime
     register_overlay(
         page,
@@ -559,6 +624,7 @@ def _present_toast(
         runtime=runtime,
         page_key=page_key,
         close_token=close_token,
+        hide_token=runtime.hide_token,
         close_toast=close_toast,
     )
 
@@ -584,6 +650,24 @@ def show_toast(
         raise ValueError("show_toast() could not resolve a message.")
 
     page_key = id(page)
+    current = _active_toasts.get(page_key)
+    if (
+        _is_same_visible_toast(
+            page=page,
+            page_key=page_key,
+            message=resolved_message,
+            type=type,
+        )
+        and current is not None
+    ):
+        _reset_active_toast_duration(
+            page=page,
+            runtime=current,
+            page_key=page_key,
+            duration=duration,
+        )
+        return
+
     toast_key = f"{type.value}:{resolved_message}"
     now = time.monotonic()
     last_shown = _last_toast_at.get((page_key, toast_key))
@@ -601,5 +685,6 @@ def show_toast(
         close_tooltip=close_tooltip,
         build=build,
         animate_in=True,
+        animate_update=True,
         insert_at=None,
     )
