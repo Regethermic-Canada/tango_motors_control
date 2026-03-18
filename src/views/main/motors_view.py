@@ -8,13 +8,13 @@ from components.ui.card import TangoCard
 from components.ui.icon_button import TangoIconButton
 from components.ui.tag import TangoTag, TagVariant
 from components.ui.text import TangoText
-from components.ui.toast import ToastType, show_toast
+from components.ui.tango_toast import ToastType, show_toast
 from contexts.locale import LocaleContext
 from contexts.motor import MotorContext
 from contexts.settings import SettingsContext
 from models.motor_types import MotorAction
 from theme import colors, spacing
-from theme.scale import get_viewport_metrics
+from theme.scale import ViewportArea, get_viewport_metrics, resolve_panel_width
 
 
 @ft.component
@@ -24,6 +24,7 @@ def MotorsView() -> ft.Control:
     settings_service = ft.use_context(SettingsContext).current()
     metrics = get_viewport_metrics(
         ft.context.page,
+        area=ViewportArea.CONTENT,
         base_width=960,
         base_height=540,
         min_scale=0.8,
@@ -38,20 +39,19 @@ def MotorsView() -> ft.Control:
     speed_value_size = int(round((72 if metrics.is_compact else 76) * metrics.scale))
     speed_percent_size = int(round((18 if metrics.is_compact else 20) * metrics.scale))
     button_text_size = int(round((16 if metrics.is_compact else 17) * metrics.scale))
-    panel_width = min(
-        640,
-        max(
-            360 if metrics.is_compact else 500,
-            int(metrics.width * (0.8 if metrics.is_compact else 0.52)),
-        ),
+    panel_width = resolve_panel_width(
+        metrics,
+        compact_fraction=0.84,
+        regular_fraction=0.60,
+        compact_min=460,
+        regular_min=560,
+        max_width=820,
+        edge_padding=spacing.XL,
     )
     step_button_size = int(round((40 if metrics.is_compact else 48) * metrics.scale))
     step_icon_size = int(round((20 if metrics.is_compact else 22) * metrics.scale))
     step_spacing = int(
         round((spacing.SM if metrics.is_compact else spacing.LG) * metrics.scale)
-    )
-    speed_control_gap = int(
-        round((spacing.XS if metrics.is_compact else spacing.SM) * metrics.scale)
     )
     speed_value_width = int(round((112 if metrics.is_compact else 144) * metrics.scale))
     speed_control_width = (
@@ -60,6 +60,7 @@ def MotorsView() -> ft.Control:
     card_padding = int(
         round((spacing.LG if metrics.is_compact else spacing.XL) * metrics.scale)
     )
+    speed_value_gap = max(4, int(round(6 * metrics.scale)))
 
     status_variant: TagVariant = "success" if is_running else "secondary"
     status_label = (
@@ -133,51 +134,59 @@ def MotorsView() -> ft.Control:
                         ft.Container(
                             width=speed_control_width,
                             alignment=ft.Alignment.CENTER,
-                            content=ft.Row(
-                                alignment=ft.MainAxisAlignment.CENTER,
-                                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                                spacing=step_spacing,
+                            content=ft.Column(
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                spacing=speed_value_gap,
                                 controls=[
-                                    TangoIconButton(
-                                        icon=ft.Icons.REMOVE,
-                                        icon_size=step_icon_size,
-                                        on_click=on_decrement_click,
-                                        tooltip=loc.t("decrement"),
-                                        variant="surface",
-                                        size="lg" if not metrics.is_compact else "md",
-                                        disabled=not can_decrement,
-                                    ),
-                                    ft.Container(
-                                        width=speed_value_width,
-                                        alignment=ft.Alignment.CENTER,
-                                        content=ft.Column(
-                                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                                            spacing=speed_control_gap,
-                                            controls=[
-                                                TangoText(
+                                    ft.Row(
+                                        alignment=ft.MainAxisAlignment.CENTER,
+                                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                                        spacing=step_spacing,
+                                        controls=[
+                                            TangoIconButton(
+                                                icon=ft.Icons.REMOVE,
+                                                icon_size=step_icon_size,
+                                                on_click=on_decrement_click,
+                                                tooltip=loc.t("decrement"),
+                                                variant="surface",
+                                                size=(
+                                                    "lg"
+                                                    if not metrics.is_compact
+                                                    else "md"
+                                                ),
+                                                disabled=not can_decrement,
+                                            ),
+                                            ft.Container(
+                                                width=speed_value_width,
+                                                alignment=ft.Alignment.CENTER,
+                                                content=TangoText(
                                                     str(motor.speed_level),
                                                     variant="display",
                                                     size=speed_value_size,
                                                     text_align=ft.TextAlign.CENTER,
                                                 ),
-                                                TangoText(
-                                                    f"{motor.speed_percent}%",
-                                                    variant="subtitle",
-                                                    size=speed_percent_size,
-                                                    color=colors.TEXT_MUTED,
-                                                    text_align=ft.TextAlign.CENTER,
+                                            ),
+                                            TangoIconButton(
+                                                icon=ft.Icons.ADD,
+                                                icon_size=step_icon_size,
+                                                on_click=on_increment_click,
+                                                tooltip=loc.t("increment"),
+                                                variant="primary",
+                                                size=(
+                                                    "lg"
+                                                    if not metrics.is_compact
+                                                    else "md"
                                                 ),
-                                            ],
-                                        ),
+                                                disabled=not can_increment,
+                                            ),
+                                        ],
                                     ),
-                                    TangoIconButton(
-                                        icon=ft.Icons.ADD,
-                                        icon_size=step_icon_size,
-                                        on_click=on_increment_click,
-                                        tooltip=loc.t("increment"),
-                                        variant="primary",
-                                        size="lg" if not metrics.is_compact else "md",
-                                        disabled=not can_increment,
+                                    TangoText(
+                                        f"{motor.speed_percent}%",
+                                        variant="subtitle",
+                                        size=speed_percent_size,
+                                        color=colors.TEXT_MUTED,
+                                        text_align=ft.TextAlign.CENTER,
                                     ),
                                 ],
                             ),

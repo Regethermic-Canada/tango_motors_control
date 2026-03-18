@@ -6,11 +6,11 @@ from components.ui.card import TangoCard
 from components.ui.numpad import TangoNumpad
 from components.ui.page import TangoPage
 from components.ui.text import TangoText
-from components.ui.toast import ToastType, show_toast
+from components.ui.tango_toast import ToastType, show_toast
 from contexts.route import RouteContext
 from contexts.settings import SettingsContext
 from theme import animation, colors, spacing
-from theme.scale import get_viewport_metrics
+from theme.scale import ViewportArea, get_viewport_metrics, resolve_panel_width
 
 logger = logging.getLogger(__name__)
 
@@ -84,21 +84,28 @@ def AuthView() -> ft.Control:
         if len(passcode) > 0:
             set_passcode(passcode[:-1])
 
-    # Visual dots representation: ● for filled, ○ for empty
-    dots = ""
-    for i in range(4):
-        dots += "● " if i < len(passcode) else "○ "
+    metrics = get_viewport_metrics(
+        ft.context.page,
+        area=ViewportArea.CONTENT,
+        min_scale=0.7,
+    )
 
-    metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
-
+    dots = "".join(
+        "● " if index < len(passcode) else "○ " for index in range(4)
+    ).strip()
     content_spacing = int(
         round((spacing.MD if metrics.is_compact else spacing.LG) * metrics.scale)
     )
-    dots_font_size = int(round((22 if metrics.is_compact else 28) * metrics.scale))
-    dots_letter_spacing = int(round((5 if metrics.is_compact else 7) * metrics.scale))
-    card_width = min(
-        680,
-        max(360 if metrics.is_compact else 520, int(metrics.width * 0.54)),
+    dots_font_size = int(round((28 if metrics.is_compact else 34) * metrics.scale))
+    dots_letter_spacing = int(round((8 if metrics.is_compact else 10) * metrics.scale))
+    card_width = resolve_panel_width(
+        metrics,
+        compact_fraction=0.64,
+        regular_fraction=0.52,
+        compact_min=420,
+        regular_min=520,
+        max_width=700,
+        edge_padding=spacing.XL,
     )
     card_padding = int(
         round((spacing.LG if metrics.is_compact else spacing.XL) * metrics.scale)
@@ -126,21 +133,15 @@ def AuthView() -> ft.Control:
                                     animation.AUTH_SHAKE_MS,
                                     animation.AUTH_SHAKE_CURVE,
                                 ),
-                                content=ft.Row(
-                                    alignment=ft.MainAxisAlignment.CENTER,
-                                    controls=[
-                                        TangoText(
-                                            dots.strip(),
-                                            variant="headline",
-                                            size=dots_font_size,
-                                            letter_spacing=dots_letter_spacing,
-                                            color=(
-                                                colors.PRIMARY
-                                                if passcode
-                                                else colors.OUTLINE
-                                            ),
-                                        )
-                                    ],
+                                content=TangoText(
+                                    dots,
+                                    variant="headline",
+                                    size=dots_font_size,
+                                    letter_spacing=dots_letter_spacing,
+                                    color=(
+                                        colors.PRIMARY if passcode else colors.OUTLINE
+                                    ),
+                                    text_align=ft.TextAlign.CENTER,
                                 ),
                             ),
                             TangoNumpad(

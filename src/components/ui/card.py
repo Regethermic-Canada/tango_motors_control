@@ -21,5 +21,5 @@ def TangoCard(
         bgcolor=colors.SURFACE,
         border_radius=border_radius or radius.PANEL,
         border=ft.Border.all(1, colors.OUTLINE_STRONG),
-        shadow=shadows.card_shadow(),
+        shadow=shadows.card_shadow(1.3),
     )

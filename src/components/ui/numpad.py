@@ -5,7 +5,7 @@ from flet.controls.material.icon_button import IconButton
 from components.ui.icon_button import TangoIconButton
 from components.ui.text import TangoText
 from theme import colors, spacing
-from theme.scale import get_viewport_metrics
+from theme.scale import ViewportArea, get_viewport_metrics
 
 
 def DigitButton(
@@ -40,7 +40,11 @@ def TangoNumpad(
     on_backspace_click: Callable[[], None],
     on_clear_click: Callable[[], None],
 ) -> ft.Control:
-    metrics = get_viewport_metrics(ft.context.page, min_scale=0.62)
+    metrics = get_viewport_metrics(
+        ft.context.page,
+        area=ViewportArea.CONTENT,
+        min_scale=0.62,
+    )
 
     numpad_width = min(
         520,

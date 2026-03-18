@@ -21,6 +21,7 @@ def Layout(content: ft.Control) -> ft.Control:
     metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
 
     logo_bottom_padding = int(round((spacing.XL + spacing.XS) * metrics.scale))
+    body_bottom_inset = int(round((spacing.XXL + spacing.SM) * metrics.scale))
     logo_width = int(round((240 if metrics.is_compact else 320) * metrics.scale))
     header_side_padding = int(
         round((spacing.MD if metrics.is_compact else spacing.LG) * metrics.scale)
@@ -37,6 +38,8 @@ def Layout(content: ft.Control) -> ft.Control:
     setattr(ft.context.page, "_tango_toast_top_offset", toast_top_offset)
     setattr(ft.context.page, "_tango_toast_right_offset", header_right)
     setattr(ft.context.page, "_tango_toast_close_tooltip", loc.t("close"))
+    setattr(ft.context.page, "_tango_content_top_inset", top_band_height)
+    setattr(ft.context.page, "_tango_content_bottom_inset", body_bottom_inset)
 
     title_key = "motors_control"
     subtitle_key: str | None = None
@@ -97,6 +100,7 @@ def Layout(content: ft.Control) -> ft.Control:
                 ),
                 ft.Container(
                     expand=True,
+                    padding=ft.Padding(0, top_band_height, 0, body_bottom_inset),
                     content=content,
                 ),
                 ft.Container(

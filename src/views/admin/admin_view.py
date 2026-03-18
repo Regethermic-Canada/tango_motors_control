@@ -7,34 +7,48 @@ from components.ui.page import TangoPage
 from components.ui.text import TangoText
 from components.ui.button import TangoButton
 from components.ui.sheet import show_tango_sheet
-from components.ui.toast import show_toast, ToastType
+from components.ui.tango_toast import ToastType, show_toast
 from contexts.locale import LocaleContext
 from contexts.settings import SettingsContext
 from theme import colors, spacing
-from theme.scale import get_viewport_metrics
+from theme.scale import ViewportArea, get_viewport_metrics, resolve_panel_width
 
 
 @ft.component
 def AdminView() -> ft.Control:
     loc = ft.use_context(LocaleContext)
     settings_service = ft.use_context(SettingsContext).current()
-    metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
+    metrics = get_viewport_metrics(
+        ft.context.page,
+        area=ViewportArea.CONTENT,
+        min_scale=0.7,
+    )
 
     outer_pad = int(
         round((spacing.LG if metrics.is_compact else spacing.XL) * metrics.scale)
     )
-    section_spacing = int(round(spacing.LG * metrics.scale))
-    block_spacing = int(round(spacing.XS * metrics.scale))
-    section_title_size = int(round((15 if metrics.is_compact else 18) * metrics.scale))
-    value_size = int(round((14 if metrics.is_compact else 16) * metrics.scale))
-    card_width = min(
-        760,
-        max(360 if metrics.is_compact else 520, int(metrics.width * 0.58)),
+    section_spacing = int(
+        round((spacing.XL if metrics.is_compact else spacing.XXL) * metrics.scale)
+    )
+    block_spacing = int(
+        round((spacing.SM if metrics.is_compact else spacing.MD) * metrics.scale)
+    )
+    section_title_size = int(round((18 if metrics.is_compact else 22) * metrics.scale))
+    value_size = int(round((16 if metrics.is_compact else 18) * metrics.scale))
+    card_width = resolve_panel_width(
+        metrics,
+        compact_fraction=0.82,
+        regular_fraction=0.66,
+        compact_min=500,
+        regular_min=600,
+        max_width=920,
+        edge_padding=outer_pad,
     )
     card_padding = int(
-        round((spacing.LG if metrics.is_compact else spacing.XL) * metrics.scale)
+        round((spacing.XL if metrics.is_compact else spacing.XXL) * metrics.scale)
     )
-    slider_scale = max(0.85, metrics.scale)
+    slider_scale = max(1.08, metrics.scale * 1.08)
+    slider_value_gap = max(4, int(round(6 * metrics.scale)))
 
     def on_timeout_change(e: Event[Slider]) -> None:
         value = e.control.value if e.control else None
@@ -72,7 +86,7 @@ def AdminView() -> ft.Control:
     timeout_header: ft.Control
     if metrics.is_compact:
         timeout_header = ft.Column(
-            spacing=max(2, int(round(4 * metrics.scale))),
+            spacing=slider_value_gap,
             horizontal_alignment=ft.CrossAxisAlignment.START,
             controls=[timeout_label, timeout_value],
         )
@@ -85,7 +99,7 @@ def AdminView() -> ft.Control:
     default_speed_header: ft.Control
     if metrics.is_compact:
         default_speed_header = ft.Column(
-            spacing=max(2, int(round(4 * metrics.scale))),
+            spacing=slider_value_gap,
             horizontal_alignment=ft.CrossAxisAlignment.START,
             controls=[default_speed_label, default_speed_value],
         )
@@ -168,11 +182,17 @@ def AdminView() -> ft.Control:
                                     expand=True,
                                     scale=slider_scale,
                                 ),
-                                ft.Divider(height=section_spacing),
                                 TangoButton(
                                     text=loc.t("test_sheet"),
                                     variant="secondary",
                                     expand=True,
+                                    size="lg",
+                                    text_size=int(
+                                        round(
+                                            (18 if metrics.is_compact else 19)
+                                            * metrics.scale
+                                        )
+                                    ),
                                     on_click=on_test_sheet_click,
                                 ),
                             ],
