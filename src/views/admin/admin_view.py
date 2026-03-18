@@ -1,9 +1,9 @@
 import flet as ft
 from flet.controls.control_event import Event
 from flet.controls.material.slider import Slider
-from components.native.card import TangoCard
-from components.native.page import TangoPage
-from components.native.text import TangoText
+from components.ui.card import TangoCard
+from components.ui.page import TangoPage
+from components.ui.text import TangoText
 from contexts.locale import LocaleContext
 from contexts.settings import SettingsContext
 from theme import colors, spacing
@@ -105,7 +105,10 @@ def AdminView() -> ft.Control:
                     TangoCard(
                         width=card_width,
                         padding=ft.Padding(
-                            card_padding, card_padding, card_padding, card_padding
+                            card_padding,
+                            card_padding,
+                            card_padding,
+                            card_padding,
                         ),
                         content=ft.Column(
                             spacing=block_spacing,

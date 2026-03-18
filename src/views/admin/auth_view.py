@@ -2,16 +2,16 @@ import logging
 import asyncio
 import flet as ft
 
-from components.native.card import TangoCard
-from components.native.page import TangoPage
-from components.native.text import TangoText
-from components.native.toast import ToastType, show_toast
+from components.ui.card import TangoCard
+from components.ui.page import TangoPage
+from components.ui.text import TangoText
+from components.ui.toast import ToastType, show_toast
 from contexts.locale import LocaleContext
 from contexts.route import RouteContext
 from contexts.settings import SettingsContext
 from theme import colors, spacing
 from theme.scale import get_viewport_metrics
-from components.views.admin.numpad import NumericNumpad
+from components.ui.numpad import TangoNumpad
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +144,7 @@ def AuthView() -> ft.Control:
                                     ],
                                 ),
                             ),
-                            NumericNumpad(
+                            TangoNumpad(
                                 on_digit_click=on_digit_click,
                                 on_backspace_click=on_backspace_click,
                                 on_clear_click=on_clear_click,

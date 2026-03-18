@@ -3,9 +3,9 @@ from flet.controls.control_event import Event
 from flet.controls.control_event import ControlEventHandler
 from flet.controls.material.icon_button import IconButton
 
-from components.native.icon_button import TangoIconButton
-from components.native.nav_item import TangoNavItem
-from components.native.text import TangoText
+from components.ui.icon_button import TangoIconButton
+from components.ui.nav_item import TangoNavItem
+from components.ui.text import TangoText
 from contexts.locale import LocaleContext
 from contexts.route import RouteContext
 from models.nav_item import NavItem

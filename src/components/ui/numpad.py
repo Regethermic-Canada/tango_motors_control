@@ -1,19 +1,16 @@
 from collections.abc import Callable
 import flet as ft
 from flet.controls.control_event import Event
-from flet.controls.control_event import ControlEventHandler
 from flet.controls.material.icon_button import IconButton
-from components.native.icon_button import TangoIconButton
-from components.native.text import TangoText
+from components.ui.icon_button import TangoIconButton
+from components.ui.text import TangoText
 from theme import colors, spacing
 from theme.scale import get_viewport_metrics
-
-ContainerHandler = ControlEventHandler[ft.Container] | None
 
 
 def DigitButton(
     text: str,
-    on_click: ContainerHandler,
+    on_click: Callable[[Event[ft.Container]], None],
     *,
     font_size: int,
     diameter: int,
@@ -38,7 +35,7 @@ def DigitButton(
 
 
 @ft.component
-def NumericNumpad(
+def TangoNumpad(
     on_digit_click: Callable[[str], None],
     on_backspace_click: Callable[[], None],
     on_clear_click: Callable[[], None],
@@ -51,10 +48,10 @@ def NumericNumpad(
     )
     row_spacing = int(round(spacing.MD * metrics.scale))
     digit_font_size = int(round(30 * metrics.scale))
-    digit_diameter = int(round(64 * metrics.scale))
-    action_icon_size = int(round(22 * metrics.scale))
+    digit_diameter = int(round(72 * metrics.scale))
+    action_icon_size = int(round(24 * metrics.scale))
 
-    def handle_digit(digit: str) -> ContainerHandler:
+    def handle_digit(digit: str) -> Callable[[Event[ft.Container]], None]:
         return lambda _: on_digit_click(digit)
 
     def handle_backspace(_: Event[IconButton]) -> None:
@@ -72,7 +69,7 @@ def NumericNumpad(
         )
 
     def action_button(
-        icon: ft.IconData, on_click: ControlEventHandler[IconButton]
+        icon: ft.IconData, on_click: Callable[[Event[IconButton]], None]
     ) -> ft.IconButton:
         return TangoIconButton(
             icon=icon,

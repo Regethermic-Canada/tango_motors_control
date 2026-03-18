@@ -1,5 +1,5 @@
 import flet as ft
-from components.native.page import TangoPage
+from components.ui.page import TangoPage
 from .motors_view import MotorsView
 
 

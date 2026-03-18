@@ -1,12 +1,12 @@
 import flet as ft
 from flet.controls.control_event import Event
 from flet.controls.material.button import Button
-from components.native.button import TangoButton
-from components.native.card import TangoCard
-from components.native.icon_button import TangoIconButton
-from components.native.tag import TangoTag, TagVariant
-from components.native.text import TangoText
-from components.native.toast import ToastType, show_toast
+from components.ui.button import TangoButton
+from components.ui.card import TangoCard
+from components.ui.icon_button import TangoIconButton
+from components.ui.tag import TangoTag, TagVariant
+from components.ui.text import TangoText
+from components.ui.toast import ToastType, show_toast
 from models.motor_types import MotorAction
 from contexts.locale import LocaleContext
 from contexts.motor import MotorContext
