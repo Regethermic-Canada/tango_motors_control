@@ -1,5 +1,6 @@
 import flet as ft
 from flet.controls.control_event import Event
+from flet.controls.material.button import Button
 from flet.controls.material.slider import Slider
 from components.ui.card import TangoCard
 from components.ui.page import TangoPage
@@ -94,6 +95,34 @@ def AdminView() -> ft.Control:
             controls=[default_speed_label, default_speed_value],
         )
 
+    def build_test_sheet() -> tuple[str, ft.Control]:
+        return (
+            settings_service.t("test_sheet"),
+            ft.Column(
+                spacing=section_spacing,
+                tight=True,
+                controls=[
+                    TangoText(settings_service.t("test_content")),
+                    TangoButton(
+                        text=settings_service.t("show_toast"),
+                        variant="primary",
+                        on_click=lambda _: show_toast(
+                            ft.context.page,
+                            type=ToastType.INFO,
+                            build=lambda: settings_service.t("test_toast"),
+                        ),
+                    ),
+                ],
+            ),
+        )
+
+    def on_test_sheet_click(_: Event[Button]) -> None:
+        show_tango_sheet(
+            ft.context.page,
+            expand=True,
+            build=build_test_sheet,
+        )
+
     return TangoPage(
         expand=True,
         padding=ft.Padding(outer_pad, outer_pad, outer_pad, outer_pad),
@@ -144,29 +173,7 @@ def AdminView() -> ft.Control:
                                     text=loc.t("test_sheet"),
                                     variant="secondary",
                                     expand=True,
-                                    on_click=lambda e: show_tango_sheet(
-                                        e.page,
-                                        content=ft.Column(
-                                            spacing=section_spacing,
-                                            tight=True,
-                                            controls=[
-                                                TangoText(
-                                                    loc.t("test_content"),
-                                                ),
-                                                TangoButton(
-                                                    text=loc.t("show_toast"),
-                                                    variant="primary",
-                                                    on_click=lambda _: show_toast(
-                                                        e.page,
-                                                        message=loc.t("test_toast"),
-                                                        type=ToastType.INFO,
-                                                    ),
-                                                ),
-                                            ],
-                                        ),
-                                        title=loc.t("test_sheet"),
-                                        expand=True,
-                                    ),
+                                    on_click=on_test_sheet_click,
                                 ),
                             ],
                         ),

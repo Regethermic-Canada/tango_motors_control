@@ -1,7 +1,7 @@
 import asyncio
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Optional, cast
 
 import flet as ft
 
@@ -28,10 +28,13 @@ from theme.animation import (
     make,
 )
 from theme.scale import get_viewport_metrics
+
 from .icon_button import TangoIconButton
 from .text import TangoText
 
 _SHEET_TRANSITION = make(SHEET_TRANSITION_MS, SHEET_TRANSITION_CURVE)
+
+SheetBuild = Callable[[], tuple[str | None, ft.Control]]
 
 
 @dataclass(frozen=True)
@@ -57,13 +60,11 @@ _active_sheets: dict[int, _SheetRuntime] = {}
 
 
 def _trigger_dismiss(
-    on_dismiss: Optional[ft.ControlEventHandler[ft.DialogControl]],
-    control: ft.Control,
+    on_dismiss: Callable[[], None] | None,
 ) -> None:
     if on_dismiss is None:
         return
-    dismiss_handler = cast(Callable[[object], object], on_dismiss)
-    dismiss_handler(ft.Event(name="dismiss", control=control))
+    on_dismiss()
 
 
 def _is_active_sheet(page_key: int, close_token: int) -> bool:
@@ -126,35 +127,29 @@ def _build_sheet_header(
     request_close: Callable[[], None],
 ) -> ft.Container:
     title_control: ft.Control
-    if title:
+    if title is None:
+        title_control = ft.Container(expand=True)
+    else:
         title_control = TangoText(
             title,
             variant="title",
             size=22,
             expand=True,
         )
-    else:
-        title_control = ft.Container(expand=True)
 
     return ft.Container(
-        content=ft.Column(
+        content=ft.Row(
             controls=[
-                ft.Row(
-                    controls=[
-                        title_control,
-                        TangoIconButton(
-                            icon=ft.Icons.CLOSE,
-                            on_click=lambda _: request_close(),
-                            variant="surface",
-                            size="md",
-                        ),
-                    ],
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                title_control,
+                TangoIconButton(
+                    icon=ft.Icons.CLOSE,
+                    on_click=lambda _: request_close(),
+                    variant="surface",
+                    size="md",
                 ),
             ],
-            spacing=0,
-            tight=True,
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
         ),
         padding=layout.header_padding,
         border=ft.Border(bottom=ft.BorderSide(1, colors.OUTLINE)),
@@ -178,8 +173,8 @@ def _build_sheet_surface(
                     expand=expand,
                 ),
             ],
-            tight=not expand,
             spacing=0,
+            tight=not expand,
             expand=expand,
         ),
         bgcolor=colors.SURFACE,
@@ -208,6 +203,7 @@ def _apply_closed_state(runtime: _SheetRuntime) -> None:
 
 def _build_sheet_runtime(
     *,
+    page: ft.Page,
     content: ft.Control,
     title: str | None,
     padding: ft.Padding | int | None,
@@ -216,12 +212,11 @@ def _build_sheet_runtime(
     on_close: Callable[[], None],
 ) -> _SheetRuntime:
     layout = _resolve_sheet_layout(
-        ft.context.page,
+        page,
         padding=padding,
         full_screen=full_screen,
         expand=expand,
     )
-
     header = _build_sheet_header(
         title=title,
         layout=layout,
@@ -262,20 +257,21 @@ def _build_sheet_runtime(
 
 
 def TangoSheet(
+    page: ft.Page,
     content: ft.Control,
     *,
-    title: Optional[str] = None,
-    padding: Optional[ft.Padding | int] = None,
+    title: str | None = None,
+    padding: ft.Padding | int | None = None,
     full_screen: bool = False,
     expand: bool = False,
-    on_close: Optional[Callable[[], None]] = None,
+    on_close: Callable[[], None] | None = None,
 ) -> _SheetRuntime:
-
     def request_close() -> None:
         if on_close is not None:
             on_close()
 
     return _build_sheet_runtime(
+        page=page,
         content=content,
         title=title,
         padding=padding,
@@ -285,19 +281,34 @@ def TangoSheet(
     )
 
 
-def show_tango_sheet(
+def _resolve_sheet_insert_index(page: ft.Page, insert_at: int | None) -> int:
+    if insert_at is not None:
+        return insert_at
+
+    next_insert_at = len(page.overlay)
+    toast_overlay = get_overlay_control(page, OverlayRole.TOAST)
+    if toast_overlay is not None and toast_overlay in page.overlay:
+        next_insert_at = page.overlay.index(toast_overlay)
+    return next_insert_at
+
+
+def _present_sheet(
+    *,
     page: ft.Page,
     content: ft.Control,
-    title: Optional[str] = None,
-    on_dismiss: Optional[ft.ControlEventHandler[ft.DialogControl]] = None,
-    padding: Optional[ft.Padding | int] = None,
-    full_screen: bool = False,
-    expand: bool = False,
+    title: str | None,
+    on_dismiss: Callable[[], None] | None,
+    padding: ft.Padding | int | None,
+    full_screen: bool,
+    expand: bool,
+    build: SheetBuild | None,
+    animate_in: bool,
+    insert_at: int | None,
 ) -> ft.Container:
     page_key = id(page)
     _clear_existing_sheet(page, page_key)
 
-    close_token = int(asyncio.get_running_loop().time() * 1_000_000)
+    close_token = time.monotonic_ns()
 
     def close_sheet() -> None:
         current = _active_sheets.get(page_key)
@@ -311,7 +322,7 @@ def show_tango_sheet(
 
         def finalize_cleanup() -> None:
             _active_sheets.pop(page_key, None)
-            _trigger_dismiss(on_dismiss, current.overlay)
+            _trigger_dismiss(on_dismiss)
 
         cleanup_overlay(
             page=page,
@@ -322,7 +333,32 @@ def show_tango_sheet(
             on_cleanup=finalize_cleanup,
         )
 
+    def refresh_sheet() -> None:
+        if build is None or not _is_active_sheet(page_key, close_token):
+            return
+
+        current = _active_sheets.get(page_key)
+        next_insert_at = (
+            page.overlay.index(current.overlay)
+            if current is not None and current.overlay in page.overlay
+            else None
+        )
+        next_title, next_content = build()
+        _present_sheet(
+            page=page,
+            content=next_content,
+            title=next_title,
+            on_dismiss=on_dismiss,
+            padding=padding,
+            full_screen=full_screen,
+            expand=expand,
+            build=build,
+            animate_in=False,
+            insert_at=next_insert_at,
+        )
+
     runtime = TangoSheet(
+        page=page,
         content=content,
         title=title,
         padding=padding,
@@ -331,24 +367,65 @@ def show_tango_sheet(
         on_close=close_sheet,
     )
     runtime.close_token = close_token
-
     _active_sheets[page_key] = runtime
-    register_overlay(page, OverlayRole.SHEET, runtime.overlay, close_sheet)
+    register_overlay(
+        page,
+        OverlayRole.SHEET,
+        runtime.overlay,
+        close_sheet,
+        refresh_callback=refresh_sheet if build is not None else None,
+    )
 
-    insert_at = len(page.overlay)
-    toast_overlay = get_overlay_control(page, OverlayRole.TOAST)
-    if toast_overlay is not None and toast_overlay in page.overlay:
-        insert_at = page.overlay.index(toast_overlay)
-    page.overlay.insert(insert_at, runtime.overlay)
-    page.update()
+    resolved_insert_at = _resolve_sheet_insert_index(page, insert_at)
+    if animate_in:
+        page.overlay.insert(resolved_insert_at, runtime.overlay)
+        page.update()
 
-    async def animate_in() -> None:
-        await asyncio.sleep(OVERLAY_MOUNT_FRAME_DELAY_S)
-        if not _is_active_sheet(page_key, close_token):
-            return
-        current = _active_sheets[page_key]
-        _apply_open_state(current)
-        current.overlay.update()
+        async def animate_in_task() -> None:
+            await asyncio.sleep(OVERLAY_MOUNT_FRAME_DELAY_S)
+            if not _is_active_sheet(page_key, close_token):
+                return
+            current = _active_sheets[page_key]
+            _apply_open_state(current)
+            current.overlay.update()
 
-    asyncio.create_task(animate_in())
+        asyncio.create_task(animate_in_task())
+    else:
+        _apply_open_state(runtime)
+        page.overlay.insert(resolved_insert_at, runtime.overlay)
+        page.update()
+
     return runtime.overlay
+
+
+def show_tango_sheet(
+    page: ft.Page,
+    content: ft.Control | None = None,
+    title: str | None = None,
+    on_dismiss: Callable[[], None] | None = None,
+    padding: ft.Padding | int | None = None,
+    full_screen: bool = False,
+    expand: bool = False,
+    build: SheetBuild | None = None,
+) -> ft.Container:
+    if build is not None and (content is not None or title is not None):
+        raise ValueError(
+            "show_tango_sheet() accepts either static content/title or 'build', not both."
+        )
+    if build is not None:
+        title, content = build()
+    if content is None:
+        raise ValueError("show_tango_sheet() requires either 'content' or 'build'.")
+
+    return _present_sheet(
+        page=page,
+        content=content,
+        title=title,
+        on_dismiss=on_dismiss,
+        padding=padding,
+        full_screen=full_screen,
+        expand=expand,
+        build=build,
+        animate_in=True,
+        insert_at=None,
+    )

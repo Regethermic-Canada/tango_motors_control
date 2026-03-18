@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 import flet as ft
 from flet.controls.control_event import Event
 from flet.controls.material.button import Button
@@ -7,9 +9,10 @@ from components.ui.icon_button import TangoIconButton
 from components.ui.tag import TangoTag, TagVariant
 from components.ui.text import TangoText
 from components.ui.toast import ToastType, show_toast
-from models.motor_types import MotorAction
 from contexts.locale import LocaleContext
 from contexts.motor import MotorContext
+from contexts.settings import SettingsContext
+from models.motor_types import MotorAction
 from theme import colors, spacing
 from theme.scale import get_viewport_metrics
 
@@ -18,6 +21,7 @@ from theme.scale import get_viewport_metrics
 def MotorsView() -> ft.Control:
     loc = ft.use_context(LocaleContext)
     motor = ft.use_context(MotorContext).current()
+    settings_service = ft.use_context(SettingsContext).current()
     metrics = get_viewport_metrics(
         ft.context.page,
         base_width=960,
@@ -62,11 +66,14 @@ def MotorsView() -> ft.Control:
         loc.t("motor_status_running") if is_running else loc.t("motor_status_stopped")
     )
 
+    def build_toast_message(message_key: str) -> Callable[[], str]:
+        return lambda: settings_service.t(message_key)
+
     def show_limit_toast(message_key: str) -> None:
         show_toast(
             page=ft.context.page,
-            message=loc.t(message_key),
             type=ToastType.WARNING,
+            build=build_toast_message(message_key),
         )
 
     def on_toggle_click(_: Event[Button]) -> None:
@@ -89,8 +96,8 @@ def MotorsView() -> ft.Control:
 
         show_toast(
             page=ft.context.page,
-            message=loc.t(message_key),
             type=toast_type,
+            build=build_toast_message(message_key),
         )
 
     def on_increment_click(_: Event[ft.IconButton]) -> None:

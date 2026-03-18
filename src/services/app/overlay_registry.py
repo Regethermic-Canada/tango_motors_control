@@ -19,6 +19,7 @@ _PAGE_OVERLAYS_ATTR = "_tango_overlays"
 class OverlayEntry:
     control: BaseControl
     close_callback: Callable[[], None]
+    refresh_callback: Callable[[], None] | None = None
 
 
 OverlayRegistry = dict[OverlayRole, OverlayEntry]
@@ -38,10 +39,12 @@ def register_overlay(
     role: OverlayRole,
     control: BaseControl,
     close_callback: Callable[[], None],
+    refresh_callback: Callable[[], None] | None = None,
 ) -> None:
     get_overlay_registry(page)[role] = OverlayEntry(
         control=control,
         close_callback=close_callback,
+        refresh_callback=refresh_callback,
     )
 
 
@@ -63,6 +66,23 @@ def get_overlay_close_callback(
 def get_overlay_control(page: ft.Page, role: OverlayRole) -> BaseControl | None:
     entry = get_overlay_registry(page).get(role)
     return entry.control if entry is not None else None
+
+
+def get_overlay_refresh_callback(
+    page: ft.Page,
+    role: OverlayRole,
+) -> Callable[[], None] | None:
+    entry = get_overlay_registry(page).get(role)
+    if entry is None:
+        return None
+    callback = entry.refresh_callback
+    return callback if callable(callback) else None
+
+
+def refresh_overlay(page: ft.Page, role: OverlayRole) -> None:
+    callback = get_overlay_refresh_callback(page, role)
+    if callback is not None:
+        callback()
 
 
 def remove_overlay_control(page: ft.Page, control: BaseControl) -> bool:

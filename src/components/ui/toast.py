@@ -1,18 +1,14 @@
 import asyncio
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
+
 import flet as ft
 from flet.controls.control_event import ControlEventHandler
 from flet.controls.material.icon_button import IconButton
 
-from services.app.overlay_registry import (
-    OverlayRole,
-    cleanup_overlay,
-    register_overlay,
-)
-from .icon_button import TangoIconButton
-from .text import TangoText
+from services.app.overlay_registry import OverlayRole, cleanup_overlay, register_overlay
 from theme import colors, radius, shadows
 from theme.animation import (
     OVERLAY_MOUNT_FRAME_DELAY_S,
@@ -27,7 +23,13 @@ from theme.animation import (
 )
 from theme.scale import get_viewport_metrics
 
+from .icon_button import TangoIconButton
+from .text import TangoText
+
 _TOAST_TRANSITION = make(TOAST_TRANSITION_MS, TOAST_TRANSITION_CURVE)
+
+ToastBuild = Callable[[], str]
+ControlHandler = ControlEventHandler[IconButton] | None
 
 
 class ToastType(Enum):
@@ -35,17 +37,6 @@ class ToastType(Enum):
     ERROR = "error"
     WARNING = "warning"
     INFO = "info"
-
-
-@dataclass
-class _ToastRuntime:
-    container: ft.Container
-    close_token: int
-
-
-_active_toasts: dict[int, _ToastRuntime] = {}
-_last_toast_at: dict[tuple[int, str], float] = {}
-ControlHandler = ControlEventHandler[IconButton] | None
 
 
 @dataclass(frozen=True)
@@ -56,6 +47,17 @@ class _ToastLayout:
     close_tooltip: str
     is_compact: bool
     metrics_scale: float
+
+
+@dataclass
+class _ToastRuntime:
+    container: ft.Container
+    close_token: int
+    expires_at: float | None
+
+
+_active_toasts: dict[int, _ToastRuntime] = {}
+_last_toast_at: dict[tuple[int, str], float] = {}
 
 
 def TangoToast(
@@ -72,6 +74,7 @@ def TangoToast(
 ) -> ft.Container:
     toast_icon_size = int(round((22 if is_compact else 28) * metrics_scale))
     toast_text_size = int(round((14 if is_compact else 16) * metrics_scale))
+    separator_height = int(round((18 if is_compact else 22) * metrics_scale))
     row_spacing = int(round((8 if is_compact else 12) * metrics_scale))
     pad_h_left = int(round((12 if is_compact else 16) * metrics_scale))
     pad_v = int(round((8 if is_compact else 10) * metrics_scale))
@@ -87,9 +90,14 @@ def TangoToast(
 
     return ft.Container(
         content=ft.Row(
-            [
+            controls=[
                 ft.Icon(icon, color=colors.TEXT_INVERSE, size=toast_icon_size),
-                ft.VerticalDivider(width=1, color=colors.INVERSE_OUTLINE),
+                ft.Container(
+                    width=1,
+                    height=separator_height,
+                    bgcolor=colors.INVERSE_OUTLINE,
+                    border_radius=999,
+                ),
                 TangoText(
                     message,
                     variant="body_strong",
@@ -114,8 +122,8 @@ def TangoToast(
         border_radius=radius.TOAST,
         width=width,
         shadow=shadows.card_shadow(metrics_scale),
-        animate_opacity=TOAST_TRANSITION_MS,
-        animate_offset=make(TOAST_TRANSITION_MS, TOAST_TRANSITION_CURVE),
+        animate_opacity=_TOAST_TRANSITION,
+        animate_offset=_TOAST_TRANSITION,
         opacity=TOAST_HIDDEN_OPACITY,
         offset=TOAST_HIDDEN_OFFSET,
         top=top,
@@ -194,12 +202,25 @@ def _apply_closed_state(runtime: _ToastRuntime) -> None:
     runtime.container.offset = TOAST_HIDDEN_OFFSET
 
 
+def _resolve_expires_at(
+    *,
+    duration: float,
+    expires_at: float | None,
+) -> float | None:
+    if expires_at is not None:
+        return expires_at
+    if duration <= 0:
+        return None
+    return time.monotonic() + duration
+
+
 def _build_toast_runtime(
     *,
     message: str,
     type: ToastType,
     layout: _ToastLayout,
     on_close: ControlHandler,
+    expires_at: float | None,
 ) -> _ToastRuntime:
     container = TangoToast(
         message=message,
@@ -212,20 +233,26 @@ def _build_toast_runtime(
         right=layout.right,
         on_close=on_close,
     )
-    container.animate_opacity = TOAST_TRANSITION_MS
-    container.animate_offset = _TOAST_TRANSITION
-    return _ToastRuntime(container=container, close_token=0)
+    return _ToastRuntime(
+        container=container,
+        close_token=0,
+        expires_at=expires_at,
+    )
 
 
-def show_toast(
+def _present_toast(
+    *,
     page: ft.Page,
     message: str,
-    type: ToastType = ToastType.ERROR,
-    duration: float = 3.0,
-    position_top: int = 80,
-    position_right: int = 20,
-    close_tooltip: str | None = None,
-    dedupe_window_s: float = 1.5,
+    type: ToastType,
+    duration: float,
+    position_top: int,
+    position_right: int,
+    close_tooltip: str | None,
+    build: ToastBuild | None,
+    animate_in: bool,
+    insert_at: int | None,
+    expires_at: float | None = None,
 ) -> None:
     layout = _resolve_toast_layout(
         page=page,
@@ -234,15 +261,13 @@ def show_toast(
         position_right=position_right,
     )
     page_key = id(page)
-    toast_key = f"{type.value}:{message}"
-    now = time.monotonic()
-    last_shown = _last_toast_at.get((page_key, toast_key))
-    if last_shown is not None and (now - last_shown) < dedupe_window_s:
-        return
-    _last_toast_at[(page_key, toast_key)] = now
-
     _clear_existing_toast(page, page_key)
-    close_token = int(time.monotonic_ns())
+
+    close_token = time.monotonic_ns()
+    resolved_expires_at = _resolve_expires_at(
+        duration=duration,
+        expires_at=expires_at,
+    )
 
     def close_toast() -> None:
         current = _active_toasts.get(page_key)
@@ -266,29 +291,118 @@ def show_toast(
             on_cleanup=finalize_cleanup,
         )
 
+    def refresh_toast() -> None:
+        if build is None or not _is_active_toast(page_key, close_token):
+            return
+
+        current = _active_toasts.get(page_key)
+        next_insert_at = (
+            page.overlay.index(current.container)
+            if current is not None and current.container in page.overlay
+            else None
+        )
+        _present_toast(
+            page=page,
+            message=build(),
+            type=type,
+            duration=duration,
+            position_top=position_top,
+            position_right=position_right,
+            close_tooltip=close_tooltip,
+            build=build,
+            animate_in=False,
+            insert_at=next_insert_at,
+            expires_at=(
+                current.expires_at if current is not None else resolved_expires_at
+            ),
+        )
+
     runtime = _build_toast_runtime(
         message=message,
         type=type,
         layout=layout,
         on_close=lambda _: close_toast(),
+        expires_at=resolved_expires_at,
     )
     runtime.close_token = close_token
     _active_toasts[page_key] = runtime
-    register_overlay(page, OverlayRole.TOAST, runtime.container, close_toast)
-    page.overlay.append(runtime.container)
-    page.update()
+    register_overlay(
+        page,
+        OverlayRole.TOAST,
+        runtime.container,
+        close_toast,
+        refresh_callback=refresh_toast if build is not None else None,
+    )
 
-    async def animate_in() -> None:
-        await asyncio.sleep(OVERLAY_MOUNT_FRAME_DELAY_S)
-        if not _is_active_toast(page_key, close_token):
-            return
-        current = _active_toasts[page_key]
-        _apply_open_state(current)
-        current.container.update()
+    resolved_insert_at = len(page.overlay) if insert_at is None else insert_at
+    if animate_in:
+        page.overlay.insert(resolved_insert_at, runtime.container)
+        page.update()
+
+        async def animate_in_task() -> None:
+            await asyncio.sleep(OVERLAY_MOUNT_FRAME_DELAY_S)
+            if not _is_active_toast(page_key, close_token):
+                return
+            current = _active_toasts[page_key]
+            _apply_open_state(current)
+            current.container.update()
+
+        asyncio.create_task(animate_in_task())
+    else:
+        _apply_open_state(runtime)
+        page.overlay.insert(resolved_insert_at, runtime.container)
+        page.update()
+
+    if runtime.expires_at is None:
+        return
+
+    expires_at = runtime.expires_at
 
     async def auto_hide() -> None:
-        await asyncio.sleep(duration)
+        remaining_s = max(0.0, expires_at - time.monotonic())
+        await asyncio.sleep(remaining_s)
         close_toast()
 
-    asyncio.create_task(animate_in())
     asyncio.create_task(auto_hide())
+
+
+def show_toast(
+    page: ft.Page,
+    message: str | None = None,
+    type: ToastType = ToastType.ERROR,
+    duration: float = 3.0,
+    position_top: int = 80,
+    position_right: int = 20,
+    close_tooltip: str | None = None,
+    dedupe_window_s: float = 1.5,
+    build: ToastBuild | None = None,
+) -> None:
+    if build is not None and message is not None:
+        raise ValueError("show_toast() accepts either 'message' or 'build', not both.")
+    if build is None and message is None:
+        raise ValueError("show_toast() requires either 'message' or 'build'.")
+
+    resolved_message = build() if build is not None else message
+    if resolved_message is None:
+        raise ValueError("show_toast() could not resolve a message.")
+
+    page_key = id(page)
+    toast_key = f"{type.value}:{resolved_message}"
+    now = time.monotonic()
+    last_shown = _last_toast_at.get((page_key, toast_key))
+    if last_shown is not None and (now - last_shown) < dedupe_window_s:
+        return
+    _last_toast_at[(page_key, toast_key)] = now
+
+    _present_toast(
+        page=page,
+        message=resolved_message,
+        type=type,
+        duration=duration,
+        position_top=position_top,
+        position_right=position_right,
+        close_tooltip=close_tooltip,
+        build=build,
+        animate_in=True,
+        insert_at=None,
+    )

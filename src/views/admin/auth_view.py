@@ -3,22 +3,20 @@ import asyncio
 import flet as ft
 
 from components.ui.card import TangoCard
+from components.ui.numpad import TangoNumpad
 from components.ui.page import TangoPage
 from components.ui.text import TangoText
 from components.ui.toast import ToastType, show_toast
-from contexts.locale import LocaleContext
 from contexts.route import RouteContext
 from contexts.settings import SettingsContext
 from theme import animation, colors, spacing
 from theme.scale import get_viewport_metrics
-from components.ui.numpad import TangoNumpad
 
 logger = logging.getLogger(__name__)
 
 
 @ft.component
 def AuthView() -> ft.Control:
-    loc = ft.use_context(LocaleContext)
     route_ctx = ft.use_context(RouteContext)
     settings_service = ft.use_context(SettingsContext).current()
     passcode, set_passcode = ft.use_state("")
@@ -42,16 +40,16 @@ def AuthView() -> ft.Control:
             set_passcode("")
             show_toast(
                 page=ft.context.page,
-                message=loc.t("admin_access_granted"),
                 type=ToastType.SUCCESS,
+                build=lambda: settings_service.t("admin_access_granted"),
             )
             route_ctx.navigate("/admin")
         else:
             # Show toast simultaneously with shake
             show_toast(
                 page=ft.context.page,
-                message=loc.t("invalid_passcode"),
                 type=ToastType.ERROR,
+                build=lambda: settings_service.t("invalid_passcode"),
             )
 
             # Multi-directional shake animation (More complex 4-point sequence)

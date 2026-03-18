@@ -34,6 +34,9 @@ class SettingsService:
         config.set("LOCALE", normalized_locale)
         logger.info("Locale changed to %s", self.locale)
 
+    def t(self, key: str, default: str | None = None) -> str:
+        return self.translations.get(key, default or key)
+
     def set_inactivity_timeout(self, seconds: float) -> None:
         if self.inactivity_timeout == seconds:
             return

@@ -8,7 +8,12 @@ from components.ui.nav_item import TangoNavItem
 from components.ui.text import TangoText
 from contexts.locale import LocaleContext
 from contexts.route import RouteContext
-from services.app.overlay_registry import OverlayRole, get_overlay_close_callback
+from contexts.settings import SettingsContext
+from services.app.overlay_registry import (
+    OverlayRole,
+    get_overlay_close_callback,
+    refresh_overlay,
+)
 from models.nav_item import NavItem
 from theme import colors, shadows
 from theme.scale import get_viewport_metrics
@@ -25,6 +30,7 @@ def _close_active_sheet() -> None:
 @ft.component
 def LanguageSelector() -> ft.Control:
     loc = ft.use_context(LocaleContext)
+    settings_service = ft.use_context(SettingsContext).current()
     metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
     diameter = int(round((32 if metrics.is_compact else 40) * metrics.scale))
     label_size = int(round((13 if metrics.is_compact else 14) * metrics.scale))
@@ -32,6 +38,11 @@ def LanguageSelector() -> ft.Control:
 
     def on_toggle_language(_: Event[ft.Container]) -> None:
         loc.set_locale(next_locale)
+        setattr(
+            ft.context.page, "_tango_toast_close_tooltip", settings_service.t("close")
+        )
+        refresh_overlay(ft.context.page, OverlayRole.TOAST)
+        refresh_overlay(ft.context.page, OverlayRole.SHEET)
 
     return ft.Container(
         width=diameter,
