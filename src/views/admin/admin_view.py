@@ -20,18 +20,18 @@ def AdminView() -> ft.Control:
     metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
 
     outer_pad = int(
-        round((spacing.LG if metrics.compact else spacing.XL) * metrics.scale)
+        round((spacing.LG if metrics.is_compact else spacing.XL) * metrics.scale)
     )
     section_spacing = int(round(spacing.LG * metrics.scale))
     block_spacing = int(round(spacing.XS * metrics.scale))
-    section_title_size = int(round((15 if metrics.compact else 18) * metrics.scale))
-    value_size = int(round((14 if metrics.compact else 16) * metrics.scale))
+    section_title_size = int(round((15 if metrics.is_compact else 18) * metrics.scale))
+    value_size = int(round((14 if metrics.is_compact else 16) * metrics.scale))
     card_width = min(
         760,
-        max(360 if metrics.compact else 520, int(metrics.width * 0.58)),
+        max(360 if metrics.is_compact else 520, int(metrics.width * 0.58)),
     )
     card_padding = int(
-        round((spacing.LG if metrics.compact else spacing.XL) * metrics.scale)
+        round((spacing.LG if metrics.is_compact else spacing.XL) * metrics.scale)
     )
     slider_scale = max(0.85, metrics.scale)
 
@@ -69,7 +69,7 @@ def AdminView() -> ft.Control:
     )
 
     timeout_header: ft.Control
-    if metrics.compact:
+    if metrics.is_compact:
         timeout_header = ft.Column(
             spacing=max(2, int(round(4 * metrics.scale))),
             horizontal_alignment=ft.CrossAxisAlignment.START,
@@ -82,7 +82,7 @@ def AdminView() -> ft.Control:
         )
 
     default_speed_header: ft.Control
-    if metrics.compact:
+    if metrics.is_compact:
         default_speed_header = ft.Column(
             spacing=max(2, int(round(4 * metrics.scale))),
             horizontal_alignment=ft.CrossAxisAlignment.START,
@@ -158,9 +158,7 @@ def AdminView() -> ft.Control:
                                                     variant="primary",
                                                     on_click=lambda _: show_toast(
                                                         e.page,
-                                                        message=loc.t(
-                                                            "test_toast"
-                                                        ),
+                                                        message=loc.t("test_toast"),
                                                         type=ToastType.INFO,
                                                     ),
                                                 ),

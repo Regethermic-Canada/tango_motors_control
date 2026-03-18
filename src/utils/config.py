@@ -17,7 +17,13 @@ def get_env(key: str, default: str) -> str:
 
 def get_env_bool(key: str, default: bool) -> bool:
     value = get_env(key, "true" if default else "false").strip().lower()
-    return value in {"1", "true", "yes", "on"}
+    if value == "":
+        return default
+    if value in {"1", "true", "yes", "on"}:
+        return True
+    if value in {"0", "false", "no", "off"}:
+        return False
+    return default
 
 
 def parse_int_csv(value: str) -> list[int]:
@@ -36,6 +42,9 @@ class Config:
     app_title: str
     app_version: str
     app_admin_default_passcode: str
+    app_fullscreen_mode: bool
+    app_screen_width: int
+    app_screen_height: int
 
     # User Preferences
     locale: str
@@ -113,6 +122,9 @@ class Config:
             app_title=get_env("APP_TITLE", "Tango Motors Control"),
             app_version=get_env("APP_VERSION", "0.1.9"),
             app_admin_default_passcode=get_env("APP_ADMIN_DEFAULT_PASSCODE", "1010"),
+            app_fullscreen_mode=get_env_bool("APP_FULLSCREEN_MODE", True),
+            app_screen_width=max(320, int(get_env("APP_SCREEN_WIDTH", "800"))),
+            app_screen_height=max(240, int(get_env("APP_SCREEN_HEIGHT", "480"))),
             locale=get_env("LOCALE", "fr").lower(),
             default_speed=int(get_env("DEFAULT_SPEED", "0")),
             admin_passcode_hash=get_env("ADMIN_PASSCODE_HASH", ""),

@@ -44,7 +44,7 @@ def TangoNumpad(
 
     numpad_width = min(
         520,
-        max(320 if metrics.compact else 440, int(metrics.width * 0.4)),
+        max(320 if metrics.is_compact else 440, int(metrics.width * 0.4)),
     )
     row_spacing = int(round(spacing.MD * metrics.scale))
     digit_font_size = int(round(30 * metrics.scale))

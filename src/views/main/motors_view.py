@@ -30,31 +30,31 @@ def MotorsView() -> ft.Control:
 
     content_spacing = int(round(spacing.SM * metrics.scale))
     panel_spacing = int(round(spacing.LG * metrics.scale))
-    speed_label_size = int(round((15 if metrics.compact else 16) * metrics.scale))
-    speed_value_size = int(round((72 if metrics.compact else 76) * metrics.scale))
-    speed_percent_size = int(round((18 if metrics.compact else 20) * metrics.scale))
-    button_text_size = int(round((16 if metrics.compact else 17) * metrics.scale))
+    speed_label_size = int(round((15 if metrics.is_compact else 16) * metrics.scale))
+    speed_value_size = int(round((72 if metrics.is_compact else 76) * metrics.scale))
+    speed_percent_size = int(round((18 if metrics.is_compact else 20) * metrics.scale))
+    button_text_size = int(round((16 if metrics.is_compact else 17) * metrics.scale))
     panel_width = min(
         640,
         max(
-            360 if metrics.compact else 500,
-            int(metrics.width * (0.8 if metrics.compact else 0.52)),
+            360 if metrics.is_compact else 500,
+            int(metrics.width * (0.8 if metrics.is_compact else 0.52)),
         ),
     )
-    step_button_size = int(round((40 if metrics.compact else 48) * metrics.scale))
-    step_icon_size = int(round((20 if metrics.compact else 22) * metrics.scale))
+    step_button_size = int(round((40 if metrics.is_compact else 48) * metrics.scale))
+    step_icon_size = int(round((20 if metrics.is_compact else 22) * metrics.scale))
     step_spacing = int(
-        round((spacing.SM if metrics.compact else spacing.LG) * metrics.scale)
+        round((spacing.SM if metrics.is_compact else spacing.LG) * metrics.scale)
     )
     speed_control_gap = int(
-        round((spacing.XS if metrics.compact else spacing.SM) * metrics.scale)
+        round((spacing.XS if metrics.is_compact else spacing.SM) * metrics.scale)
     )
-    speed_value_width = int(round((112 if metrics.compact else 144) * metrics.scale))
+    speed_value_width = int(round((112 if metrics.is_compact else 144) * metrics.scale))
     speed_control_width = (
         (step_button_size * 2) + speed_value_width + (step_spacing * 2)
     )
     card_padding = int(
-        round((spacing.LG if metrics.compact else spacing.XL) * metrics.scale)
+        round((spacing.LG if metrics.is_compact else spacing.XL) * metrics.scale)
     )
 
     status_variant: TagVariant = "success" if is_running else "secondary"
@@ -137,7 +137,7 @@ def MotorsView() -> ft.Control:
                                         on_click=on_decrement_click,
                                         tooltip=loc.t("decrement"),
                                         variant="surface",
-                                        size="lg" if not metrics.compact else "md",
+                                        size="lg" if not metrics.is_compact else "md",
                                         disabled=not can_decrement,
                                     ),
                                     ft.Container(
@@ -169,7 +169,7 @@ def MotorsView() -> ft.Control:
                                         on_click=on_increment_click,
                                         tooltip=loc.t("increment"),
                                         variant="primary",
-                                        size="lg" if not metrics.compact else "md",
+                                        size="lg" if not metrics.is_compact else "md",
                                         disabled=not can_increment,
                                     ),
                                 ],
@@ -193,7 +193,7 @@ def MotorsView() -> ft.Control:
                             else loc.t("start_motors")
                         ),
                         on_click=on_toggle_click,
-                        size="lg" if not metrics.compact else "md",
+                        size="lg" if not metrics.is_compact else "md",
                         text_size=button_text_size,
                         variant="surface" if is_running else "primary",
                     ),

@@ -21,18 +21,18 @@ def Layout(content: ft.Control) -> ft.Control:
     metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
 
     logo_bottom_padding = int(round((spacing.XL + spacing.XS) * metrics.scale))
-    logo_width = int(round((240 if metrics.compact else 320) * metrics.scale))
+    logo_width = int(round((240 if metrics.is_compact else 320) * metrics.scale))
     header_side_padding = int(
-        round((spacing.MD if metrics.compact else spacing.LG) * metrics.scale)
+        round((spacing.MD if metrics.is_compact else spacing.LG) * metrics.scale)
     )
     header_right = int(round(spacing.MD * metrics.scale))
     header_gap = int(round(spacing.XS * metrics.scale))
     header_card_padding = int(round(4 * metrics.scale))
-    top_band_height = int(round((68 if metrics.compact else 76) * metrics.scale))
+    top_band_height = int(round((68 if metrics.is_compact else 76) * metrics.scale))
     toast_top_offset = top_band_height + int(round(spacing.SM * metrics.scale))
     title_spacing = int(round(2 * metrics.scale))
-    title_size = int(round((18 if metrics.compact else 22) * metrics.scale))
-    subtitle_size = int(round((11 if metrics.compact else 13) * metrics.scale))
+    title_size = int(round((18 if metrics.is_compact else 22) * metrics.scale))
+    subtitle_size = int(round((11 if metrics.is_compact else 13) * metrics.scale))
 
     setattr(ft.context.page, "_tango_toast_top_offset", toast_top_offset)
     setattr(ft.context.page, "_tango_toast_right_offset", header_right)

@@ -4,6 +4,12 @@
 APP_TITLE=Tango Motors Control
 APP_VERSION=0.1.9
 APP_ADMIN_DEFAULT_PASSCODE=1010
+# Target touchscreen size used for viewport scaling and the optional dev window.
+APP_SCREEN_WIDTH=800
+APP_SCREEN_HEIGHT=480
+# true = fullscreen kiosk mode
+# false = open a fixed APP_SCREEN_WIDTH x APP_SCREEN_HEIGHT desktop window
+APP_FULLSCREEN_MODE=true
 
 ###############################################################################
 # User Preferences

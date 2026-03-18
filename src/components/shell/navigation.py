@@ -19,8 +19,8 @@ ContainerHandler = ControlEventHandler[ft.Container] | None
 def LanguageSelector() -> ft.Control:
     loc = ft.use_context(LocaleContext)
     metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
-    diameter = int(round((32 if metrics.compact else 40) * metrics.scale))
-    label_size = int(round((13 if metrics.compact else 14) * metrics.scale))
+    diameter = int(round((32 if metrics.is_compact else 40) * metrics.scale))
+    label_size = int(round((13 if metrics.is_compact else 14) * metrics.scale))
     next_locale = "fr" if loc.locale == "en" else "en"
 
     def on_toggle_language(_: Event[ft.Container]) -> None:
@@ -57,7 +57,7 @@ def Group(item: NavItem, selected: bool) -> ft.Control:
         selected=selected,
         tooltip=item.label,
         icon_size=icon_size,
-        size=int(round((40 if metrics.compact else 48) * metrics.scale)),
+        size=int(round((40 if metrics.is_compact else 48) * metrics.scale)),
         on_click=lambda _: route_context.navigate(f"/{item.name}"),
     )
 
@@ -65,7 +65,7 @@ def Group(item: NavItem, selected: bool) -> ft.Control:
 @ft.component
 def Groups(nav_items: list[NavItem], selected_name: str | None) -> ft.Control:
     metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
-    nav_width = int(round((40 if metrics.compact else 48) * metrics.scale))
+    nav_width = int(round((40 if metrics.is_compact else 48) * metrics.scale))
     return ft.Column(
         expand=True,
         spacing=0,
@@ -96,5 +96,5 @@ def AdminModeToggle() -> ft.Control:
         tooltip=loc.t("admin_settings") if not is_admin else loc.t("main_view"),
         on_click=on_admin_click,
         variant="primary" if is_admin else "surface",
-        size="sm" if metrics.compact else "md",
+        size="sm" if metrics.is_compact else "md",
     )

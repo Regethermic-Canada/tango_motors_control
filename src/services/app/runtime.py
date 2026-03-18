@@ -72,9 +72,18 @@ class AppRuntime:
 
     def on_mounted(self) -> None:
         self._page.title = config.app_title
-        self._page.window.maximized = True
-        self._page.window.full_screen = True
-        self._page.window.frameless = True
+        if config.app_fullscreen_mode:
+            self._page.window.maximized = True
+            self._page.window.full_screen = True
+            self._page.window.frameless = True
+            self._page.window.resizable = False
+        else:
+            self._page.window.width = config.app_screen_width
+            self._page.window.height = config.app_screen_height
+            self._page.window.maximized = False
+            self._page.window.full_screen = False
+            self._page.window.frameless = False
+            self._page.window.resizable = False
         configure_page(self._page)
         self._page.on_resize = self.on_page_resize
         self.sync_viewport_size(force=True)

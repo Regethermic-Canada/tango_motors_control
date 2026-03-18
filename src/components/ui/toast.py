@@ -35,19 +35,19 @@ def TangoToast(
     message: str,
     type: ToastType,
     close_tooltip: str,
-    compact: bool,
+    is_compact: bool,
     metrics_scale: float,
     width: int,
     top: int,
     right: int,
     on_close: ControlHandler = None,
 ) -> ft.Container:
-    toast_icon_size = int(round((22 if compact else 28) * metrics_scale))
-    toast_text_size = int(round((14 if compact else 16) * metrics_scale))
-    row_spacing = int(round((8 if compact else 12) * metrics_scale))
-    pad_h_left = int(round((12 if compact else 16) * metrics_scale))
-    pad_v = int(round((8 if compact else 10) * metrics_scale))
-    pad_h_right = int(round((8 if compact else 12) * metrics_scale))
+    toast_icon_size = int(round((22 if is_compact else 28) * metrics_scale))
+    toast_text_size = int(round((14 if is_compact else 16) * metrics_scale))
+    row_spacing = int(round((8 if is_compact else 12) * metrics_scale))
+    pad_h_left = int(round((12 if is_compact else 16) * metrics_scale))
+    pad_v = int(round((8 if is_compact else 10) * metrics_scale))
+    pad_h_right = int(round((8 if is_compact else 12) * metrics_scale))
 
     palette = {
         ToastType.SUCCESS: (colors.SUCCESS, ft.Icons.CHECK_CIRCLE_OUTLINE),
@@ -73,7 +73,7 @@ def TangoToast(
                     icon=ft.Icons.CLOSE,
                     tooltip=close_tooltip,
                     on_click=on_close,
-                    icon_size=int(round((14 if compact else 16) * metrics_scale)),
+                    icon_size=int(round((14 if is_compact else 16) * metrics_scale)),
                     variant="inverse",
                     size="sm",
                 ),
@@ -106,11 +106,11 @@ def show_toast(
     dedupe_window_s: float = 1.5,
 ) -> None:
     metrics = get_viewport_metrics(page, min_scale=0.66)
-    compact = metrics.compact
+    is_compact = metrics.is_compact
     resolved_top = getattr(page, "_tango_toast_top_offset", None)
     resolved_right = getattr(page, "_tango_toast_right_offset", None)
     toast_width = min(
-        280 if compact else 400,
+        280 if is_compact else 400,
         max(220, int(metrics.width - (position_right * 2) - 8)),
     )
     top_offset = (
@@ -171,7 +171,7 @@ def show_toast(
         message=message,
         type=type,
         close_tooltip=resolved_close_tooltip,
-        compact=compact,
+        is_compact=is_compact,
         metrics_scale=metrics.scale,
         width=toast_width,
         top=top_offset,

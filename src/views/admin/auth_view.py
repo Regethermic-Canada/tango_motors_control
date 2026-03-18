@@ -94,16 +94,16 @@ def AuthView() -> ft.Control:
     metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
 
     content_spacing = int(
-        round((spacing.MD if metrics.compact else spacing.LG) * metrics.scale)
+        round((spacing.MD if metrics.is_compact else spacing.LG) * metrics.scale)
     )
-    dots_font_size = int(round((22 if metrics.compact else 28) * metrics.scale))
-    dots_letter_spacing = int(round((5 if metrics.compact else 7) * metrics.scale))
+    dots_font_size = int(round((22 if metrics.is_compact else 28) * metrics.scale))
+    dots_letter_spacing = int(round((5 if metrics.is_compact else 7) * metrics.scale))
     card_width = min(
         680,
-        max(360 if metrics.compact else 520, int(metrics.width * 0.54)),
+        max(360 if metrics.is_compact else 520, int(metrics.width * 0.54)),
     )
     card_padding = int(
-        round((spacing.LG if metrics.compact else spacing.XL) * metrics.scale)
+        round((spacing.LG if metrics.is_compact else spacing.XL) * metrics.scale)
     )
 
     return TangoPage(

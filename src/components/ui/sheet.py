@@ -30,7 +30,7 @@ def TangoSheet(
     """
 
     metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
-    top_band_height = int(round((68 if metrics.compact else 76) * metrics.scale))
+    top_band_height = int(round((68 if metrics.is_compact else 76) * metrics.scale))
     is_docked = expand and not full_screen
 
     # Calculate exact height to stop right at the header bottom
