@@ -29,5 +29,7 @@
   "loading_interface": "Chargement de l'interface",
   "close": "Fermer",
   "test_sheet": "Test Menu Coulissant",
-  "test_content": "Ceci est un test du composant TangoSheet avec un rembourrage et un en-tête personnalisés."
+  "test_content": "Ceci est un test du composant TangoSheet avec un rembourrage et un en-tête personnalisés.",
+  "show_toast": "Afficher un Toast",
+  "test_toast": "Ceci est un toast de test !"
 }

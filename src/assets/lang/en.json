@@ -29,5 +29,7 @@
   "loading_interface": "Loading interface",
   "close": "Close",
   "test_sheet": "Test Bottom Sheet",
-  "test_content": "This is a test of the TangoSheet component with custom padding and header."
+  "test_content": "This is a test of the TangoSheet component with custom padding and header.",
+  "show_toast": "Show Toast",
+  "test_toast": "This is a test toast!"
 }

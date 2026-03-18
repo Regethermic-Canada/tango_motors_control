@@ -6,6 +6,7 @@ from components.ui.page import TangoPage
 from components.ui.text import TangoText
 from components.ui.button import TangoButton
 from components.ui.sheet import show_tango_sheet
+from components.ui.toast import show_toast, ToastType
 from contexts.locale import LocaleContext
 from contexts.settings import SettingsContext
 from theme import colors, spacing
@@ -145,8 +146,25 @@ def AdminView() -> ft.Control:
                                     expand=True,
                                     on_click=lambda e: show_tango_sheet(
                                         e.page,
-                                        content=TangoText(
-                                            loc.t("test_content"),
+                                        content=ft.Column(
+                                            spacing=section_spacing,
+                                            tight=True,
+                                            controls=[
+                                                TangoText(
+                                                    loc.t("test_content"),
+                                                ),
+                                                TangoButton(
+                                                    text=loc.t("show_toast"),
+                                                    variant="primary",
+                                                    on_click=lambda _: show_toast(
+                                                        e.page,
+                                                        message=loc.t(
+                                                            "test_toast"
+                                                        ),
+                                                        type=ToastType.INFO,
+                                                    ),
+                                                ),
+                                            ],
                                         ),
                                         title=loc.t("test_sheet"),
                                         expand=True,
