@@ -1,7 +1,7 @@
 import flet as ft
 from typing import Optional
 
-from theme import colors, radius, spacing
+from theme import colors, spacing
 from theme.scale import get_viewport_metrics
 from .icon_button import TangoIconButton
 from .text import TangoText
@@ -10,7 +10,6 @@ from .text import TangoText
 def TangoSheet(
     content: ft.Control,
     title: Optional[str] = None,
-    show_drag_handle: bool = True,
     dismissible: bool = True,
     on_dismiss: Optional[ft.ControlEventHandler[ft.DialogControl]] = None,
     padding: Optional[ft.Padding | int] = None,
@@ -23,25 +22,33 @@ def TangoSheet(
     Args:
         content: The main content to display in the sheet.
         title: Optional title to display in the header.
-        show_drag_handle: Whether to show the drag handle.
         dismissible: Whether the sheet can be dismissed by clicking outside.
         on_dismiss: Event handler called when the sheet is dismissed.
         padding: Padding for the content area.
         full_screen: Whether the sheet should be full screen height.
-        expand: Whether the sheet should expand to almost full height and full width.
+        expand: Whether the sheet should expand to full width and dock under the header.
     """
 
-    metrics = get_viewport_metrics(ft.context.page)
+    metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
+    top_band_height = int(round((68 if metrics.compact else 76) * metrics.scale))
+    is_docked = expand and not full_screen
 
-    # For full screen or expanded, we want to allow scrolling and large sizes
+    # Calculate exact height to stop right at the header bottom
+    resolved_height = None
+    if is_docked:
+        resolved_height = metrics.height - top_band_height
+
     sheet = ft.BottomSheet(
         content=ft.Container(),
         dismissible=dismissible,
-        show_drag_handle=show_drag_handle,
+        # We always allow dragging to close the sheet for a natural feel
+        draggable=True,
+        # We hide the handle to prevent it from covering the app header
+        show_drag_handle=False,
         on_dismiss=on_dismiss,
         fullscreen=full_screen,
         scrollable=True,
-        # Force full width on large screens by overriding constraints
+        # Force full width on large screens by overriding Material 3 constraints
         size_constraints=(
             ft.BoxConstraints(
                 min_width=metrics.width,
@@ -91,11 +98,6 @@ def TangoSheet(
         border=ft.Border(bottom=ft.BorderSide(1, colors.OUTLINE)),
     )
 
-    # Calculate height if expand is True
-    resolved_height = None
-    if expand and not full_screen:
-        resolved_height = int(metrics.height * 0.9)
-
     sheet.content = ft.Container(
         content=ft.Column(
             controls=[
@@ -111,10 +113,8 @@ def TangoSheet(
             expand=expand,
         ),
         bgcolor=colors.SURFACE,
-        border_radius=ft.border_radius.only(
-            top_left=radius.PANEL if not full_screen else 0,
-            top_right=radius.PANEL if not full_screen else 0,
-        ),
+        # Remove border radius to ensure a flat, integrated look when docked
+        border_radius=0,
         expand=expand,
         height=resolved_height,
         width=metrics.width if (expand or full_screen) else None,
@@ -127,7 +127,6 @@ def show_tango_sheet(
     page: ft.Page,
     content: ft.Control,
     title: Optional[str] = None,
-    show_drag_handle: bool = True,
     dismissible: bool = True,
     on_dismiss: Optional[ft.ControlEventHandler[ft.DialogControl]] = None,
     padding: Optional[ft.Padding | int] = None,
@@ -136,11 +135,20 @@ def show_tango_sheet(
 ) -> ft.BottomSheet:
     """
     Helper function to create and show a TangoSheet.
+
+    Args:
+        page: The page where the sheet will be shown.
+        content: The main content to display in the sheet.
+        title: Optional title to display in the header.
+        dismissible: Whether the sheet can be dismissed by clicking outside.
+        on_dismiss: Event handler called when the sheet is dismissed.
+        padding: Padding for the content area.
+        full_screen: Whether the sheet should be full screen height.
+        expand: Whether the sheet should expand to full width and dock under the header.
     """
     sheet = TangoSheet(
         content=content,
         title=title,
-        show_drag_handle=show_drag_handle,
         dismissible=dismissible,
         on_dismiss=on_dismiss,
         padding=padding,
@@ -148,6 +156,7 @@ def show_tango_sheet(
         expand=expand,
     )
 
+    # Ensure the sheet is in the overlay to be part of the control tree
     if sheet not in page.overlay:
         page.overlay.append(sheet)
 
