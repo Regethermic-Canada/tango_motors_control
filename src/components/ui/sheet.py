@@ -81,37 +81,43 @@ def TangoSheet(
             sheet.open = False
             e.page.update()
 
-    header = ft.Container(
-        content=ft.Row(
-            controls=[
-                *header_controls,
-                TangoIconButton(
-                    icon=ft.Icons.CLOSE,
-                    on_click=handle_close,
-                    variant="surface",
-                    size="md",
-                ),
-            ],
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-        ),
-        padding=ft.Padding(spacing.LG, spacing.MD, spacing.LG, spacing.MD),
-        border=ft.Border(bottom=ft.BorderSide(1, colors.OUTLINE)),
-    )
-
     # Custom draggable indicator bar
     drag_handle = ft.Container(
         width=40,
         height=4,
         bgcolor=colors.OUTLINE_STRONG,
         border_radius=2,
-        margin=ft.margin.only(top=12, bottom=0),
+        margin=ft.margin.only(top=12, bottom=8),
+    )
+
+    header = ft.Container(
+        content=ft.Column(
+            controls=[
+                ft.Row([drag_handle], alignment=ft.MainAxisAlignment.CENTER),
+                ft.Row(
+                    controls=[
+                        *header_controls,
+                        TangoIconButton(
+                            icon=ft.Icons.CLOSE,
+                            on_click=handle_close,
+                            variant="surface",
+                            size="md",
+                        ),
+                    ],
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+            ],
+            spacing=0,
+            tight=True,
+        ),
+        padding=ft.Padding(spacing.LG, 0, spacing.LG, spacing.MD),
+        border=ft.Border(bottom=ft.BorderSide(1, colors.OUTLINE)),
     )
 
     sheet.content = ft.Container(
         content=ft.Column(
             controls=[
-                ft.Row([drag_handle], alignment=ft.MainAxisAlignment.CENTER),
                 header,
                 ft.Container(
                     content=content,
