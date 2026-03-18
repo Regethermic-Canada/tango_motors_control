@@ -38,7 +38,28 @@ class AppRuntime:
             self._shell_service.check_inactivity(
                 self._settings_service.inactivity_timeout
             )
+
+            # If screensaver is active, ensure overlays are closed
+            if self._shell_service.is_screensaver_active:
+                self._close_all_overlays()
+
             self._motor_controller.sync_motor_state()
+
+    def _close_all_overlays(self) -> None:
+        """Closes all active sheets, dialogs, and banners in the page overlay."""
+        # Explicitly set open=False on all supported controls in the overlay
+        for control in self._page.overlay:
+            if hasattr(control, "open"):
+                control.open = False
+
+        # Also use the official close method if available for standard dialogs
+        if hasattr(self._page, "close"):
+            try:
+                self._page.close()
+            except Exception:
+                pass
+
+        self._page.update()
 
     async def initialize_motors_task(self) -> None:
         await asyncio.to_thread(self._motor_controller.initialize_motors)
