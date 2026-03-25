@@ -27,6 +27,7 @@ def _build_metric_row(
     value: str,
     label_size: int,
     value_size: int,
+    value_min_width: int,
 ) -> ft.Row:
     return ft.Row(
         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -38,12 +39,16 @@ def _build_metric_row(
                 size=label_size,
                 color=colors.TEXT_MUTED,
             ),
-            TangoText(
-                value,
-                variant="body_strong",
-                size=value_size,
-                color=colors.TEXT,
-                text_align=ft.TextAlign.RIGHT,
+            ft.Container(
+                width=value_min_width,
+                alignment=ft.Alignment.CENTER_RIGHT,
+                content=TangoText(
+                    value,
+                    variant="body_strong",
+                    size=value_size,
+                    color=colors.TEXT,
+                    text_align=ft.TextAlign.RIGHT,
+                ),
             ),
         ],
     )
@@ -71,16 +76,24 @@ def MotorStatusSheet(*, statuses: list[MotorStatusSnapshot]) -> ft.Control:
     card_gap = int(
         round((spacing.SM if metrics.is_compact else spacing.MD) * metrics.scale)
     )
-    card_padding = int(
-        round((spacing.SM if metrics.is_compact else spacing.MD) * metrics.scale)
+    content_padding = int(
+        round((spacing.SM if metrics.is_compact else spacing.LG) * metrics.scale)
     )
-    title_size = int(round((18 if metrics.is_compact else 20) * metrics.scale))
-    value_size = int(round((15 if metrics.is_compact else 16) * metrics.scale))
-    caption_size = int(round((13 if metrics.is_compact else 14) * metrics.scale))
-    content_width = int(metrics.width * (0.94 if metrics.is_compact else 0.96))
+    card_padding = int(
+        round((spacing.MD if metrics.is_compact else spacing.XL) * metrics.scale)
+    )
+    section_gap = int(
+        round((spacing.MD if metrics.is_compact else spacing.LG) * metrics.scale)
+    )
+    row_gap = int(round((spacing.XS if metrics.is_compact else spacing.SM) * metrics.scale))
+    title_size = int(round((19 if metrics.is_compact else 22) * metrics.scale))
+    value_size = int(round((16 if metrics.is_compact else 18) * metrics.scale))
+    caption_size = int(round((14 if metrics.is_compact else 15) * metrics.scale))
+    content_width = int(metrics.width * (0.9 if metrics.is_compact else 0.9))
     column_count = 1 if metrics.is_compact else min(2, max(1, len(statuses)))
     total_gap = card_gap * max(0, column_count - 1)
     card_width = max(320, int((content_width - total_gap) / column_count))
+    value_min_width = int(round((116 if metrics.is_compact else 136) * metrics.scale))
     unavailable_value = loc.t("motor_status_not_available")
 
     def resolve_status(snapshot: MotorStatusSnapshot) -> tuple[str, TagVariant]:
@@ -104,7 +117,7 @@ def MotorStatusSheet(*, statuses: list[MotorStatusSnapshot]) -> ft.Control:
                 content=TangoCard(
                     padding=card_padding,
                     content=ft.Column(
-                        spacing=card_gap,
+                        spacing=section_gap,
                         controls=[
                             ft.Row(
                                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -118,51 +131,61 @@ def MotorStatusSheet(*, statuses: list[MotorStatusSnapshot]) -> ft.Control:
                                     TangoTag(status_label, variant=status_variant),
                                 ],
                             ),
-                            _build_metric_row(
-                                label=loc.t("motor_direction"),
-                                value=direction_label,
-                                label_size=caption_size,
-                                value_size=value_size,
-                            ),
-                            _build_metric_row(
-                                label=loc.t("motor_temperature"),
-                                value=_format_metric(
-                                    snapshot.temperature_c,
-                                    suffix="°C",
-                                    fallback=unavailable_value,
-                                ),
-                                label_size=caption_size,
-                                value_size=value_size,
-                            ),
-                            _build_metric_row(
-                                label=loc.t("motor_velocity"),
-                                value=_format_metric(
-                                    snapshot.output_velocity_rad_s,
-                                    suffix="rad/s",
-                                    fallback=unavailable_value,
-                                ),
-                                label_size=caption_size,
-                                value_size=value_size,
-                            ),
-                            _build_metric_row(
-                                label=loc.t("motor_torque"),
-                                value=_format_metric(
-                                    snapshot.output_torque_nm,
-                                    suffix="Nm",
-                                    fallback=unavailable_value,
-                                ),
-                                label_size=caption_size,
-                                value_size=value_size,
-                            ),
-                            _build_metric_row(
-                                label=loc.t("motor_current"),
-                                value=_format_metric(
-                                    snapshot.qaxis_current_a,
-                                    suffix="A",
-                                    fallback=unavailable_value,
-                                ),
-                                label_size=caption_size,
-                                value_size=value_size,
+                            ft.Column(
+                                spacing=row_gap,
+                                controls=[
+                                    _build_metric_row(
+                                        label=loc.t("motor_direction"),
+                                        value=direction_label,
+                                        label_size=caption_size,
+                                        value_size=value_size,
+                                        value_min_width=value_min_width,
+                                    ),
+                                    _build_metric_row(
+                                        label=loc.t("motor_temperature"),
+                                        value=_format_metric(
+                                            snapshot.temperature_c,
+                                            suffix="°C",
+                                            fallback=unavailable_value,
+                                        ),
+                                        label_size=caption_size,
+                                        value_size=value_size,
+                                        value_min_width=value_min_width,
+                                    ),
+                                    _build_metric_row(
+                                        label=loc.t("motor_velocity"),
+                                        value=_format_metric(
+                                            snapshot.output_velocity_rad_s,
+                                            suffix="rad/s",
+                                            fallback=unavailable_value,
+                                        ),
+                                        label_size=caption_size,
+                                        value_size=value_size,
+                                        value_min_width=value_min_width,
+                                    ),
+                                    _build_metric_row(
+                                        label=loc.t("motor_torque"),
+                                        value=_format_metric(
+                                            snapshot.output_torque_nm,
+                                            suffix="Nm",
+                                            fallback=unavailable_value,
+                                        ),
+                                        label_size=caption_size,
+                                        value_size=value_size,
+                                        value_min_width=value_min_width,
+                                    ),
+                                    _build_metric_row(
+                                        label=loc.t("motor_current"),
+                                        value=_format_metric(
+                                            snapshot.qaxis_current_a,
+                                            suffix="A",
+                                            fallback=unavailable_value,
+                                        ),
+                                        label_size=caption_size,
+                                        value_size=value_size,
+                                        value_min_width=value_min_width,
+                                    ),
+                                ],
                             ),
                         ],
                     ),
@@ -183,7 +206,7 @@ def MotorStatusSheet(*, statuses: list[MotorStatusSnapshot]) -> ft.Control:
     return ft.Container(
         expand=True,
         alignment=ft.Alignment.TOP_CENTER,
-        padding=ft.Padding(0, card_gap, 0, card_gap),
+        padding=ft.Padding(content_padding, content_padding, content_padding, content_padding),
         content=ft.Container(
             width=content_width,
             content=ft.Column(
