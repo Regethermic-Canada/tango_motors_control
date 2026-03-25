@@ -3,7 +3,7 @@ from collections.abc import Callable
 
 import flet as ft
 
-from theme import animation, colors, typography
+from theme import animation, colors, radius
 
 PASSCODE_LENGTH = 4
 _SHAKE_POINTS = [
@@ -15,37 +15,39 @@ _SHAKE_POINTS = [
 
 
 def _resolve_indicator_sizes(*, scale: float, is_compact: bool) -> tuple[int, int]:
-    font_size = int(round((28 if is_compact else 34) * scale))
-    letter_spacing = int(round((8 if is_compact else 10) * scale))
-    return font_size, letter_spacing
+    indicator_size = int(round((16 if is_compact else 18) * scale))
+    indicator_spacing = int(round((14 if is_compact else 16) * scale))
+    return indicator_size, indicator_spacing
 
 
-def build_passcode_dots(
+def build_passcode_indicators(
     passcode: str,
     *,
     length: int = PASSCODE_LENGTH,
-) -> str:
-    return "".join(
-        "● " if index < len(passcode) else "○ " for index in range(length)
-    ).strip()
-
-
-def passcode_indicator_style(
-    *,
     scale: float,
     is_compact: bool,
-    is_active: bool,
-) -> ft.TextStyle:
-    font_size, letter_spacing = _resolve_indicator_sizes(
+) -> list[ft.Control]:
+    indicator_size, _ = _resolve_indicator_sizes(
         scale=scale,
         is_compact=is_compact,
     )
-    return typography.text_style(
-        "headline",
-        color=colors.PRIMARY if is_active else colors.OUTLINE,
-        size=font_size,
-        letter_spacing=letter_spacing,
-    )
+    active_count = len(passcode)
+    indicators: list[ft.Control] = []
+    for index in range(length):
+        is_active = index < active_count
+        indicators.append(
+            ft.Container(
+                width=indicator_size,
+                height=indicator_size,
+                border_radius=radius.FULL,
+                bgcolor=colors.PRIMARY if is_active else colors.SURFACE,
+                border=ft.Border.all(
+                    2,
+                    colors.PRIMARY if is_active else colors.OUTLINE_STRONG,
+                ),
+            )
+        )
+    return indicators
 
 
 def PasscodeIndicator(
@@ -55,20 +57,24 @@ def PasscodeIndicator(
     is_compact: bool,
     offset: ft.Offset | None = None,
 ) -> ft.Container:
+    _, indicator_spacing = _resolve_indicator_sizes(
+        scale=scale,
+        is_compact=is_compact,
+    )
     return ft.Container(
         offset=offset or ft.Offset(0, 0),
         animate_offset=animation.make(
             animation.AUTH_SHAKE_MS,
             animation.AUTH_SHAKE_CURVE,
         ),
-        content=ft.Text(
-            value=build_passcode_dots(passcode),
-            style=passcode_indicator_style(
+        content=ft.Row(
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=indicator_spacing,
+            controls=build_passcode_indicators(
+                passcode,
                 scale=scale,
                 is_compact=is_compact,
-                is_active=bool(passcode),
             ),
-            text_align=ft.TextAlign.CENTER,
         ),
     )
 
