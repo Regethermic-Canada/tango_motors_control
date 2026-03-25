@@ -172,6 +172,22 @@ def _tooltip_theme() -> ft.TooltipTheme:
     )
 
 
+def _scrollbar_theme() -> ft.ScrollbarTheme:
+    return ft.ScrollbarTheme(
+        thumb_visibility=True,
+        track_visibility=False,
+        thickness=8,
+        radius=radius.FULL,
+        thumb_color=colors.PRIMARY,
+        track_color=colors.PRIMARY_SOFT,
+        track_border_color=colors.PRIMARY_BORDER,
+        cross_axis_margin=2,
+        main_axis_margin=2,
+        min_thumb_length=42,
+        interactive=True,
+    )
+
+
 def build_theme() -> ft.Theme:
     return ft.Theme(
         font_family=typography.FONT_FAMILY,
@@ -194,6 +210,7 @@ def build_theme() -> ft.Theme:
         text_button_theme=ft.TextButtonTheme(style=_text_button_style()),
         popup_menu_theme=_popup_menu_theme(),
         tooltip_theme=_tooltip_theme(),
+        scrollbar_theme=_scrollbar_theme(),
     )
 
 
