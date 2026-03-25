@@ -85,7 +85,9 @@ def MotorStatusSheet(*, statuses: list[MotorStatusSnapshot]) -> ft.Control:
     section_gap = int(
         round((spacing.MD if metrics.is_compact else spacing.LG) * metrics.scale)
     )
-    row_gap = int(round((spacing.XS if metrics.is_compact else spacing.SM) * metrics.scale))
+    row_gap = int(
+        round((spacing.XS if metrics.is_compact else spacing.SM) * metrics.scale)
+    )
     title_size = int(round((19 if metrics.is_compact else 22) * metrics.scale))
     value_size = int(round((16 if metrics.is_compact else 18) * metrics.scale))
     caption_size = int(round((14 if metrics.is_compact else 15) * metrics.scale))
@@ -206,7 +208,9 @@ def MotorStatusSheet(*, statuses: list[MotorStatusSnapshot]) -> ft.Control:
     return ft.Container(
         expand=True,
         alignment=ft.Alignment.TOP_CENTER,
-        padding=ft.Padding(content_padding, content_padding, content_padding, content_padding),
+        padding=ft.Padding(
+            content_padding, content_padding, content_padding, content_padding
+        ),
         content=ft.Container(
             width=content_width,
             content=ft.Column(
