@@ -3,7 +3,11 @@ import logging
 import flet as ft
 
 from models.motor_types import MotorAction, MotorActionResult
-from services.motors.motor_service import MotorService, MotorServiceConfig
+from services.motors.motor_service import (
+    MotorService,
+    MotorServiceConfig,
+    MotorStatusSnapshot,
+)
 from utils.config import config
 
 logger = logging.getLogger(__name__)
@@ -124,6 +128,9 @@ class MotorController:
         if self.is_motors_running:
             return self.stop_motors()
         return self.start_motors()
+
+    def get_status_snapshots(self) -> list[MotorStatusSnapshot]:
+        return self._motor_service.get_status_snapshots()
 
     def _apply_speed_to_motors(self) -> None:
         try:

@@ -1,13 +1,17 @@
+from collections.abc import Callable
 import flet as ft
 from flet.controls.control_event import Event
 from flet.controls.material.button import Button
 from flet.controls.material.slider import Slider
+from typing import Literal
 from components.views.admin.admin_passcode_sheet import AdminPasscodeSheet
+from components.views.main.motor_status_sheet import MotorStatusSheet
 from components.ui.card import TangoCard
 from components.ui.page import TangoPage
 from components.ui.sheet import TangoSheet
 from components.ui.text import TangoText
 from components.ui.button import TangoButton
+from contexts.motor import MotorContext
 from contexts.settings import SettingsContext
 from contexts.locale import LocaleContext
 from theme import colors, spacing
@@ -17,8 +21,9 @@ from theme.scale import ViewportArea, get_viewport_metrics, resolve_panel_width
 @ft.component
 def AdminView() -> ft.Control:
     loc = ft.use_context(LocaleContext)
+    motor = ft.use_context(MotorContext).current()
     settings_service = ft.use_context(SettingsContext).current()
-    is_passcode_sheet_open, set_is_passcode_sheet_open = ft.use_state(False)
+    active_sheet, set_active_sheet = ft.use_state("")
     new_passcode, set_new_passcode = ft.use_state("")
     confirm_passcode, set_confirm_passcode = ft.use_state("")
     is_passcode_saving, set_is_passcode_saving = ft.use_state(False)
@@ -53,6 +58,14 @@ def AdminView() -> ft.Control:
     )
     slider_scale = max(1.08, metrics.scale * 1.08)
     slider_value_gap = max(4, int(round(6 * metrics.scale)))
+    action_button_size = int(round((18 if metrics.is_compact else 19) * metrics.scale))
+    action_button_variant_size: Literal["md", "lg"] = (
+        "md" if metrics.is_compact else "lg"
+    )
+    action_button_spacing = int(
+        round((spacing.XS if metrics.is_compact else spacing.MD) * metrics.scale)
+    )
+    motor_status_snapshots = motor.get_status_snapshots()
 
     def on_timeout_change(e: Event[Slider]) -> None:
         value = e.control.value if e.control else None
@@ -131,7 +144,10 @@ def AdminView() -> ft.Control:
 
     def close_passcode_sheet() -> None:
         reset_passcode_sheet_state()
-        set_is_passcode_sheet_open(False)
+        set_active_sheet("")
+
+    def close_motor_status_sheet() -> None:
+        set_active_sheet("")
 
     passcode_sheet_content = (
         AdminPasscodeSheet(
@@ -143,13 +159,61 @@ def AdminView() -> ft.Control:
             set_is_saving=set_is_passcode_saving,
             on_close=close_passcode_sheet,
         )
-        if is_passcode_sheet_open
+        if active_sheet == "passcode"
         else None
     )
 
     def on_change_admin_passcode_click(_: Event[Button]) -> None:
         reset_passcode_sheet_state()
-        set_is_passcode_sheet_open(True)
+        set_active_sheet("passcode")
+
+    def on_motor_status_click(_: Event[Button]) -> None:
+        set_active_sheet("motor_status")
+
+    active_sheet_title: str | None = None
+    active_sheet_content: ft.Control | None = None
+    active_sheet_scrollable = False
+    active_sheet_on_dismiss: Callable[[], None] | None = None
+
+    if active_sheet == "passcode":
+        active_sheet_title = loc.t("change_admin_passcode")
+        active_sheet_content = passcode_sheet_content
+        active_sheet_scrollable = False
+        active_sheet_on_dismiss = close_passcode_sheet
+    elif active_sheet == "motor_status":
+        active_sheet_title = loc.t("motor_status_sheet_title")
+        active_sheet_content = MotorStatusSheet(statuses=motor_status_snapshots)
+        active_sheet_scrollable = True
+        active_sheet_on_dismiss = close_motor_status_sheet
+
+    sheet_action_buttons: ft.Control = ft.Row(
+        spacing=action_button_spacing,
+        controls=[
+            ft.Container(
+                expand=True,
+                content=TangoButton(
+                    text=loc.t("change_admin_passcode"),
+                    variant="secondary",
+                    expand=True,
+                    size=action_button_variant_size,
+                    text_size=action_button_size,
+                    on_click=on_change_admin_passcode_click,
+                ),
+            ),
+            ft.Container(
+                expand=True,
+                content=TangoButton(
+                    text=loc.t("motor_status_sheet_title"),
+                    variant="secondary",
+                    expand=True,
+                    size=action_button_variant_size,
+                    text_size=action_button_size,
+                    icon=ft.Icons.TUNE,
+                    on_click=on_motor_status_click,
+                ),
+            ),
+        ],
+    )
 
     return TangoPage(
         expand=True,
@@ -206,19 +270,7 @@ def AdminView() -> ft.Control:
                                         ft.Divider(height=section_spacing),
                                         admin_passcode_label,
                                         admin_passcode_description,
-                                        TangoButton(
-                                            text=loc.t("change_admin_passcode"),
-                                            variant="secondary",
-                                            expand=True,
-                                            size="lg",
-                                            text_size=int(
-                                                round(
-                                                    (18 if metrics.is_compact else 19)
-                                                    * metrics.scale
-                                                )
-                                            ),
-                                            on_click=on_change_admin_passcode_click,
-                                        ),
+                                        sheet_action_buttons,
                                     ],
                                 ),
                             ),
@@ -226,11 +278,11 @@ def AdminView() -> ft.Control:
                     ),
                 ),
                 TangoSheet(
-                    open=is_passcode_sheet_open,
-                    title=loc.t("change_admin_passcode"),
-                    content=passcode_sheet_content,
-                    scrollable=False,
-                    on_dismiss=close_passcode_sheet,
+                    open=active_sheet != "",
+                    title=active_sheet_title,
+                    content=active_sheet_content,
+                    scrollable=active_sheet_scrollable,
+                    on_dismiss=active_sheet_on_dismiss,
                 ),
             ],
         ),

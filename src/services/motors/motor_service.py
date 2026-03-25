@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 from threading import Event, RLock, Thread
@@ -82,6 +83,18 @@ class _ManagedMotor:
     motor: CubeMarsServoCAN
     direction: int
     motor_id: int
+
+
+@dataclass(frozen=True)
+class MotorStatusSnapshot:
+    motor_id: int
+    direction: int
+    is_connected: bool
+    is_active: bool
+    temperature_c: float | None
+    output_velocity_rad_s: float | None
+    output_torque_nm: float | None
+    qaxis_current_a: float | None
 
 
 class _ServiceState(Enum):
@@ -242,6 +255,48 @@ class MotorService:
                 logger.exception("Speed command failed; attempting full auto-reconnect")
                 self._reconnect_all_runtime_locked()
                 return self._speed_ramp.target_speed_percent
+
+    def get_status_snapshots(self) -> list[MotorStatusSnapshot]:
+        with self._lock:
+            pool_by_id = {item.motor_id: item for item in self._pool}
+            connected_by_id = {item.motor_id: item for item in self._connected}
+            active_by_id = {item.motor_id: item for item in self._motors}
+
+            snapshots: list[MotorStatusSnapshot] = []
+            for motor_id, direction in self._cfg.motor_targets:
+                managed = (
+                    active_by_id.get(motor_id)
+                    or connected_by_id.get(motor_id)
+                    or pool_by_id.get(motor_id)
+                )
+                is_connected = motor_id in connected_by_id
+                is_active = motor_id in active_by_id
+                motor = managed.motor if is_connected and managed is not None else None
+                snapshots.append(
+                    MotorStatusSnapshot(
+                        motor_id=motor_id,
+                        direction=direction,
+                        is_connected=is_connected,
+                        is_active=is_active,
+                        temperature_c=_safe_metric_read(
+                            motor,
+                            lambda item: item.get_temperature_celsius(),
+                        ),
+                        output_velocity_rad_s=_safe_metric_read(
+                            motor,
+                            lambda item: item.get_output_velocity_radians_per_second(),
+                        ),
+                        output_torque_nm=_safe_metric_read(
+                            motor,
+                            lambda item: item.get_output_torque_newton_meters(),
+                        ),
+                        qaxis_current_a=_safe_metric_read(
+                            motor,
+                            lambda item: item.get_current_qaxis_amps(),
+                        ),
+                    )
+                )
+            return snapshots
 
     def _send_speed_command_locked(self, speed_percent: float) -> float:
         clamped_speed = self._speed_ramp.clamp_float(speed_percent)
@@ -519,6 +574,18 @@ def _safe_exit(motor: CubeMarsServoCAN) -> None:
         motor.close()
     except Exception:
         logger.exception("Motor shutdown error")
+
+
+def _safe_metric_read(
+    motor: CubeMarsServoCAN | None,
+    reader: Callable[[CubeMarsServoCAN], float],
+) -> float | None:
+    if motor is None:
+        return None
+    try:
+        return float(reader(motor))
+    except Exception:
+        return None
 
 
 def _detach_motor_listener(motor: CubeMarsServoCAN) -> None:
