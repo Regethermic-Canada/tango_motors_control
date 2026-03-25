@@ -2,14 +2,15 @@ from collections.abc import Callable
 import flet as ft
 from flet.controls.control_event import Event
 from flet.controls.material.button import Button
-from flet.controls.material.slider import Slider
 from typing import Literal
 from components.views.admin.admin_passcode_sheet import AdminPasscodeSheet
 from components.views.main.motor_status_sheet import MotorStatusSheet
 from components.ui.card import TangoCard
 from components.ui.page import TangoPage
 from components.ui.sheet import TangoSheet
+from components.ui.slider import TangoSlider
 from components.ui.text import TangoText
+from components.ui.tango_toast import ToastType, show_toast
 from components.ui.button import TangoButton
 from contexts.motor import MotorContext
 from contexts.settings import SettingsContext
@@ -24,6 +25,12 @@ def AdminView() -> ft.Control:
     motor = ft.use_context(MotorContext).current()
     settings_service = ft.use_context(SettingsContext).current()
     active_sheet, set_active_sheet = ft.use_state("")
+    inactivity_timeout_draft, set_inactivity_timeout_draft = ft.use_state(
+        float(settings_service.inactivity_timeout)
+    )
+    default_speed_draft, set_default_speed_draft = ft.use_state(
+        float(settings_service.default_speed)
+    )
     new_passcode, set_new_passcode = ft.use_state("")
     confirm_passcode, set_confirm_passcode = ft.use_state("")
     is_passcode_saving, set_is_passcode_saving = ft.use_state(False)
@@ -67,15 +74,40 @@ def AdminView() -> ft.Control:
     )
     motor_status_snapshots = motor.get_status_snapshots()
 
-    def on_timeout_change(e: Event[Slider]) -> None:
-        value = e.control.value if e.control else None
-        if isinstance(value, int | float):
-            settings_service.set_inactivity_timeout(float(value))
+    def sync_slider_drafts() -> None:
+        set_inactivity_timeout_draft(float(settings_service.inactivity_timeout))
+        set_default_speed_draft(float(settings_service.default_speed))
 
-    def on_default_speed_change(e: Event[Slider]) -> None:
-        value = e.control.value if e.control else None
-        if isinstance(value, int | float):
-            settings_service.set_default_speed(int(round(value)))
+    ft.use_effect(
+        sync_slider_drafts,
+        [
+            settings_service.inactivity_timeout,
+            settings_service.default_speed,
+        ],
+    )
+
+    def show_settings_toast(message_key: str) -> None:
+        show_toast(
+            page=ft.context.page,
+            type=ToastType.INFO,
+            build=lambda: settings_service.t(message_key),
+        )
+
+    def on_timeout_commit(value: float) -> None:
+        committed_value = float(round(value))
+        set_inactivity_timeout_draft(committed_value)
+        if settings_service.inactivity_timeout == committed_value:
+            return
+        settings_service.set_inactivity_timeout(committed_value)
+        show_settings_toast("inactivity_timeout_updated")
+
+    def on_default_speed_commit(value: float) -> None:
+        committed_value = int(round(value))
+        set_default_speed_draft(float(committed_value))
+        if settings_service.default_speed == committed_value:
+            return
+        settings_service.set_default_speed(committed_value)
+        show_settings_toast("default_speed_updated")
 
     timeout_label = TangoText(
         loc.t("inactivity_timeout"),
@@ -83,7 +115,7 @@ def AdminView() -> ft.Control:
         size=section_title_size,
     )
     timeout_value = TangoText(
-        f"{int(settings_service.inactivity_timeout)} {loc.t('seconds')}",
+        f"{int(round(inactivity_timeout_draft))} {loc.t('seconds')}",
         variant="caption",
         size=value_size,
         color=colors.TEXT_MUTED,
@@ -94,7 +126,7 @@ def AdminView() -> ft.Control:
         size=section_title_size,
     )
     default_speed_value = TangoText(
-        str(settings_service.default_speed),
+        str(int(round(default_speed_draft))),
         variant="caption",
         size=value_size,
         color=colors.TEXT_MUTED,
@@ -244,27 +276,27 @@ def AdminView() -> ft.Control:
                                     spacing=block_spacing,
                                     controls=[
                                         timeout_header,
-                                        ft.Slider(
+                                        TangoSlider(
                                             min=10,
                                             max=150,
                                             divisions=14,
                                             label="{value}s",
-                                            value=settings_service.inactivity_timeout,
-                                            on_change=on_timeout_change,
-                                            expand=True,
+                                            value=inactivity_timeout_draft,
+                                            set_value=set_inactivity_timeout_draft,
+                                            on_commit=on_timeout_commit,
                                             scale=slider_scale,
                                         ),
                                         ft.Divider(height=section_spacing),
                                         default_speed_header,
-                                        ft.Slider(
+                                        TangoSlider(
                                             min=settings_service.default_speed_min,
                                             max=settings_service.default_speed_max,
                                             divisions=settings_service.default_speed_max
                                             * 2,
                                             label="{value}",
-                                            value=settings_service.default_speed,
-                                            on_change=on_default_speed_change,
-                                            expand=True,
+                                            value=default_speed_draft,
+                                            set_value=set_default_speed_draft,
+                                            on_commit=on_default_speed_commit,
                                             scale=slider_scale,
                                         ),
                                         ft.Divider(height=section_spacing),

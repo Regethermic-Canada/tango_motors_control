@@ -34,6 +34,8 @@
   "application_config": "Application Configuration",
   "inactivity_timeout": "Inactivity Timeout",
   "default_speed": "Default Speed",
+  "inactivity_timeout_updated": "Inactivity timeout updated",
+  "default_speed_updated": "Default speed updated",
   "seconds": "seconds",
   "admin_access": "Admin Access",
   "admin_access_granted": "Admin access granted",
