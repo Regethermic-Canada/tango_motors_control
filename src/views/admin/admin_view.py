@@ -229,7 +229,7 @@ def AdminView() -> ft.Control:
                     open=is_passcode_sheet_open,
                     title=loc.t("change_admin_passcode"),
                     content=passcode_sheet_content,
-                    expand=True,
+                    scrollable=False,
                     on_dismiss=close_passcode_sheet,
                 ),
             ],

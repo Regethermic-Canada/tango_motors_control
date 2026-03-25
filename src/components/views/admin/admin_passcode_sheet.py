@@ -41,21 +41,15 @@ def AdminPasscodeSheet(
     )
     helper_spacing = int(round(spacing.XS * metrics.scale))
     top_padding = int(
-        round((spacing.LG if metrics.is_compact else spacing.XL) * metrics.scale)
+        round((spacing.SM if metrics.is_compact else spacing.MD) * metrics.scale)
     )
     bottom_padding = int(
-        round((spacing.XL if metrics.is_compact else spacing.XXL) * metrics.scale)
+        round((spacing.SM if metrics.is_compact else spacing.LG) * metrics.scale)
     )
-    sheet_header_height = int(round((56 if metrics.is_compact else 64) * metrics.scale))
     instruction_size = int(round((18 if metrics.is_compact else 20) * metrics.scale))
     helper_size = int(round((14 if metrics.is_compact else 15) * metrics.scale))
     content_width = min(
         560, int(metrics.width * (0.88 if metrics.is_compact else 0.72))
-    )
-    content_height = (
-        None
-        if metrics.is_compact
-        else max(0, int(metrics.height - sheet_header_height))
     )
     is_confirming = len(new_passcode) == PASSCODE_LENGTH
     active_passcode = confirm_passcode if is_confirming else new_passcode
@@ -143,69 +137,62 @@ def AdminPasscodeSheet(
         if new_passcode:
             set_new_passcode(new_passcode[:-1])
 
-    return ft.Column(
-        height=content_height,
-        alignment=(
-            ft.MainAxisAlignment.START
-            if metrics.is_compact
-            else ft.MainAxisAlignment.CENTER
+    return ft.Container(
+        expand=True,
+        alignment=ft.Alignment.CENTER,
+        content=ft.Container(
+            width=content_width,
+            padding=ft.Padding(0, top_padding, 0, bottom_padding),
+            alignment=ft.Alignment.TOP_CENTER,
+            content=ft.Column(
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=sheet_spacing,
+                controls=[
+                    ft.Column(
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        spacing=helper_spacing,
+                        controls=[
+                            ft.Text(
+                                value=step_value,
+                                style=typography.text_style(
+                                    "overline",
+                                    color=colors.TEXT_SOFT,
+                                    size=helper_size,
+                                ),
+                                text_align=ft.TextAlign.CENTER,
+                            ),
+                            ft.Text(
+                                value=instruction,
+                                style=typography.text_style(
+                                    "subtitle",
+                                    size=instruction_size,
+                                ),
+                                text_align=ft.TextAlign.CENTER,
+                            ),
+                            ft.Text(
+                                value=helper,
+                                style=typography.text_style(
+                                    "caption",
+                                    color=colors.TEXT_MUTED,
+                                    size=helper_size,
+                                ),
+                                text_align=ft.TextAlign.CENTER,
+                            ),
+                        ],
+                    ),
+                    PasscodeIndicator(
+                        passcode=active_passcode,
+                        scale=metrics.scale,
+                        is_compact=metrics.is_compact,
+                        offset=shake_offset,
+                    ),
+                    TangoNumpad(
+                        on_digit_click=on_digit_click,
+                        on_backspace_click=on_backspace_click,
+                        on_clear_click=on_clear_click,
+                        scale_factor=0.78 if metrics.is_compact else 0.86,
+                    ),
+                ],
+            ),
         ),
-        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-        controls=[
-            ft.Container(
-                width=content_width,
-                padding=ft.Padding(0, top_padding, 0, bottom_padding),
-                alignment=ft.Alignment.TOP_CENTER,
-                content=ft.Column(
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=sheet_spacing,
-                    controls=[
-                        ft.Column(
-                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                            spacing=helper_spacing,
-                            controls=[
-                                ft.Text(
-                                    value=step_value,
-                                    style=typography.text_style(
-                                        "overline",
-                                        color=colors.TEXT_SOFT,
-                                        size=helper_size,
-                                    ),
-                                    text_align=ft.TextAlign.CENTER,
-                                ),
-                                ft.Text(
-                                    value=instruction,
-                                    style=typography.text_style(
-                                        "subtitle",
-                                        size=instruction_size,
-                                    ),
-                                    text_align=ft.TextAlign.CENTER,
-                                ),
-                                ft.Text(
-                                    value=helper,
-                                    style=typography.text_style(
-                                        "caption",
-                                        color=colors.TEXT_MUTED,
-                                        size=helper_size,
-                                    ),
-                                    text_align=ft.TextAlign.CENTER,
-                                ),
-                            ],
-                        ),
-                        PasscodeIndicator(
-                            passcode=active_passcode,
-                            scale=metrics.scale,
-                            is_compact=metrics.is_compact,
-                            offset=shake_offset,
-                        ),
-                        TangoNumpad(
-                            on_digit_click=on_digit_click,
-                            on_backspace_click=on_backspace_click,
-                            on_clear_click=on_clear_click,
-                            scale_factor=0.88 if metrics.is_compact else 0.94,
-                        ),
-                    ],
-                ),
-            )
-        ],
     )

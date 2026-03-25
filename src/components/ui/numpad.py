@@ -1,11 +1,17 @@
 from collections.abc import Callable
+
 import flet as ft
 from flet.controls.control_event import Event
 from flet.controls.material.icon_button import IconButton
-from components.ui.icon_button import TangoIconButton
+from components.ui.icon_button import IconButtonSize, TangoIconButton
 from components.ui.text import TangoText
 from theme import colors, spacing
 from theme.scale import ViewportArea, get_viewport_metrics
+
+_BASE_DIGIT_DIAMETER = 72
+_BASE_ROW_SPACING = spacing.MD
+_BASE_NUMPAD_HEIGHT = (_BASE_DIGIT_DIAMETER * 4) + (_BASE_ROW_SPACING * 3)
+_BASE_NUMPAD_WIDTH = 320
 
 
 def DigitButton(
@@ -40,24 +46,30 @@ def TangoNumpad(
     on_clear_click: Callable[[], None],
     *,
     scale_factor: float = 1.0,
+    max_height: int | None = None,
 ) -> ft.Control:
     metrics = get_viewport_metrics(
         ft.context.page,
         area=ViewportArea.CONTENT,
         min_scale=0.62,
     )
-    control_scale = max(0.72, metrics.scale * scale_factor)
+    height_scale = (
+        1.0 if max_height is None else min(1.0, max_height / float(_BASE_NUMPAD_HEIGHT))
+    )
+    control_scale = max(0.58, min(metrics.scale * scale_factor, height_scale))
 
     numpad_width = min(
         520,
         max(
-            320 if metrics.is_compact else 440, int(metrics.width * 0.4 * scale_factor)
+            240 if metrics.is_compact else 300,
+            int(round(_BASE_NUMPAD_WIDTH * control_scale)),
         ),
     )
     row_spacing = int(round(spacing.MD * control_scale))
     digit_font_size = int(round(30 * control_scale))
     digit_diameter = int(round(72 * control_scale))
     action_icon_size = int(round(24 * control_scale))
+    action_button_size: IconButtonSize = "lg" if digit_diameter >= 52 else "md"
 
     def handle_digit(digit: str) -> Callable[[Event[ft.Container]], None]:
         return lambda _: on_digit_click(digit)
@@ -84,7 +96,7 @@ def TangoNumpad(
             on_click=on_click,
             icon_size=action_icon_size,
             variant="surface",
-            size="lg",
+            size=action_button_size,
         )
 
     return ft.Container(

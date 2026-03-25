@@ -61,7 +61,6 @@ class _SheetRuntime:
     header: ft.Container
     title_slot: ft.Container
     close_button: ft.IconButton
-    body_scroll: ft.ListView
     body: ft.Container
     close_token: int
 
@@ -103,20 +102,19 @@ def _resolve_sheet_layout(
     *,
     padding: ft.Padding | int | None,
     full_screen: bool,
-    expand: bool,
 ) -> _SheetLayout:
     metrics = get_viewport_metrics(page, min_scale=0.7)
     top_band_height = int(round((68 if metrics.is_compact else 76) * metrics.scale))
-    is_docked = expand and not full_screen
+    is_docked = not full_screen
     panel_height = (
         metrics.height
         if full_screen
         else metrics.height - top_band_height if is_docked else None
     )
-    panel_width = float(metrics.width) if (expand or full_screen) else None
+    panel_width = float(metrics.width)
     panel_radius: ft.BorderRadius | int = (
         0
-        if (expand or full_screen)
+        if full_screen or is_docked
         else ft.border_radius.only(top_left=radius.XXL, top_right=radius.XXL)
     )
     return _SheetLayout(
@@ -192,7 +190,6 @@ def _build_sheet_surface(
     body: ft.Container,
     header: ft.Container,
     layout: _SheetLayout,
-    expand: bool,
 ) -> ft.Container:
     return ft.Container(
         content=ft.Column(
@@ -201,12 +198,12 @@ def _build_sheet_surface(
                 body,
             ],
             spacing=0,
-            tight=not expand,
-            expand=expand,
+            tight=False,
+            expand=True,
         ),
         bgcolor=colors.SURFACE,
         border_radius=layout.panel_radius,
-        expand=expand,
+        expand=True,
         height=layout.panel_height,
         width=layout.panel_width,
         shadow=layout.shadow,
@@ -214,26 +211,43 @@ def _build_sheet_surface(
     )
 
 
+def _build_sheet_body_content(
+    *,
+    content: ft.Control,
+    scrollable: bool,
+) -> ft.Control:
+    if scrollable:
+        return ft.ListView(
+            controls=[
+                ft.Container(
+                    alignment=ft.Alignment.TOP_CENTER,
+                    content=content,
+                )
+            ],
+            expand=True,
+            spacing=0,
+        )
+
+    return ft.Container(
+        expand=True,
+        alignment=ft.Alignment.CENTER,
+        content=content,
+    )
+
+
 def _build_sheet_body(
     *,
     content: ft.Control,
     layout: _SheetLayout,
-    expand: bool,
-) -> tuple[ft.ListView, ft.Container]:
-    body_scroll = ft.ListView(
-        controls=[
-            ft.Container(
-                alignment=ft.Alignment.TOP_CENTER,
-                content=content,
-            )
-        ],
-        expand=expand,
-        spacing=0,
-    )
-    return body_scroll, ft.Container(
-        content=body_scroll,
+    scrollable: bool,
+) -> ft.Container:
+    return ft.Container(
+        content=_build_sheet_body_content(
+            content=content,
+            scrollable=scrollable,
+        ),
         padding=layout.body_padding,
-        expand=expand,
+        expand=True,
         alignment=ft.Alignment.TOP_CENTER,
     )
 
@@ -259,14 +273,13 @@ def _build_sheet_runtime(
     title: str | None,
     padding: ft.Padding | int | None,
     full_screen: bool,
-    expand: bool,
+    scrollable: bool,
     on_close: Callable[[], None],
 ) -> _SheetRuntime:
     layout = _resolve_sheet_layout(
         page,
         padding=padding,
         full_screen=full_screen,
-        expand=expand,
     )
     header, title_slot, close_button = _build_sheet_header(
         title=title,
@@ -274,16 +287,15 @@ def _build_sheet_runtime(
         close_tooltip=getattr(page, "_tango_sheet_close_tooltip", "Close"),
         request_close=on_close,
     )
-    body_scroll, body = _build_sheet_body(
+    body = _build_sheet_body(
         content=content,
         layout=layout,
-        expand=expand,
+        scrollable=scrollable,
     )
     surface = _build_sheet_surface(
         body=body,
         header=header,
         layout=layout,
-        expand=expand,
     )
     surface.opacity = SHEET_SURFACE_CLOSED_OPACITY
     surface.scale = SHEET_SURFACE_CLOSED_SCALE
@@ -312,7 +324,6 @@ def _build_sheet_runtime(
         header=header,
         title_slot=title_slot,
         close_button=close_button,
-        body_scroll=body_scroll,
         body=body,
         close_token=0,
     )
@@ -326,30 +337,26 @@ def _update_sheet_runtime(
     title: str | None,
     padding: ft.Padding | int | None,
     full_screen: bool,
-    expand: bool,
+    scrollable: bool,
 ) -> None:
     layout = _resolve_sheet_layout(
         page,
         padding=padding,
         full_screen=full_screen,
-        expand=expand,
     )
     runtime.overlay.top = layout.overlay_top_inset
     runtime.surface.height = layout.panel_height
     runtime.surface.width = layout.panel_width
     runtime.surface.border_radius = layout.panel_radius
     runtime.surface.shadow = layout.shadow
-    runtime.surface.expand = expand
+    runtime.surface.expand = True
     runtime.header.padding = layout.header_padding
-    runtime.body_scroll.controls = [
-        ft.Container(
-            alignment=ft.Alignment.TOP_CENTER,
-            content=content,
-        )
-    ]
-    runtime.body_scroll.expand = expand
     runtime.body.padding = layout.body_padding
-    runtime.body.expand = expand
+    runtime.body.content = _build_sheet_body_content(
+        content=content,
+        scrollable=scrollable,
+    )
+    runtime.body.expand = True
     runtime.title_slot.content = _build_sheet_title_control(
         title,
         size=layout.header_title_size,
@@ -365,7 +372,7 @@ def _create_sheet_runtime(
     title: str | None = None,
     padding: ft.Padding | int | None = None,
     full_screen: bool = False,
-    expand: bool = False,
+    scrollable: bool = False,
     on_close: Callable[[], None] | None = None,
 ) -> _SheetRuntime:
     def request_close() -> None:
@@ -378,7 +385,7 @@ def _create_sheet_runtime(
         title=title,
         padding=padding,
         full_screen=full_screen,
-        expand=expand,
+        scrollable=scrollable,
         on_close=request_close,
     )
 
@@ -402,7 +409,7 @@ def _present_sheet(
     on_dismiss: Callable[[], None] | None,
     padding: ft.Padding | int | None,
     full_screen: bool,
-    expand: bool,
+    scrollable: bool,
     build: _SheetBuild | None,
     animate_in: bool,
     insert_at: int | None,
@@ -417,7 +424,7 @@ def _present_sheet(
             title=title,
             padding=padding,
             full_screen=full_screen,
-            expand=expand,
+            scrollable=scrollable,
         )
         return current.overlay
 
@@ -466,7 +473,7 @@ def _present_sheet(
             on_dismiss=on_dismiss,
             padding=padding,
             full_screen=full_screen,
-            expand=expand,
+            scrollable=scrollable,
             build=build,
             animate_in=False,
             insert_at=next_insert_at,
@@ -478,7 +485,7 @@ def _present_sheet(
         title=title,
         padding=padding,
         full_screen=full_screen,
-        expand=expand,
+        scrollable=scrollable,
         on_close=close_sheet,
     )
     runtime.close_token = close_token
@@ -520,7 +527,7 @@ def _show_sheet(
     on_dismiss: Callable[[], None] | None = None,
     padding: ft.Padding | int | None = None,
     full_screen: bool = False,
-    expand: bool = False,
+    scrollable: bool = False,
     build: _SheetBuild | None = None,
 ) -> ft.Container:
     if build is not None and (content is not None or title is not None):
@@ -539,7 +546,7 @@ def _show_sheet(
         on_dismiss=on_dismiss,
         padding=padding,
         full_screen=full_screen,
-        expand=expand,
+        scrollable=scrollable,
         build=build,
         animate_in=True,
         insert_at=None,
@@ -555,7 +562,7 @@ def TangoSheet(
     on_dismiss: Callable[[], None] | None = None,
     padding: ft.Padding | int | None = None,
     full_screen: bool = False,
-    expand: bool = False,
+    scrollable: bool = False,
 ) -> ft.Control:
     page = ft.context.page
 
@@ -575,7 +582,7 @@ def TangoSheet(
             on_dismiss=on_dismiss,
             padding=padding,
             full_screen=full_screen,
-            expand=expand,
+            scrollable=scrollable,
         )
 
     def _cleanup_sheet_overlay() -> None:
@@ -591,7 +598,7 @@ def TangoSheet(
             content,
             padding,
             full_screen,
-            expand,
+            scrollable,
         ],
     )
     ft.on_unmounted(_cleanup_sheet_overlay)
