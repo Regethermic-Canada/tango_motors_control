@@ -38,9 +38,9 @@ def LanguageSelector() -> ft.Control:
 
     def on_toggle_language(_: Event[ft.Container]) -> None:
         loc.set_locale(next_locale)
-        setattr(
-            ft.context.page, "_tango_toast_close_tooltip", settings_service.t("close")
-        )
+        close_label = settings_service.t("close")
+        setattr(ft.context.page, "_tango_toast_close_tooltip", close_label)
+        setattr(ft.context.page, "_tango_sheet_close_tooltip", close_label)
         refresh_overlay(ft.context.page, OverlayRole.TOAST)
         refresh_overlay(ft.context.page, OverlayRole.SHEET)
 

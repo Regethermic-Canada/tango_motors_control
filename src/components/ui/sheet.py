@@ -8,6 +8,7 @@ import flet as ft
 from services.app.overlay_registry import (
     OverlayRole,
     cleanup_overlay,
+    get_overlay_close_callback,
     get_overlay_control,
     register_overlay,
 )
@@ -29,12 +30,14 @@ from theme.animation import (
 )
 from theme.scale import get_viewport_metrics
 
-from .icon_button import TangoIconButton
+from .icon_button import IconButtonSize, TangoIconButton
 from .text import TangoText
 
 _SHEET_TRANSITION = make(SHEET_TRANSITION_MS, SHEET_TRANSITION_CURVE)
 
-SheetBuild = Callable[[], tuple[str | None, ft.Control]]
+__all__ = ["TangoSheet"]
+
+_SheetBuild = Callable[[], tuple[str | None, ft.Control]]
 
 
 @dataclass(frozen=True)
@@ -45,6 +48,8 @@ class _SheetLayout:
     overlay_top_inset: float
     shadow: ft.BoxShadow
     header_padding: ft.Padding
+    header_title_size: int
+    close_button_size: IconButtonSize
     body_padding: ft.Padding | int
 
 
@@ -53,6 +58,10 @@ class _SheetRuntime:
     overlay: ft.Container
     anchor: ft.Container
     surface: ft.Container
+    header: ft.Container
+    title_slot: ft.Container
+    close_button: ft.IconButton
+    body: ft.Container
     close_token: int
 
 
@@ -115,8 +124,28 @@ def _resolve_sheet_layout(
         panel_radius=panel_radius,
         overlay_top_inset=float(top_band_height),
         shadow=shadows.card_shadow(metrics.scale),
-        header_padding=ft.Padding(spacing.LG, spacing.MD, spacing.LG, spacing.MD),
+        header_padding=ft.Padding(
+            spacing.MD,
+            spacing.SM if metrics.is_compact else spacing.MD,
+            spacing.MD,
+            spacing.SM if metrics.is_compact else spacing.MD,
+        ),
+        header_title_size=int(
+            round((16 if metrics.is_compact else 18) * metrics.scale)
+        ),
+        close_button_size="sm" if metrics.is_compact else "md",
         body_padding=padding or spacing.LG,
+    )
+
+
+def _build_sheet_title_control(title: str | None, *, size: int) -> ft.Control:
+    if title is None:
+        return ft.Container(expand=True)
+    return TangoText(
+        title,
+        variant="title",
+        size=size,
+        expand=True,
     )
 
 
@@ -124,42 +153,43 @@ def _build_sheet_header(
     *,
     title: str | None,
     layout: _SheetLayout,
+    close_tooltip: str | None,
     request_close: Callable[[], None],
-) -> ft.Container:
-    title_control: ft.Control
-    if title is None:
-        title_control = ft.Container(expand=True)
-    else:
-        title_control = TangoText(
-            title,
-            variant="title",
-            size=22,
-            expand=True,
-        )
+) -> tuple[ft.Container, ft.Container, ft.IconButton]:
+    title_slot = ft.Container(
+        content=_build_sheet_title_control(title, size=layout.header_title_size),
+        expand=True,
+    )
+    close_button = TangoIconButton(
+        icon=ft.Icons.CLOSE,
+        tooltip=close_tooltip,
+        on_click=lambda _: request_close(),
+        variant="surface",
+        size=layout.close_button_size,
+    )
 
-    return ft.Container(
-        content=ft.Row(
-            controls=[
-                title_control,
-                TangoIconButton(
-                    icon=ft.Icons.CLOSE,
-                    on_click=lambda _: request_close(),
-                    variant="surface",
-                    size="md",
-                ),
-            ],
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+    return (
+        ft.Container(
+            content=ft.Row(
+                controls=[
+                    title_slot,
+                    close_button,
+                ],
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            padding=layout.header_padding,
+            border=ft.Border(bottom=ft.BorderSide(1, colors.OUTLINE)),
         ),
-        padding=layout.header_padding,
-        border=ft.Border(bottom=ft.BorderSide(1, colors.OUTLINE)),
+        title_slot,
+        close_button,
     )
 
 
 def _build_sheet_surface(
     *,
-    content: ft.Control,
-    header: ft.Control,
+    body: ft.Container,
+    header: ft.Container,
     layout: _SheetLayout,
     expand: bool,
 ) -> ft.Container:
@@ -167,11 +197,7 @@ def _build_sheet_surface(
         content=ft.Column(
             controls=[
                 header,
-                ft.Container(
-                    content=content,
-                    padding=layout.body_padding,
-                    expand=expand,
-                ),
+                body,
             ],
             spacing=0,
             tight=not expand,
@@ -217,13 +243,19 @@ def _build_sheet_runtime(
         full_screen=full_screen,
         expand=expand,
     )
-    header = _build_sheet_header(
+    header, title_slot, close_button = _build_sheet_header(
         title=title,
         layout=layout,
+        close_tooltip=getattr(page, "_tango_sheet_close_tooltip", "Close"),
         request_close=on_close,
     )
-    surface = _build_sheet_surface(
+    body = ft.Container(
         content=content,
+        padding=layout.body_padding,
+        expand=expand,
+    )
+    surface = _build_sheet_surface(
+        body=body,
         header=header,
         layout=layout,
         expand=expand,
@@ -252,11 +284,49 @@ def _build_sheet_runtime(
         overlay=overlay,
         anchor=anchor,
         surface=surface,
+        header=header,
+        title_slot=title_slot,
+        close_button=close_button,
+        body=body,
         close_token=0,
     )
 
 
-def TangoSheet(
+def _update_sheet_runtime(
+    runtime: _SheetRuntime,
+    *,
+    page: ft.Page,
+    content: ft.Control,
+    title: str | None,
+    padding: ft.Padding | int | None,
+    full_screen: bool,
+    expand: bool,
+) -> None:
+    layout = _resolve_sheet_layout(
+        page,
+        padding=padding,
+        full_screen=full_screen,
+        expand=expand,
+    )
+    runtime.overlay.top = layout.overlay_top_inset
+    runtime.surface.height = layout.panel_height
+    runtime.surface.width = layout.panel_width
+    runtime.surface.border_radius = layout.panel_radius
+    runtime.surface.shadow = layout.shadow
+    runtime.surface.expand = expand
+    runtime.header.padding = layout.header_padding
+    runtime.body.padding = layout.body_padding
+    runtime.body.content = content
+    runtime.body.expand = expand
+    runtime.title_slot.content = _build_sheet_title_control(
+        title,
+        size=layout.header_title_size,
+    )
+    runtime.close_button.tooltip = getattr(page, "_tango_sheet_close_tooltip", "Close")
+    runtime.overlay.update()
+
+
+def _create_sheet_runtime(
     page: ft.Page,
     content: ft.Control,
     *,
@@ -301,11 +371,24 @@ def _present_sheet(
     padding: ft.Padding | int | None,
     full_screen: bool,
     expand: bool,
-    build: SheetBuild | None,
+    build: _SheetBuild | None,
     animate_in: bool,
     insert_at: int | None,
 ) -> ft.Container:
     page_key = id(page)
+    current = _active_sheets.get(page_key)
+    if current is not None and current.overlay in page.overlay:
+        _update_sheet_runtime(
+            current,
+            page=page,
+            content=content,
+            title=title,
+            padding=padding,
+            full_screen=full_screen,
+            expand=expand,
+        )
+        return current.overlay
+
     _clear_existing_sheet(page, page_key)
 
     close_token = time.monotonic_ns()
@@ -357,7 +440,7 @@ def _present_sheet(
             insert_at=next_insert_at,
         )
 
-    runtime = TangoSheet(
+    runtime = _create_sheet_runtime(
         page=page,
         content=content,
         title=title,
@@ -398,7 +481,7 @@ def _present_sheet(
     return runtime.overlay
 
 
-def show_tango_sheet(
+def _show_sheet(
     page: ft.Page,
     content: ft.Control | None = None,
     title: str | None = None,
@@ -406,16 +489,16 @@ def show_tango_sheet(
     padding: ft.Padding | int | None = None,
     full_screen: bool = False,
     expand: bool = False,
-    build: SheetBuild | None = None,
+    build: _SheetBuild | None = None,
 ) -> ft.Container:
     if build is not None and (content is not None or title is not None):
         raise ValueError(
-            "show_tango_sheet() accepts either static content/title or 'build', not both."
+            "_show_sheet() accepts either static content/title or 'build', not both."
         )
     if build is not None:
         title, content = build()
     if content is None:
-        raise ValueError("show_tango_sheet() requires either 'content' or 'build'.")
+        raise ValueError("_show_sheet() requires either 'content' or 'build'.")
 
     return _present_sheet(
         page=page,
@@ -428,4 +511,61 @@ def show_tango_sheet(
         build=build,
         animate_in=True,
         insert_at=None,
+    )
+
+
+@ft.component
+def TangoSheet(
+    *,
+    open: bool,
+    content: ft.Control | None = None,
+    title: str | None = None,
+    on_dismiss: Callable[[], None] | None = None,
+    padding: ft.Padding | int | None = None,
+    full_screen: bool = False,
+    expand: bool = False,
+) -> ft.Control:
+    page = ft.context.page
+
+    def _sync_sheet_overlay() -> None:
+        close_sheet = get_overlay_close_callback(page, OverlayRole.SHEET)
+        if not open:
+            if callable(close_sheet):
+                close_sheet()
+            return
+        if content is None:
+            return
+
+        _show_sheet(
+            page=page,
+            content=content,
+            title=title,
+            on_dismiss=on_dismiss,
+            padding=padding,
+            full_screen=full_screen,
+            expand=expand,
+        )
+
+    def _cleanup_sheet_overlay() -> None:
+        close_sheet = get_overlay_close_callback(page, OverlayRole.SHEET)
+        if callable(close_sheet):
+            close_sheet()
+
+    ft.use_effect(
+        _sync_sheet_overlay,
+        [
+            open,
+            title,
+            content,
+            padding,
+            full_screen,
+            expand,
+        ],
+    )
+    ft.on_unmounted(_cleanup_sheet_overlay)
+
+    return ft.Container(
+        width=0,
+        height=0,
+        visible=False,
     )

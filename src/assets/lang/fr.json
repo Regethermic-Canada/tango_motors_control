@@ -26,10 +26,15 @@
   "admin_access_granted": "Accès admin autorisé",
   "enter_passcode": "Entrer le code",
   "invalid_passcode": "Code invalide",
+  "change_admin_passcode": "Changer le code admin",
+  "admin_passcode_description": "Ouvre le pavé numérique pour définir un nouveau code admin à 4 chiffres.",
+  "new_admin_passcode": "Entrer le nouveau code admin",
+  "confirm_admin_passcode": "Confirmer le nouveau code admin",
+  "admin_passcode_hint": "Utilise 4 chiffres avec le pavé numérique.",
+  "admin_passcode_updated": "Code admin mis à jour",
+  "admin_passcode_mismatch": "Les codes ne correspondent pas",
+  "admin_passcode_update_failed": "Échec de la mise à jour du code admin",
+  "saving": "Enregistrement...",
   "loading_interface": "Chargement de l'interface",
-  "close": "Fermer",
-  "test_sheet": "Test Menu Coulissant",
-  "test_content": "Ceci est un test du composant TangoSheet avec un rembourrage et un en-tête personnalisés.",
-  "show_toast": "Afficher un Toast",
-  "test_toast": "Ceci est un toast de test !"
+  "close": "Fermer"
 }

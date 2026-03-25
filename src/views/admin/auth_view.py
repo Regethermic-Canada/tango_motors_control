@@ -5,11 +5,15 @@ import flet as ft
 from components.ui.card import TangoCard
 from components.ui.numpad import TangoNumpad
 from components.ui.page import TangoPage
-from components.ui.text import TangoText
+from components.ui.passcode_indicator import (
+    PASSCODE_LENGTH,
+    PasscodeIndicator,
+    animate_passcode_shake,
+)
 from components.ui.tango_toast import ToastType, show_toast
 from contexts.route import RouteContext
 from contexts.settings import SettingsContext
-from theme import animation, colors, spacing
+from theme import spacing
 from theme.scale import ViewportArea, get_viewport_metrics, resolve_panel_width
 
 logger = logging.getLogger(__name__)
@@ -17,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 @ft.component
 def AuthView() -> ft.Control:
+    page = ft.context.page
     route_ctx = ft.use_context(RouteContext)
     settings_service = ft.use_context(SettingsContext).current()
     passcode, set_passcode = ft.use_state("")
@@ -52,29 +57,20 @@ def AuthView() -> ft.Control:
                 build=lambda: settings_service.t("invalid_passcode"),
             )
 
-            # Multi-directional shake animation (More complex 4-point sequence)
-            shake_points = [
-                ft.Offset(0.02, 0.01),
-                ft.Offset(-0.02, -0.01),
-                ft.Offset(0.02, -0.01),
-                ft.Offset(-0.02, 0.01),
-            ]
-            for _ in range(2):
-                for point in shake_points:
-                    set_shake_offset(point)
-                    ft.context.page.update()
-                    await asyncio.sleep(0.03)
+            def apply_shake_offset(point: ft.Offset) -> None:
+                set_shake_offset(point)
+                page.update()
 
-            set_shake_offset(ft.Offset(0, 0))
-            ft.context.page.update()
-
+            await animate_passcode_shake(
+                apply_offset=apply_shake_offset,
+            )
             set_passcode("")
 
     def on_digit_click(digit: str) -> None:
-        if len(passcode) < 4:
+        if len(passcode) < PASSCODE_LENGTH:
             new_passcode = passcode + digit
             set_passcode(new_passcode)
-            if len(new_passcode) == 4:
+            if len(new_passcode) == PASSCODE_LENGTH:
                 asyncio.create_task(verify_passcode(new_passcode))
 
     def on_clear_click() -> None:
@@ -84,20 +80,10 @@ def AuthView() -> ft.Control:
         if len(passcode) > 0:
             set_passcode(passcode[:-1])
 
-    metrics = get_viewport_metrics(
-        ft.context.page,
-        area=ViewportArea.CONTENT,
-        min_scale=0.7,
-    )
-
-    dots = "".join(
-        "● " if index < len(passcode) else "○ " for index in range(4)
-    ).strip()
+    metrics = get_viewport_metrics(page, area=ViewportArea.CONTENT, min_scale=0.7)
     content_spacing = int(
         round((spacing.MD if metrics.is_compact else spacing.LG) * metrics.scale)
     )
-    dots_font_size = int(round((28 if metrics.is_compact else 34) * metrics.scale))
-    dots_letter_spacing = int(round((8 if metrics.is_compact else 10) * metrics.scale))
     card_width = resolve_panel_width(
         metrics,
         compact_fraction=0.64,
@@ -127,22 +113,11 @@ def AuthView() -> ft.Control:
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                         spacing=content_spacing,
                         controls=[
-                            ft.Container(
+                            PasscodeIndicator(
+                                passcode=passcode,
+                                scale=metrics.scale,
+                                is_compact=metrics.is_compact,
                                 offset=shake_offset,
-                                animate_offset=animation.make(
-                                    animation.AUTH_SHAKE_MS,
-                                    animation.AUTH_SHAKE_CURVE,
-                                ),
-                                content=TangoText(
-                                    dots,
-                                    variant="headline",
-                                    size=dots_font_size,
-                                    letter_spacing=dots_letter_spacing,
-                                    color=(
-                                        colors.PRIMARY if passcode else colors.OUTLINE
-                                    ),
-                                    text_align=ft.TextAlign.CENTER,
-                                ),
                             ),
                             TangoNumpad(
                                 on_digit_click=on_digit_click,

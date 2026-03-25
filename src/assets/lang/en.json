@@ -26,10 +26,15 @@
   "admin_access_granted": "Admin access granted",
   "enter_passcode": "Enter Passcode",
   "invalid_passcode": "Invalid Passcode",
+  "change_admin_passcode": "Change Admin Passcode",
+  "admin_passcode_description": "Opens the numpad to set a new 4-digit admin passcode.",
+  "new_admin_passcode": "Enter the new admin passcode",
+  "confirm_admin_passcode": "Confirm the new admin passcode",
+  "admin_passcode_hint": "Use 4 digits on the numpad.",
+  "admin_passcode_updated": "Admin passcode updated",
+  "admin_passcode_mismatch": "Passcodes do not match",
+  "admin_passcode_update_failed": "Failed to update admin passcode",
+  "saving": "Saving...",
   "loading_interface": "Loading interface",
-  "close": "Close",
-  "test_sheet": "Test Bottom Sheet",
-  "test_content": "This is a test of the TangoSheet component with custom padding and header.",
-  "show_toast": "Show Toast",
-  "test_toast": "This is a test toast!"
+  "close": "Close"
 }

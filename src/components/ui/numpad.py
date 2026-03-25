@@ -34,26 +34,30 @@ def DigitButton(
     )
 
 
-@ft.component
 def TangoNumpad(
     on_digit_click: Callable[[str], None],
     on_backspace_click: Callable[[], None],
     on_clear_click: Callable[[], None],
+    *,
+    scale_factor: float = 1.0,
 ) -> ft.Control:
     metrics = get_viewport_metrics(
         ft.context.page,
         area=ViewportArea.CONTENT,
         min_scale=0.62,
     )
+    control_scale = max(0.72, metrics.scale * scale_factor)
 
     numpad_width = min(
         520,
-        max(320 if metrics.is_compact else 440, int(metrics.width * 0.4)),
+        max(
+            320 if metrics.is_compact else 440, int(metrics.width * 0.4 * scale_factor)
+        ),
     )
-    row_spacing = int(round(spacing.MD * metrics.scale))
-    digit_font_size = int(round(30 * metrics.scale))
-    digit_diameter = int(round(72 * metrics.scale))
-    action_icon_size = int(round(24 * metrics.scale))
+    row_spacing = int(round(spacing.MD * control_scale))
+    digit_font_size = int(round(30 * control_scale))
+    digit_diameter = int(round(72 * control_scale))
+    action_icon_size = int(round(24 * control_scale))
 
     def handle_digit(digit: str) -> Callable[[Event[ft.Container]], None]:
         return lambda _: on_digit_click(digit)
