@@ -258,55 +258,52 @@ def AdminView() -> ft.Control:
                 ft.Container(
                     expand=True,
                     alignment=ft.Alignment.CENTER,
-                    content=ft.Column(
-                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    content=ft.Container(
+                        width=card_width,
                         expand=True,
-                        scroll=ft.ScrollMode.AUTO,
-                        spacing=section_spacing,
-                        controls=[
-                            TangoCard(
-                                width=card_width,
-                                padding=ft.Padding(
-                                    card_padding,
-                                    card_padding,
-                                    card_padding,
-                                    card_padding,
-                                ),
-                                content=ft.Column(
-                                    spacing=block_spacing,
-                                    controls=[
-                                        timeout_header,
-                                        TangoSlider(
-                                            min=10,
-                                            max=150,
-                                            divisions=14,
-                                            label="{value}s",
-                                            value=inactivity_timeout_draft,
-                                            set_value=set_inactivity_timeout_draft,
-                                            on_commit=on_timeout_commit,
-                                            scale=slider_scale,
-                                        ),
-                                        ft.Divider(height=section_spacing),
-                                        default_speed_header,
-                                        TangoSlider(
-                                            min=settings_service.default_speed_min,
-                                            max=settings_service.default_speed_max,
-                                            divisions=settings_service.default_speed_max
-                                            * 2,
-                                            label="{value}",
-                                            value=default_speed_draft,
-                                            set_value=set_default_speed_draft,
-                                            on_commit=on_default_speed_commit,
-                                            scale=slider_scale,
-                                        ),
-                                        ft.Divider(height=section_spacing),
-                                        admin_passcode_label,
-                                        admin_passcode_description,
-                                        sheet_action_buttons,
-                                    ],
-                                ),
+                        content=TangoCard(
+                            expand=True,
+                            scrollable=True,
+                            padding=ft.Padding(
+                                card_padding,
+                                card_padding,
+                                card_padding,
+                                card_padding,
                             ),
-                        ],
+                            content=ft.Column(
+                                spacing=block_spacing,
+                                controls=[
+                                    timeout_header,
+                                    TangoSlider(
+                                        min=10,
+                                        max=150,
+                                        divisions=14,
+                                        label="{value}s",
+                                        value=inactivity_timeout_draft,
+                                        set_value=set_inactivity_timeout_draft,
+                                        on_commit=on_timeout_commit,
+                                        scale=slider_scale,
+                                    ),
+                                    ft.Divider(height=section_spacing),
+                                    default_speed_header,
+                                    TangoSlider(
+                                        min=settings_service.default_speed_min,
+                                        max=settings_service.default_speed_max,
+                                        divisions=settings_service.default_speed_max
+                                        * 2,
+                                        label="{value}",
+                                        value=default_speed_draft,
+                                        set_value=set_default_speed_draft,
+                                        on_commit=on_default_speed_commit,
+                                        scale=slider_scale,
+                                    ),
+                                    ft.Divider(height=section_spacing),
+                                    admin_passcode_label,
+                                    admin_passcode_description,
+                                    sheet_action_buttons,
+                                ],
+                            ),
+                        ),
                     ),
                 ),
                 TangoSheet(
