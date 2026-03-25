@@ -61,6 +61,7 @@ class _SheetRuntime:
     header: ft.Container
     title_slot: ft.Container
     close_button: ft.IconButton
+    body_scroll: ft.ListView
     body: ft.Container
     close_token: int
 
@@ -213,6 +214,30 @@ def _build_sheet_surface(
     )
 
 
+def _build_sheet_body(
+    *,
+    content: ft.Control,
+    layout: _SheetLayout,
+    expand: bool,
+) -> tuple[ft.ListView, ft.Container]:
+    body_scroll = ft.ListView(
+        controls=[
+            ft.Container(
+                alignment=ft.Alignment.TOP_CENTER,
+                content=content,
+            )
+        ],
+        expand=expand,
+        spacing=0,
+    )
+    return body_scroll, ft.Container(
+        content=body_scroll,
+        padding=layout.body_padding,
+        expand=expand,
+        alignment=ft.Alignment.TOP_CENTER,
+    )
+
+
 def _apply_open_state(runtime: _SheetRuntime) -> None:
     runtime.anchor.offset = SHEET_ANCHOR_OPEN_OFFSET
     runtime.surface.opacity = SHEET_SURFACE_OPEN_OPACITY
@@ -249,9 +274,9 @@ def _build_sheet_runtime(
         close_tooltip=getattr(page, "_tango_sheet_close_tooltip", "Close"),
         request_close=on_close,
     )
-    body = ft.Container(
+    body_scroll, body = _build_sheet_body(
         content=content,
-        padding=layout.body_padding,
+        layout=layout,
         expand=expand,
     )
     surface = _build_sheet_surface(
@@ -287,6 +312,7 @@ def _build_sheet_runtime(
         header=header,
         title_slot=title_slot,
         close_button=close_button,
+        body_scroll=body_scroll,
         body=body,
         close_token=0,
     )
@@ -315,8 +341,14 @@ def _update_sheet_runtime(
     runtime.surface.shadow = layout.shadow
     runtime.surface.expand = expand
     runtime.header.padding = layout.header_padding
+    runtime.body_scroll.controls = [
+        ft.Container(
+            alignment=ft.Alignment.TOP_CENTER,
+            content=content,
+        )
+    ]
+    runtime.body_scroll.expand = expand
     runtime.body.padding = layout.body_padding
-    runtime.body.content = content
     runtime.body.expand = expand
     runtime.title_slot.content = _build_sheet_title_control(
         title,

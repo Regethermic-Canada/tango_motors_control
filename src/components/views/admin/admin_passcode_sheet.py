@@ -131,65 +131,58 @@ def AdminPasscodeSheet(*, on_close: Callable[[], None]) -> ft.Control:
         if new_passcode:
             set_new_passcode(new_passcode[:-1])
 
-    return ft.Column(
-        expand=True,
-        scroll=ft.ScrollMode.AUTO,
-        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-        controls=[
-            ft.Container(
-                width=content_width,
-                padding=ft.Padding(0, top_padding, 0, bottom_padding),
-                alignment=ft.Alignment.TOP_CENTER,
-                content=ft.Column(
+    return ft.Container(
+        width=content_width,
+        padding=ft.Padding(0, top_padding, 0, bottom_padding),
+        alignment=ft.Alignment.TOP_CENTER,
+        content=ft.Column(
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=sheet_spacing,
+            controls=[
+                ft.Column(
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=sheet_spacing,
+                    spacing=helper_spacing,
                     controls=[
-                        ft.Column(
-                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                            spacing=helper_spacing,
-                            controls=[
-                                ft.Text(
-                                    value=step_value,
-                                    style=typography.text_style(
-                                        "overline",
-                                        color=colors.TEXT_SOFT,
-                                        size=helper_size,
-                                    ),
-                                    text_align=ft.TextAlign.CENTER,
-                                ),
-                                ft.Text(
-                                    value=instruction,
-                                    style=typography.text_style(
-                                        "subtitle",
-                                        size=instruction_size,
-                                    ),
-                                    text_align=ft.TextAlign.CENTER,
-                                ),
-                                ft.Text(
-                                    value=helper,
-                                    style=typography.text_style(
-                                        "caption",
-                                        color=colors.TEXT_MUTED,
-                                        size=helper_size,
-                                    ),
-                                    text_align=ft.TextAlign.CENTER,
-                                ),
-                            ],
+                        ft.Text(
+                            value=step_value,
+                            style=typography.text_style(
+                                "overline",
+                                color=colors.TEXT_SOFT,
+                                size=helper_size,
+                            ),
+                            text_align=ft.TextAlign.CENTER,
                         ),
-                        PasscodeIndicator(
-                            passcode=active_passcode,
-                            scale=metrics.scale,
-                            is_compact=metrics.is_compact,
-                            offset=shake_offset,
+                        ft.Text(
+                            value=instruction,
+                            style=typography.text_style(
+                                "subtitle",
+                                size=instruction_size,
+                            ),
+                            text_align=ft.TextAlign.CENTER,
                         ),
-                        TangoNumpad(
-                            on_digit_click=on_digit_click,
-                            on_backspace_click=on_backspace_click,
-                            on_clear_click=on_clear_click,
-                            scale_factor=0.88 if metrics.is_compact else 0.94,
+                        ft.Text(
+                            value=helper,
+                            style=typography.text_style(
+                                "caption",
+                                color=colors.TEXT_MUTED,
+                                size=helper_size,
+                            ),
+                            text_align=ft.TextAlign.CENTER,
                         ),
                     ],
                 ),
-            ),
-        ],
+                PasscodeIndicator(
+                    passcode=active_passcode,
+                    scale=metrics.scale,
+                    is_compact=metrics.is_compact,
+                    offset=shake_offset,
+                ),
+                TangoNumpad(
+                    on_digit_click=on_digit_click,
+                    on_backspace_click=on_backspace_click,
+                    on_clear_click=on_clear_click,
+                    scale_factor=0.88 if metrics.is_compact else 0.94,
+                ),
+            ],
+        ),
     )
