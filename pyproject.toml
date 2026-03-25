@@ -2,7 +2,7 @@
 name = "tango-motors-control"
 version = "0.1.9"
 description = "tango motors control for Regethermic Canada"
-readme = "README.md"
+readme = "readme.md"
 requires-python = ">=3.10"
 authors = [
     { name = "samor", email = "samor140@hotmail.com" }
