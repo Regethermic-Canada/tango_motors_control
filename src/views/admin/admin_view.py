@@ -19,6 +19,9 @@ def AdminView() -> ft.Control:
     loc = ft.use_context(LocaleContext)
     settings_service = ft.use_context(SettingsContext).current()
     is_passcode_sheet_open, set_is_passcode_sheet_open = ft.use_state(False)
+    new_passcode, set_new_passcode = ft.use_state("")
+    confirm_passcode, set_confirm_passcode = ft.use_state("")
+    is_passcode_saving, set_is_passcode_saving = ft.use_state(False)
     metrics = get_viewport_metrics(
         ft.context.page,
         area=ViewportArea.CONTENT,
@@ -121,13 +124,31 @@ def AdminView() -> ft.Control:
             controls=[default_speed_label, default_speed_value],
         )
 
+    def reset_passcode_sheet_state() -> None:
+        set_new_passcode("")
+        set_confirm_passcode("")
+        set_is_passcode_saving(False)
+
+    def close_passcode_sheet() -> None:
+        reset_passcode_sheet_state()
+        set_is_passcode_sheet_open(False)
+
     passcode_sheet_content = (
-        AdminPasscodeSheet(on_close=lambda: set_is_passcode_sheet_open(False))
+        AdminPasscodeSheet(
+            new_passcode=new_passcode,
+            set_new_passcode=set_new_passcode,
+            confirm_passcode=confirm_passcode,
+            set_confirm_passcode=set_confirm_passcode,
+            is_saving=is_passcode_saving,
+            set_is_saving=set_is_passcode_saving,
+            on_close=close_passcode_sheet,
+        )
         if is_passcode_sheet_open
         else None
     )
 
     def on_change_admin_passcode_click(_: Event[Button]) -> None:
+        reset_passcode_sheet_state()
         set_is_passcode_sheet_open(True)
 
     return TangoPage(
@@ -209,7 +230,7 @@ def AdminView() -> ft.Control:
                     title=loc.t("change_admin_passcode"),
                     content=passcode_sheet_content,
                     expand=True,
-                    on_dismiss=lambda: set_is_passcode_sheet_open(False),
+                    on_dismiss=close_passcode_sheet,
                 ),
             ],
         ),

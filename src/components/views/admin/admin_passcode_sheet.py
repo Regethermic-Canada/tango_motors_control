@@ -17,13 +17,19 @@ from theme.scale import ViewportArea, get_viewport_metrics
 
 
 @ft.component
-def AdminPasscodeSheet(*, on_close: Callable[[], None]) -> ft.Control:
+def AdminPasscodeSheet(
+    *,
+    new_passcode: str,
+    set_new_passcode: Callable[[str], None],
+    confirm_passcode: str,
+    set_confirm_passcode: Callable[[str], None],
+    is_saving: bool,
+    set_is_saving: Callable[[bool], None],
+    on_close: Callable[[], None],
+) -> ft.Control:
     loc = ft.use_context(LocaleContext)
     settings_service = ft.use_context(SettingsContext).current()
     page = ft.context.page
-    new_passcode, set_new_passcode = ft.use_state("")
-    confirm_passcode, set_confirm_passcode = ft.use_state("")
-    is_saving, set_is_saving = ft.use_state(False)
     shake_offset, set_shake_offset = ft.use_state(ft.Offset(0, 0))
     metrics = get_viewport_metrics(
         page,
