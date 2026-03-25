@@ -61,7 +61,9 @@ class _SheetRuntime:
     header: ft.Container
     title_slot: ft.Container
     close_button: ft.IconButton
+    body_content_slot: ft.Container
     body: ft.Container
+    is_scrollable: bool
     close_token: int
 
 
@@ -211,27 +213,34 @@ def _build_sheet_surface(
     )
 
 
-def _build_sheet_body_content(
+def _build_sheet_body_shell(
     *,
     content: ft.Control,
     scrollable: bool,
-) -> ft.Control:
+) -> tuple[ft.Control, ft.Container]:
+    body_content_slot = ft.Container(content=content)
     if scrollable:
-        return ft.ListView(
-            controls=[
-                ft.Container(
-                    alignment=ft.Alignment.TOP_CENTER,
-                    content=content,
-                )
-            ],
-            expand=True,
-            spacing=0,
+        return (
+            ft.ListView(
+                controls=[
+                    ft.Container(
+                        alignment=ft.Alignment.TOP_CENTER,
+                        content=body_content_slot,
+                    )
+                ],
+                expand=True,
+                spacing=0,
+            ),
+            body_content_slot,
         )
 
-    return ft.Container(
-        expand=True,
-        alignment=ft.Alignment.CENTER,
-        content=content,
+    return (
+        ft.Container(
+            expand=True,
+            alignment=ft.Alignment.CENTER,
+            content=body_content_slot,
+        ),
+        body_content_slot,
     )
 
 
@@ -240,15 +249,19 @@ def _build_sheet_body(
     content: ft.Control,
     layout: _SheetLayout,
     scrollable: bool,
-) -> ft.Container:
-    return ft.Container(
-        content=_build_sheet_body_content(
-            content=content,
-            scrollable=scrollable,
+) -> tuple[ft.Container, ft.Container]:
+    body_content, body_content_slot = _build_sheet_body_shell(
+        content=content,
+        scrollable=scrollable,
+    )
+    return (
+        ft.Container(
+            content=body_content,
+            padding=layout.body_padding,
+            expand=True,
+            alignment=ft.Alignment.TOP_CENTER,
         ),
-        padding=layout.body_padding,
-        expand=True,
-        alignment=ft.Alignment.TOP_CENTER,
+        body_content_slot,
     )
 
 
@@ -287,7 +300,7 @@ def _build_sheet_runtime(
         close_tooltip=getattr(page, "_tango_sheet_close_tooltip", "Close"),
         request_close=on_close,
     )
-    body = _build_sheet_body(
+    body, body_content_slot = _build_sheet_body(
         content=content,
         layout=layout,
         scrollable=scrollable,
@@ -324,7 +337,9 @@ def _build_sheet_runtime(
         header=header,
         title_slot=title_slot,
         close_button=close_button,
+        body_content_slot=body_content_slot,
         body=body,
+        is_scrollable=scrollable,
         close_token=0,
     )
 
@@ -352,10 +367,16 @@ def _update_sheet_runtime(
     runtime.surface.expand = True
     runtime.header.padding = layout.header_padding
     runtime.body.padding = layout.body_padding
-    runtime.body.content = _build_sheet_body_content(
-        content=content,
-        scrollable=scrollable,
-    )
+    if runtime.is_scrollable != scrollable:
+        next_body_content, next_body_content_slot = _build_sheet_body_shell(
+            content=content,
+            scrollable=scrollable,
+        )
+        runtime.body.content = next_body_content
+        runtime.body_content_slot = next_body_content_slot
+        runtime.is_scrollable = scrollable
+    else:
+        runtime.body_content_slot.content = content
     runtime.body.expand = True
     runtime.title_slot.content = _build_sheet_title_control(
         title,
