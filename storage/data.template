@@ -41,15 +41,15 @@ LOG_LEVEL=INFO
 ###############################################################################
 # Enable hardware control (true | false)
 MOTOR_ENABLED=false
-# Motor type supported by cubemars-servo-can (e.g., AK40-10)
-MOTOR_TYPE=AK40-10
+# Motor type supported by cubemars-servo-can (e.g., AKA60-6)
+MOTOR_TYPE=AKA60-6
 # SocketCAN channel
 MOTOR_CAN_CHANNEL=can0
 # Motor CAN IDs (CSV). Example for 4 motors: 1,2,3,4
-MOTOR_IDS=1,2
+MOTOR_IDS=1,2,3,4
 # Direction multipliers (CSV). Must match MOTOR_IDS count (1:1).
 # Example for 4 mirrored motors: 1,-1,1,-1
-MOTOR_DIRECTIONS=1,-1
+MOTOR_DIRECTIONS=1,-1,1,-1
 # Motor command/update rate in Hz while running velocity mode.
 MOTOR_COMMAND_HZ=50
 # Ramp time in seconds for a full 0% to MOTOR_MAX_SPEED sweep.
