@@ -38,11 +38,20 @@ def _build_metric_row(
         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         vertical_alignment=ft.CrossAxisAlignment.CENTER,
         controls=[
-            TangoText(
-                label,
-                variant="caption",
-                size=label_size,
-                color=colors.TEXT_MUTED,
+            ft.Container(
+                expand=True,
+                content=ft.Text(
+                    value=label,
+                    style=TangoText(
+                        "",
+                        variant="caption",
+                        size=label_size,
+                        color=colors.TEXT_MUTED,
+                    ).style,
+                    no_wrap=True,
+                    max_lines=1,
+                    overflow=ft.TextOverflow.ELLIPSIS,
+                ),
             ),
             ft.Container(
                 width=value_min_width,
@@ -104,15 +113,16 @@ def MotorStatusSheet(*, statuses: list[MotorStatusSnapshot]) -> ft.Control:
     unavailable_value = loc.t("motor_status_not_available")
 
     def resolve_status(snapshot: MotorStatusSnapshot) -> tuple[str, TagVariant]:
-        if snapshot.is_active:
+        if snapshot.is_running:
             return (loc.t("motor_status_active"), "success")
         if snapshot.is_connected:
-            return (loc.t("motor_status_connected"), "secondary")
+            return (loc.t("motor_status_stopped"), "secondary")
         return (loc.t("motor_status_disconnected"), "neutral")
 
     cards: list[ft.Control] = []
     for snapshot in statuses:
         status_label, status_variant = resolve_status(snapshot)
+        measured_velocity_rad_s = snapshot.output_velocity_rad_s
         direction_label = (
             loc.t("motor_direction_forward")
             if snapshot.direction >= 0
@@ -162,7 +172,7 @@ def MotorStatusSheet(*, statuses: list[MotorStatusSnapshot]) -> ft.Control:
                                     _build_metric_row(
                                         label=loc.t("motor_velocity"),
                                         value=_format_metric(
-                                            snapshot.output_velocity_rad_s,
+                                            measured_velocity_rad_s,
                                             suffix="rad/s",
                                             fallback=unavailable_value,
                                         ),
@@ -174,7 +184,7 @@ def MotorStatusSheet(*, statuses: list[MotorStatusSnapshot]) -> ft.Control:
                                         label=loc.t("motor_plate_time"),
                                         value=_format_metric(
                                             velocity_rad_s_to_sec_per_plate(
-                                                snapshot.output_velocity_rad_s or 0.0,
+                                                measured_velocity_rad_s or 0.0,
                                                 plate_size_cm=config.motor_plate_size_cm,
                                             ),
                                             suffix=loc.t("seconds_per_plate_unit"),
@@ -188,7 +198,7 @@ def MotorStatusSheet(*, statuses: list[MotorStatusSnapshot]) -> ft.Control:
                                         label=loc.t("motor_plate_rate"),
                                         value=_format_metric(
                                             velocity_rad_s_to_plates_per_second(
-                                                snapshot.output_velocity_rad_s or 0.0,
+                                                measured_velocity_rad_s or 0.0,
                                                 plate_size_cm=config.motor_plate_size_cm,
                                             ),
                                             suffix=loc.t("plates_per_second_unit"),

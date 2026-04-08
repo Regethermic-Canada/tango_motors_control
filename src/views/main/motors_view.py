@@ -258,7 +258,7 @@ def MotorsView() -> ft.Control:
                                 ),
                                 on_click=on_toggle_click,
                                 size="xl",
-                                variant="surface" if is_running else "primary",
+                                variant="error" if is_running else "primary",
                             ),
                         ],
                     )
@@ -284,7 +284,7 @@ def MotorsView() -> ft.Control:
                                     ),
                                     on_click=on_toggle_click,
                                     size="xl",
-                                    variant="surface" if is_running else "primary",
+                                    variant="error" if is_running else "primary",
                                 ),
                             ),
                         ],

@@ -7,7 +7,7 @@ from .text import TangoText
 from theme import colors, radius
 
 ControlHandler = ControlEventHandler[Button] | None
-ButtonVariant = Literal["primary", "secondary", "surface"]
+ButtonVariant = Literal["primary", "secondary", "surface", "error"]
 ButtonSize = Literal["sm", "md", "lg", "xl"]
 
 _HEIGHTS = {
@@ -29,6 +29,7 @@ _VARIANT_STYLES: dict[ButtonVariant, tuple[str, str, str]] = {
     "primary": (colors.PRIMARY, colors.TEXT_INVERSE, colors.PRIMARY),
     "secondary": (colors.PRIMARY_SOFT, colors.PRIMARY, colors.PRIMARY_SOFT),
     "surface": (colors.SURFACE, colors.TEXT, colors.OUTLINE),
+    "error": (colors.ERROR, colors.TEXT_INVERSE, colors.ERROR),
 }
 
 

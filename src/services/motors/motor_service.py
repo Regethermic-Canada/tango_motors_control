@@ -97,7 +97,7 @@ class MotorStatusSnapshot:
     motor_id: int
     direction: int
     is_connected: bool
-    is_active: bool
+    is_running: bool
     temperature_c: float | None
     output_velocity_rad_s: float | None
     output_torque_nm: float | None
@@ -272,6 +272,7 @@ class MotorService:
 
     def get_status_snapshots(self) -> list[MotorStatusSnapshot]:
         with self._lock:
+            self._refresh_connections_for_status_locked()
             pool_by_id = {item.motor_id: item for item in self._pool}
             connected_by_id = {item.motor_id: item for item in self._connected}
             active_by_id = {item.motor_id: item for item in self._motors}
@@ -284,14 +285,16 @@ class MotorService:
                     or pool_by_id.get(motor_id)
                 )
                 is_connected = motor_id in connected_by_id
-                is_active = motor_id in active_by_id
+                is_running = (
+                    self._state is _ServiceState.RUNNING and motor_id in active_by_id
+                )
                 motor = managed.motor if is_connected and managed is not None else None
                 snapshots.append(
                     MotorStatusSnapshot(
                         motor_id=motor_id,
                         direction=direction,
                         is_connected=is_connected,
-                        is_active=is_active,
+                        is_running=is_running,
                         temperature_c=_safe_metric_read(
                             motor,
                             lambda item: item.get_temperature_celsius(),
@@ -312,6 +315,15 @@ class MotorService:
                 )
             return snapshots
 
+    def _refresh_connections_for_status_locked(self) -> None:
+        if not self._cfg.enabled:
+            return
+        if self._state is _ServiceState.RUNNING:
+            return
+
+        self._ensure_initialized_locked()
+        self._connect_available_locked()
+
     def _send_speed_command_locked(self, velocity_rad_s: float) -> float:
         clamped_velocity = self._clamp_target_velocity_locked(velocity_rad_s)
         if not self._motors:
@@ -320,7 +332,7 @@ class MotorService:
         failed: list[_ManagedMotor] = []
         for item in self._motors:
             try:
-                item.motor.set_motor_velocity_radians_per_second(
+                item.motor.set_output_velocity_radians_per_second(
                     clamped_velocity * item.direction
                 )
                 item.motor.update()
@@ -628,4 +640,4 @@ def _close_can_manager(motor: CubeMarsServoCAN) -> None:
 
 
 def _motor_velocity_limit_rad_s(motor: CubeMarsServoCAN) -> float:
-    return motor.config.V_max * motor.radps_per_ERPM * motor.config.GEAR_RATIO
+    return motor.config.V_max * motor.radps_per_ERPM

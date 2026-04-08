@@ -11,6 +11,7 @@
   "motor_status_sheet_title": "État moteurs",
   "motor_status_active": "Actif",
   "motor_status_connected": "Connecté",
+  "motor_status_stopped": "Arrêté",
   "motor_status_disconnected": "Hors ligne",
   "motor_status_not_available": "Indisponible",
   "motor_label": "Moteur",
