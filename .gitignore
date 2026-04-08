@@ -11,9 +11,6 @@ __pycache__/
 build/
 develop-eggs/
 dist/
-!dist/
-dist/*
-!dist/tango_motors_control
 downloads/
 eggs/
 .eggs/
