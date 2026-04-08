@@ -82,7 +82,9 @@ def AdminView() -> ft.Control:
     action_button_spacing = int(
         round((spacing.XS if metrics.is_compact else spacing.MD) * metrics.scale)
     )
-    motor_status_snapshots = motor.get_status_snapshots()
+    motor_status_snapshots = (
+        motor.get_status_snapshots() if active_sheet == "motor_status" else []
+    )
 
     def sync_motor_status_refresh() -> None:
         motor.set_status_refresh_enabled(active_sheet == "motor_status")
