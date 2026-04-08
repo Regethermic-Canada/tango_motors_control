@@ -79,7 +79,7 @@ def MotorsView() -> ft.Control:
     direction_button_offset = int(
         round((spacing.MD if metrics.is_compact else spacing.LG) * metrics.scale)
     )
-    toggle_icon_size = int(round((30 if metrics.is_compact else 34) * metrics.scale))
+    toggle_icon_size = int(round((52 if metrics.is_compact else 60) * metrics.scale))
 
     direction_icon = (
         ft.Icons.ARROW_BACK if motor.is_reversed else ft.Icons.ARROW_FORWARD

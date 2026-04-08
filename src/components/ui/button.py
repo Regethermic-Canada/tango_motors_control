@@ -54,9 +54,11 @@ def TangoButton(
         32 if size == "xl" else 22 if size == "lg" else 20
     )
     content: ft.Control
-    button_icon = icon
+    button_icon: ft.IconData | None = None
+    resolved_text_size = text_size or (
+        22 if size == "xl" else 17 if size == "lg" else 16
+    )
     if icon_only and icon is not None:
-        button_icon = None
         content = ft.Container(
             alignment=ft.Alignment.CENTER,
             content=ft.Icon(
@@ -65,12 +67,41 @@ def TangoButton(
                 size=resolved_icon_size,
             ),
         )
+    elif icon is not None:
+        icon_left_padding = 8 if size == "sm" else 10 if size == "md" else 12
+        content = ft.Stack(
+            expand=True,
+            controls=[
+                ft.Container(
+                    expand=True,
+                    alignment=ft.Alignment.CENTER,
+                    content=TangoText(
+                        text or "",
+                        variant="label",
+                        color=foreground,
+                        size=resolved_text_size,
+                        text_align=ft.TextAlign.CENTER,
+                    ),
+                ),
+                ft.Container(
+                    left=icon_left_padding,
+                    top=0,
+                    bottom=0,
+                    alignment=ft.Alignment.CENTER_LEFT,
+                    content=ft.Icon(
+                        icon,
+                        color=foreground,
+                        size=resolved_icon_size,
+                    ),
+                ),
+            ],
+        )
     else:
         content = TangoText(
             text or "",
             variant="label",
             color=foreground,
-            size=text_size or (22 if size == "xl" else 17 if size == "lg" else 16),
+            size=resolved_text_size,
             text_align=ft.TextAlign.CENTER,
         )
 
