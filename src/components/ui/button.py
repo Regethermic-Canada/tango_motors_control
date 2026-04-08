@@ -8,12 +8,13 @@ from theme import colors, radius
 
 ControlHandler = ControlEventHandler[Button] | None
 ButtonVariant = Literal["primary", "secondary", "surface"]
-ButtonSize = Literal["sm", "md", "lg"]
+ButtonSize = Literal["sm", "md", "lg", "xl"]
 
 _HEIGHTS = {
     "sm": 36,
     "md": 46,
     "lg": 52,
+    "xl": 72,
 }
 
 
@@ -21,6 +22,7 @@ _PADDING = {
     "sm": (12, 8),
     "md": (16, 10),
     "lg": (20, 12),
+    "xl": (28, 16),
 }
 
 _VARIANT_STYLES: dict[ButtonVariant, tuple[str, str, str]] = {
@@ -31,13 +33,15 @@ _VARIANT_STYLES: dict[ButtonVariant, tuple[str, str, str]] = {
 
 
 def TangoButton(
-    text: str,
+    text: str | None = None,
     *,
     on_click: ControlHandler = None,
     variant: ButtonVariant = "primary",
     size: ButtonSize = "md",
     expand: bool = False,
     icon: ft.IconData | None = None,
+    icon_only: bool = False,
+    icon_size: int | None = None,
     tooltip: str | None = None,
     disabled: bool = False,
     width: int | None = None,
@@ -46,10 +50,34 @@ def TangoButton(
     background, foreground, border_color = _VARIANT_STYLES[variant]
     pad_x, pad_y = _PADDING[size]
     resolved_height = _HEIGHTS[size]
+    resolved_icon_size = icon_size or (
+        32 if size == "xl" else 22 if size == "lg" else 20
+    )
+    content: ft.Control
+    button_icon = icon
+    if icon_only and icon is not None:
+        button_icon = None
+        content = ft.Container(
+            alignment=ft.Alignment.CENTER,
+            content=ft.Icon(
+                icon,
+                color=foreground,
+                size=resolved_icon_size,
+            ),
+        )
+    else:
+        content = TangoText(
+            text or "",
+            variant="label",
+            color=foreground,
+            size=text_size or (22 if size == "xl" else 17 if size == "lg" else 16),
+            text_align=ft.TextAlign.CENTER,
+        )
+
     return ft.FilledButton(
         expand=expand,
         width=width,
-        icon=icon,
+        icon=button_icon,
         tooltip=tooltip,
         disabled=disabled,
         on_click=on_click,
@@ -60,12 +88,6 @@ def TangoButton(
             padding=ft.Padding(pad_x, pad_y, pad_x, pad_y),
             shape=ft.RoundedRectangleBorder(radius=radius.BUTTON),
         ),
-        content=TangoText(
-            text,
-            variant="label",
-            color=foreground,
-            size=text_size or (17 if size == "lg" else 16),
-            text_align=ft.TextAlign.CENTER,
-        ),
+        content=content,
         height=resolved_height,
     )

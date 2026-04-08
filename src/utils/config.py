@@ -40,7 +40,6 @@ class Config:
 
     # App
     app_title: str
-    app_version: str
     app_admin_default_passcode: str
     app_fullscreen_mode: bool
     app_screen_width: int
@@ -48,7 +47,7 @@ class Config:
 
     # User Preferences
     locale: str
-    default_speed: int
+    default_sec_per_plate: float
     admin_passcode_hash: str
 
     # Assets
@@ -68,8 +67,9 @@ class Config:
     motor_command_hz: float
     motor_ramp_time_s: float
     motor_hold_release_timeout_s: float
-    motor_max_step_speed: int
-    motor_max_speed: int
+    motor_plate_size_cm: float
+    motor_min_sec_per_plate: float
+    motor_max_sec_per_plate: float
     motor_max_temp_c: float
 
     _storage_path: Path
@@ -120,13 +120,12 @@ class Config:
         return cls(
             _storage_path=storage_path,
             app_title=get_env("APP_TITLE", "Tango Motors Control"),
-            app_version=get_env("APP_VERSION", "0.1.9"),
             app_admin_default_passcode=get_env("APP_ADMIN_DEFAULT_PASSCODE", "1010"),
             app_fullscreen_mode=get_env_bool("APP_FULLSCREEN_MODE", True),
             app_screen_width=max(320, int(get_env("APP_SCREEN_WIDTH", "800"))),
             app_screen_height=max(240, int(get_env("APP_SCREEN_HEIGHT", "480"))),
             locale=get_env("LOCALE", "fr").lower(),
-            default_speed=int(get_env("DEFAULT_SPEED", "0")),
+            default_sec_per_plate=float(get_env("DEFAULT_SEC_PER_PLATE", "15")),
             admin_passcode_hash=get_env("ADMIN_PASSCODE_HASH", ""),
             asset_logo=get_env("ASSET_LOGO", "tango_logo.png"),
             asset_screensaver=get_env(
@@ -144,8 +143,9 @@ class Config:
             motor_hold_release_timeout_s=max(
                 0.0, float(get_env("MOTOR_HOLD_RELEASE_TIMEOUT_S", "5.0"))
             ),
-            motor_max_step_speed=int(get_env("MOTOR_MAX_STEP_SPEED", "10")),
-            motor_max_speed=int(get_env("MOTOR_MAX_SPEED", "100")),
+            motor_plate_size_cm=max(0.1, float(get_env("MOTOR_PLATE_SIZE_CM", "53"))),
+            motor_min_sec_per_plate=float(get_env("MOTOR_MIN_SEC_PER_PLATE", "15")),
+            motor_max_sec_per_plate=float(get_env("MOTOR_MAX_SEC_PER_PLATE", "40")),
             motor_max_temp_c=float(get_env("MOTOR_MAX_TEMP_C", "70.0")),
         )
 

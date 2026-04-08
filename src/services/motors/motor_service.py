@@ -9,6 +9,7 @@ from threading import Event, RLock, Thread
 
 from cubemars_servo_can import CubeMarsServoCAN
 
+from .plate_speed import sec_per_plate_to_velocity_rad_s
 from .speed_ramp import SpeedRamp
 from utils.config import Config
 
@@ -26,7 +27,7 @@ class MotorServiceConfig:
     command_hz: float
     ramp_time_s: float
     hold_release_timeout_s: float
-    max_speed_percent: int
+    max_target_velocity_rad_s: float
     max_mosfet_temp_c: float
 
     @classmethod
@@ -53,7 +54,13 @@ class MotorServiceConfig:
             command_hz=max(1.0, app_config.motor_command_hz),
             ramp_time_s=max(0.0, app_config.motor_ramp_time_s),
             hold_release_timeout_s=max(0.0, app_config.motor_hold_release_timeout_s),
-            max_speed_percent=min(100, max(0, abs(app_config.motor_max_speed))),
+            max_target_velocity_rad_s=sec_per_plate_to_velocity_rad_s(
+                min(
+                    app_config.motor_min_sec_per_plate,
+                    app_config.motor_max_sec_per_plate,
+                ),
+                plate_size_cm=app_config.motor_plate_size_cm,
+            ),
             max_mosfet_temp_c=app_config.motor_max_temp_c,
         )
 
@@ -115,7 +122,7 @@ class MotorService:
         self._failed_start_ids: set[int] = set()
         self._max_motor_velocity_rad_s = 0.0
         self._speed_ramp = SpeedRamp(
-            max_speed_percent=self._cfg.max_speed_percent,
+            max_command_value=self._cfg.max_target_velocity_rad_s,
             command_hz=self._cfg.command_hz,
             ramp_time_s=self._cfg.ramp_time_s,
         )
@@ -133,7 +140,7 @@ class MotorService:
             self._ensure_initialized_locked()
             self._connect_available_locked()
 
-    def start(self, initial_speed_percent: int = 0) -> None:
+    def start(self, initial_target_velocity_rad_s: float = 0.0) -> None:
         if not self._cfg.enabled:
             logger.info("Motor service disabled by config (MOTOR_ENABLED=false)")
             return
@@ -142,7 +149,9 @@ class MotorService:
             if self._is_service_active_locked():
                 self._state = _ServiceState.RUNNING
                 self._holding_since_s = None
-                self._speed_ramp.set_target(initial_speed_percent)
+                self._speed_ramp.set_target(
+                    self._clamp_target_velocity_locked(initial_target_velocity_rad_s)
+                )
                 try:
                     self._drive_toward_target_locked()
                 except Exception:
@@ -163,11 +172,14 @@ class MotorService:
             self._next_temp_log_at_s = 0.0
             self._holding_since_s = None
             self._speed_ramp.reset()
-            self._speed_ramp.set_target(initial_speed_percent)
+            self._speed_ramp.set_target(
+                self._clamp_target_velocity_locked(initial_target_velocity_rad_s)
+            )
             try:
-                self._send_speed_command_locked(
-                    self._speed_ramp.commanded_speed_percent
+                applied_velocity = self._send_speed_command_locked(
+                    self._speed_ramp.commanded_command_value
                 )
+                self._speed_ramp.set_commanded(applied_velocity)
             except Exception:
                 logger.exception(
                     "Initial motor command failed; attempting full auto-reconnect"
@@ -230,31 +242,33 @@ class MotorService:
         was_running = False
         with self._lock:
             was_running = self._state is _ServiceState.RUNNING
-            target_speed_percent = self._speed_ramp.target_speed_percent
+            target_velocity_rad_s = self._speed_ramp.target_command_value
 
         self.shutdown()
         self.initialize()
 
         if was_running:
-            self.start(initial_speed_percent=target_speed_percent)
+            self.start(initial_target_velocity_rad_s=target_velocity_rad_s)
         return self.is_running()
 
-    def set_speed_percent(self, speed_percent: int) -> int:
+    def set_target_velocity_rad_s(self, target_velocity_rad_s: float) -> float:
         if not self._cfg.enabled:
-            return speed_percent
+            return target_velocity_rad_s
 
         with self._lock:
-            clamped_speed = self._speed_ramp.set_target(speed_percent)
+            clamped_velocity = self._speed_ramp.set_target(
+                self._clamp_target_velocity_locked(target_velocity_rad_s)
+            )
             if not self._is_service_active_locked():
                 logger.debug("Speed updated while motor service inactive")
-                return clamped_speed
+                return clamped_velocity
             try:
                 self._drive_toward_target_locked()
-                return clamped_speed
+                return self._speed_ramp.commanded_command_value
             except Exception:
                 logger.exception("Speed command failed; attempting full auto-reconnect")
                 self._reconnect_all_runtime_locked()
-                return self._speed_ramp.target_speed_percent
+                return self._speed_ramp.target_command_value
 
     def get_status_snapshots(self) -> list[MotorStatusSnapshot]:
         with self._lock:
@@ -298,19 +312,16 @@ class MotorService:
                 )
             return snapshots
 
-    def _send_speed_command_locked(self, speed_percent: float) -> float:
-        clamped_speed = self._speed_ramp.clamp_float(speed_percent)
+    def _send_speed_command_locked(self, velocity_rad_s: float) -> float:
+        clamped_velocity = self._clamp_target_velocity_locked(velocity_rad_s)
         if not self._motors:
-            return clamped_speed
-
-        speed_ratio = clamped_speed / 100.0
-        base_velocity = speed_ratio * self._max_motor_velocity_rad_s
+            return clamped_velocity
 
         failed: list[_ManagedMotor] = []
         for item in self._motors:
             try:
                 item.motor.set_motor_velocity_radians_per_second(
-                    base_velocity * item.direction
+                    clamped_velocity * item.direction
                 )
                 item.motor.update()
             except Exception:
@@ -328,7 +339,7 @@ class MotorService:
                 f"{failed_ids}; full shutdown and auto-reconnect required"
             )
 
-        return clamped_speed
+        return clamped_velocity
 
     def is_running(self) -> bool:
         return self._state is _ServiceState.RUNNING
@@ -439,8 +450,8 @@ class MotorService:
 
     def _reconnect_all_runtime_locked(self) -> None:
         previous_state = self._state
-        target_speed_percent = self._speed_ramp.target_speed_percent
-        commanded_speed_percent = self._speed_ramp.commanded_speed_percent
+        target_velocity_rad_s = self._speed_ramp.target_command_value
+        commanded_velocity_rad_s = self._speed_ramp.commanded_command_value
         self._teardown_all_motors_locked()
         self._build_pool_locked()
         self._connect_available_locked()
@@ -458,9 +469,12 @@ class MotorService:
         self._holding_since_s = (
             time.monotonic() if previous_state is _ServiceState.HOLDING else None
         )
-        self._speed_ramp.set_target(target_speed_percent)
-        self._speed_ramp.set_commanded(commanded_speed_percent)
-        self._send_speed_command_locked(self._speed_ramp.commanded_speed_percent)
+        self._speed_ramp.set_target(target_velocity_rad_s)
+        self._speed_ramp.set_commanded(commanded_velocity_rad_s)
+        applied_velocity = self._send_speed_command_locked(
+            self._speed_ramp.commanded_command_value
+        )
+        self._speed_ramp.set_commanded(applied_velocity)
         logger.info(
             "Motor service auto-reconnected on %s with active IDs: %s",
             self._cfg.can_channel,
@@ -513,9 +527,20 @@ class MotorService:
         self._speed_ramp.reset()
 
     def _drive_toward_target_locked(self) -> None:
-        next_speed = self._speed_ramp.next_commanded_speed()
-        self._send_speed_command_locked(next_speed)
-        self._speed_ramp.set_commanded(next_speed)
+        next_velocity = self._speed_ramp.next_command_value()
+        applied_velocity = self._send_speed_command_locked(next_velocity)
+        self._speed_ramp.set_commanded(applied_velocity)
+
+    def _clamp_target_velocity_locked(self, velocity_rad_s: float) -> float:
+        clamped_velocity = self._speed_ramp.clamp_float(velocity_rad_s)
+        if self._max_motor_velocity_rad_s <= 0.0:
+            return clamped_velocity
+
+        velocity_limit = min(
+            self._cfg.max_target_velocity_rad_s,
+            self._max_motor_velocity_rad_s,
+        )
+        return max(-velocity_limit, min(clamped_velocity, velocity_limit))
 
     def _wait_until_commanded_zero(self, timeout_s: float) -> bool:
         deadline = time.monotonic() + timeout_s

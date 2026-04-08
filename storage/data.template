@@ -2,7 +2,6 @@
 # App
 ###############################################################################
 APP_TITLE=Tango Motors Control
-APP_VERSION=0.1.9
 APP_ADMIN_DEFAULT_PASSCODE=1010
 # Target touchscreen size used for viewport scaling and the optional dev window.
 APP_SCREEN_WIDTH=800
@@ -16,8 +15,8 @@ APP_FULLSCREEN_MODE=true
 ###############################################################################
 # App Language (fr | en)
 LOCALE=fr
-# Default UI speed level on startup (between -MOTOR_MAX_STEP_SPEED and +MOTOR_MAX_STEP_SPEED)
-DEFAULT_SPEED=0
+# Default plate time on startup.
+DEFAULT_SEC_PER_PLATE=15
 # Admin Passcode Hash (Argon2)
 ADMIN_PASSCODE_HASH=
 
@@ -32,7 +31,7 @@ ASSET_SCREENSAVER=regethermic_screensaver.png
 # Behavior
 ###############################################################################
 # Inactivity Timeout in seconds before screensaver
-INACTIVITY_TIMEOUT=30
+INACTIVITY_TIMEOUT=60
 # Logging Level (DEBUG | INFO | WARNING | ERROR)
 LOG_LEVEL=INFO
 
@@ -52,13 +51,15 @@ MOTOR_IDS=1,2,3,4
 MOTOR_DIRECTIONS=1,-1,1,-1
 # Motor command/update rate in Hz while running velocity mode.
 MOTOR_COMMAND_HZ=50
-# Ramp time in seconds for a full 0% to MOTOR_MAX_SPEED sweep.
+# Ramp time in seconds for a full 0 rad/s to fastest plate-time sweep.
 MOTOR_RAMP_TIME_S=0.5
 # Hold at 0 rad/s for this many seconds after stop, then release motors automatically.
 MOTOR_HOLD_RELEASE_TIMEOUT_S=5.0
-# UI speed level max absolute value shown in interface.
-MOTOR_MAX_STEP_SPEED=5
-# Effective motor speed cap in absolute percent (0..100).
-MOTOR_MAX_SPEED=5
+# Plate diameter used to derive tangential plates/s from motor rad/s.
+MOTOR_PLATE_SIZE_CM=53
+# Fastest allowed target.
+MOTOR_MIN_SEC_PER_PLATE=15
+# Slowest allowed target.
+MOTOR_MAX_SEC_PER_PLATE=40
 # Safety max MOSFET temperature in Celsius
 MOTOR_MAX_TEMP_C=70.0

@@ -28,8 +28,8 @@ def AdminView() -> ft.Control:
     inactivity_timeout_draft, set_inactivity_timeout_draft = ft.use_state(
         float(settings_service.inactivity_timeout)
     )
-    default_speed_draft, set_default_speed_draft = ft.use_state(
-        float(settings_service.default_speed)
+    default_plate_time_draft, set_default_plate_time_draft = ft.use_state(
+        float(settings_service.default_sec_per_plate)
     )
     new_passcode, set_new_passcode = ft.use_state("")
     confirm_passcode, set_confirm_passcode = ft.use_state("")
@@ -76,13 +76,13 @@ def AdminView() -> ft.Control:
 
     def sync_slider_drafts() -> None:
         set_inactivity_timeout_draft(float(settings_service.inactivity_timeout))
-        set_default_speed_draft(float(settings_service.default_speed))
+        set_default_plate_time_draft(float(settings_service.default_sec_per_plate))
 
     ft.use_effect(
         sync_slider_drafts,
         [
             settings_service.inactivity_timeout,
-            settings_service.default_speed,
+            settings_service.default_sec_per_plate,
         ],
     )
 
@@ -101,13 +101,13 @@ def AdminView() -> ft.Control:
         settings_service.set_inactivity_timeout(committed_value)
         show_settings_toast("inactivity_timeout_updated")
 
-    def on_default_speed_commit(value: float) -> None:
-        committed_value = int(round(value))
-        set_default_speed_draft(float(committed_value))
-        if settings_service.default_speed == committed_value:
+    def on_default_plate_time_commit(value: float) -> None:
+        committed_value = float(round(value))
+        set_default_plate_time_draft(committed_value)
+        if settings_service.default_sec_per_plate == committed_value:
             return
-        settings_service.set_default_speed(committed_value)
-        show_settings_toast("default_speed_updated")
+        settings_service.set_default_sec_per_plate(committed_value)
+        show_settings_toast("default_plate_time_updated")
 
     timeout_label = TangoText(
         loc.t("inactivity_timeout"),
@@ -120,13 +120,13 @@ def AdminView() -> ft.Control:
         size=value_size,
         color=colors.TEXT_MUTED,
     )
-    default_speed_label = TangoText(
-        loc.t("default_speed"),
+    default_plate_time_label = TangoText(
+        loc.t("default_plate_time"),
         variant="subtitle",
         size=section_title_size,
     )
-    default_speed_value = TangoText(
-        str(int(round(default_speed_draft))),
+    default_plate_time_value = TangoText(
+        f"{int(round(default_plate_time_draft))} {loc.t('seconds_per_plate_unit')}",
         variant="caption",
         size=value_size,
         color=colors.TEXT_MUTED,
@@ -156,17 +156,17 @@ def AdminView() -> ft.Control:
             controls=[timeout_label, timeout_value],
         )
 
-    default_speed_header: ft.Control
+    default_plate_time_header: ft.Control
     if metrics.is_compact:
-        default_speed_header = ft.Column(
+        default_plate_time_header = ft.Column(
             spacing=slider_value_gap,
             horizontal_alignment=ft.CrossAxisAlignment.START,
-            controls=[default_speed_label, default_speed_value],
+            controls=[default_plate_time_label, default_plate_time_value],
         )
     else:
-        default_speed_header = ft.Row(
+        default_plate_time_header = ft.Row(
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-            controls=[default_speed_label, default_speed_value],
+            controls=[default_plate_time_label, default_plate_time_value],
         )
 
     def reset_passcode_sheet_state() -> None:
@@ -285,16 +285,18 @@ def AdminView() -> ft.Control:
                                         scale=slider_scale,
                                     ),
                                     ft.Divider(height=section_spacing),
-                                    default_speed_header,
+                                    default_plate_time_header,
                                     TangoSlider(
-                                        min=settings_service.default_speed_min,
-                                        max=settings_service.default_speed_max,
-                                        divisions=settings_service.default_speed_max
-                                        * 2,
-                                        label="{value}",
-                                        value=default_speed_draft,
-                                        set_value=set_default_speed_draft,
-                                        on_commit=on_default_speed_commit,
+                                        min=settings_service.default_sec_per_plate_min,
+                                        max=settings_service.default_sec_per_plate_max,
+                                        divisions=int(
+                                            settings_service.default_sec_per_plate_max
+                                            - settings_service.default_sec_per_plate_min
+                                        ),
+                                        label="{value}s",
+                                        value=default_plate_time_draft,
+                                        set_value=set_default_plate_time_draft,
+                                        on_commit=on_default_plate_time_commit,
                                         scale=slider_scale,
                                     ),
                                     ft.Divider(height=section_spacing),

@@ -5,8 +5,13 @@ from components.ui.tag import TangoTag, TagVariant
 from components.ui.text import TangoText
 from contexts.locale import LocaleContext
 from services.motors.motor_service import MotorStatusSnapshot
+from services.motors.plate_speed import (
+    velocity_rad_s_to_plates_per_second,
+    velocity_rad_s_to_sec_per_plate,
+)
 from theme import colors, spacing
 from theme.scale import ViewportArea, get_viewport_metrics
+from utils.config import config
 
 
 def _format_metric(
@@ -160,6 +165,35 @@ def MotorStatusSheet(*, statuses: list[MotorStatusSnapshot]) -> ft.Control:
                                             snapshot.output_velocity_rad_s,
                                             suffix="rad/s",
                                             fallback=unavailable_value,
+                                        ),
+                                        label_size=caption_size,
+                                        value_size=value_size,
+                                        value_min_width=value_min_width,
+                                    ),
+                                    _build_metric_row(
+                                        label=loc.t("motor_plate_time"),
+                                        value=_format_metric(
+                                            velocity_rad_s_to_sec_per_plate(
+                                                snapshot.output_velocity_rad_s or 0.0,
+                                                plate_size_cm=config.motor_plate_size_cm,
+                                            ),
+                                            suffix=loc.t("seconds_per_plate_unit"),
+                                            fallback=unavailable_value,
+                                        ),
+                                        label_size=caption_size,
+                                        value_size=value_size,
+                                        value_min_width=value_min_width,
+                                    ),
+                                    _build_metric_row(
+                                        label=loc.t("motor_plate_rate"),
+                                        value=_format_metric(
+                                            velocity_rad_s_to_plates_per_second(
+                                                snapshot.output_velocity_rad_s or 0.0,
+                                                plate_size_cm=config.motor_plate_size_cm,
+                                            ),
+                                            suffix=loc.t("plates_per_second_unit"),
+                                            fallback=unavailable_value,
+                                            precision=3,
                                         ),
                                         label_size=caption_size,
                                         value_size=value_size,

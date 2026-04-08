@@ -5,8 +5,8 @@ from flet.controls.control_event import Event
 from flet.controls.material.button import Button
 from components.ui.button import TangoButton
 from components.ui.card import TangoCard
-from components.ui.icon_button import TangoIconButton
-from components.ui.tag import TangoTag, TagVariant
+from components.ui.icon_button import TangoIconButton, IconButtonVariant
+from components.ui.slider import TangoSlider
 from components.ui.text import TangoText
 from components.ui.tango_toast import ToastType, show_toast
 from contexts.locale import LocaleContext
@@ -30,15 +30,26 @@ def MotorsView() -> ft.Control:
         min_scale=0.8,
     )
     is_running = motor.is_motors_running
-    can_increment = motor.can_increment()
-    can_decrement = motor.can_decrement()
+    plate_time_draft, set_plate_time_draft = ft.use_state(float(motor.sec_per_plate))
 
-    content_spacing = int(round(spacing.SM * metrics.scale))
-    panel_spacing = int(round(spacing.LG * metrics.scale))
-    speed_label_size = int(round((15 if metrics.is_compact else 16) * metrics.scale))
-    speed_value_size = int(round((72 if metrics.is_compact else 76) * metrics.scale))
-    speed_percent_size = int(round((18 if metrics.is_compact else 20) * metrics.scale))
-    button_text_size = int(round((16 if metrics.is_compact else 17) * metrics.scale))
+    def sync_plate_time_draft() -> None:
+        set_plate_time_draft(float(motor.sec_per_plate))
+
+    ft.use_effect(sync_plate_time_draft, [motor.sec_per_plate])
+
+    preview_sec_per_plate = float(round(plate_time_draft))
+
+    content_spacing = int(
+        round((spacing.LG if metrics.is_compact else spacing.XL) * metrics.scale)
+    )
+    panel_spacing = int(
+        round((spacing.LG if metrics.is_compact else spacing.XL) * metrics.scale)
+    )
+    speed_value_size = int(round((54 if metrics.is_compact else 64) * metrics.scale))
+    speed_unit_size = int(round((22 if metrics.is_compact else 24) * metrics.scale))
+    speed_number_width = int(
+        round((150 if metrics.is_compact else 180) * metrics.scale)
+    )
     panel_width = resolve_panel_width(
         metrics,
         compact_fraction=0.84,
@@ -48,34 +59,37 @@ def MotorsView() -> ft.Control:
         max_width=820,
         edge_padding=spacing.XL,
     )
-    step_button_size = int(round((40 if metrics.is_compact else 48) * metrics.scale))
-    step_icon_size = int(round((20 if metrics.is_compact else 22) * metrics.scale))
-    step_spacing = int(
-        round((spacing.SM if metrics.is_compact else spacing.LG) * metrics.scale)
-    )
-    speed_value_width = int(round((112 if metrics.is_compact else 144) * metrics.scale))
-    speed_control_width = (
-        (step_button_size * 2) + speed_value_width + (step_spacing * 2)
-    )
+    slider_scale = max(1.06, metrics.scale * 1.04)
     card_padding = int(
-        round((spacing.LG if metrics.is_compact else spacing.XL) * metrics.scale)
+        round((spacing.XL if metrics.is_compact else spacing.XXL) * metrics.scale)
     )
-    speed_value_gap = max(4, int(round(6 * metrics.scale)))
+    action_gap = int(
+        round((spacing.SM if metrics.is_compact else spacing.MD) * metrics.scale)
+    )
+    reverse_icon_size = int(round((22 if metrics.is_compact else 24) * metrics.scale))
+    value_row_gap = int(
+        round((spacing.SM if metrics.is_compact else spacing.MD) * metrics.scale)
+    )
+    value_action_gap = int(
+        round((spacing.XL if metrics.is_compact else spacing.XXL) * metrics.scale)
+    )
+    value_block_padding_y = int(
+        round((spacing.XS if metrics.is_compact else spacing.SM) * metrics.scale)
+    )
+    direction_button_offset = int(
+        round((spacing.MD if metrics.is_compact else spacing.LG) * metrics.scale)
+    )
+    toggle_icon_size = int(round((30 if metrics.is_compact else 34) * metrics.scale))
 
-    status_variant: TagVariant = "success" if is_running else "secondary"
-    status_label = (
-        loc.t("motor_status_running") if is_running else loc.t("motor_status_stopped")
+    direction_icon = (
+        ft.Icons.ARROW_BACK if motor.is_reversed else ft.Icons.ARROW_FORWARD
+    )
+    direction_button_variant: IconButtonVariant = (
+        "warning" if motor.is_reversed else "primary"
     )
 
     def build_toast_message(message_key: str) -> Callable[[], str]:
         return lambda: settings_service.t(message_key)
-
-    def show_limit_toast(message_key: str) -> None:
-        show_toast(
-            page=ft.context.page,
-            type=ToastType.WARNING,
-            build=build_toast_message(message_key),
-        )
 
     def on_toggle_click(_: Event[Button]) -> None:
         result = motor.toggle_motors()
@@ -101,15 +115,46 @@ def MotorsView() -> ft.Control:
             build=build_toast_message(message_key),
         )
 
-    def on_increment_click(_: Event[ft.IconButton]) -> None:
-        changed = motor.increment()
-        if changed and not motor.can_increment():
-            show_limit_toast("max_speed_reached")
+    def on_plate_time_commit(value: float) -> None:
+        committed_value = float(round(value))
+        set_plate_time_draft(committed_value)
+        changed = motor.set_sec_per_plate(committed_value)
+        if not changed:
+            return
 
-    def on_decrement_click(_: Event[ft.IconButton]) -> None:
-        changed = motor.decrement()
-        if changed and not motor.can_decrement():
-            show_limit_toast("min_speed_reached")
+        if committed_value <= motor.sec_per_plate_min:
+            show_toast(
+                page=ft.context.page,
+                type=ToastType.WARNING,
+                build=build_toast_message("min_plate_time_reached"),
+            )
+            return
+
+        if committed_value >= motor.sec_per_plate_max:
+            show_toast(
+                page=ft.context.page,
+                type=ToastType.WARNING,
+                build=build_toast_message("max_plate_time_reached"),
+            )
+            return
+
+        show_toast(
+            page=ft.context.page,
+            type=ToastType.INFO,
+            build=build_toast_message("plate_time_updated"),
+        )
+
+    def on_direction_click(_: Event[ft.IconButton]) -> None:
+        motor.toggle_direction()
+        show_toast(
+            page=ft.context.page,
+            type=ToastType.WARNING if motor.is_reversed else ToastType.INFO,
+            build=build_toast_message(
+                "direction_set_reverse"
+                if motor.is_reversed
+                else "direction_set_forward"
+            ),
+        )
 
     return TangoCard(
         width=panel_width,
@@ -120,99 +165,130 @@ def MotorsView() -> ft.Control:
             tight=True,
             spacing=panel_spacing,
             controls=[
-                TangoTag(status_label, variant=status_variant),
                 ft.Column(
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=content_spacing,
                     controls=[
-                        TangoText(
-                            loc.t("speed"),
-                            variant="overline",
-                            size=speed_label_size,
-                            color=colors.TEXT_SOFT,
-                        ),
-                        ft.Container(
-                            width=speed_control_width,
-                            alignment=ft.Alignment.CENTER,
-                            content=ft.Column(
-                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                                spacing=speed_value_gap,
-                                controls=[
-                                    ft.Row(
-                                        alignment=ft.MainAxisAlignment.CENTER,
-                                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                                        spacing=step_spacing,
+                        ft.Row(
+                            alignment=ft.MainAxisAlignment.CENTER,
+                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                            spacing=value_action_gap,
+                            controls=[
+                                ft.Container(
+                                    padding=ft.Padding(
+                                        0,
+                                        value_block_padding_y,
+                                        0,
+                                        value_block_padding_y,
+                                    ),
+                                    content=ft.Row(
+                                        vertical_alignment=ft.CrossAxisAlignment.END,
+                                        spacing=value_row_gap,
                                         controls=[
-                                            TangoIconButton(
-                                                icon=ft.Icons.REMOVE,
-                                                icon_size=step_icon_size,
-                                                on_click=on_decrement_click,
-                                                tooltip=loc.t("decrement"),
-                                                variant="surface",
-                                                size=(
-                                                    "lg"
-                                                    if not metrics.is_compact
-                                                    else "md"
-                                                ),
-                                                disabled=not can_decrement,
-                                            ),
                                             ft.Container(
-                                                width=speed_value_width,
-                                                alignment=ft.Alignment.CENTER,
+                                                width=speed_number_width,
+                                                alignment=ft.Alignment.CENTER_RIGHT,
                                                 content=TangoText(
-                                                    str(motor.speed_level),
+                                                    str(
+                                                        int(
+                                                            round(preview_sec_per_plate)
+                                                        )
+                                                    ),
                                                     variant="display",
                                                     size=speed_value_size,
-                                                    text_align=ft.TextAlign.CENTER,
+                                                    text_align=ft.TextAlign.RIGHT,
                                                 ),
                                             ),
-                                            TangoIconButton(
-                                                icon=ft.Icons.ADD,
-                                                icon_size=step_icon_size,
-                                                on_click=on_increment_click,
-                                                tooltip=loc.t("increment"),
-                                                variant="primary",
-                                                size=(
-                                                    "lg"
-                                                    if not metrics.is_compact
-                                                    else "md"
-                                                ),
-                                                disabled=not can_increment,
+                                            TangoText(
+                                                loc.t("seconds_per_plate_unit"),
+                                                variant="subtitle",
+                                                size=speed_unit_size,
+                                                color=colors.TEXT_MUTED,
+                                                text_align=ft.TextAlign.CENTER,
                                             ),
                                         ],
                                     ),
-                                    TangoText(
-                                        f"{motor.speed_percent}%",
-                                        variant="subtitle",
-                                        size=speed_percent_size,
-                                        color=colors.TEXT_MUTED,
-                                        text_align=ft.TextAlign.CENTER,
+                                ),
+                                ft.Container(
+                                    margin=ft.Margin(direction_button_offset, 0, 0, 0),
+                                    content=TangoIconButton(
+                                        icon=direction_icon,
+                                        on_click=on_direction_click,
+                                        tooltip=(
+                                            loc.t("set_forward")
+                                            if motor.is_reversed
+                                            else loc.t("set_reverse")
+                                        ),
+                                        variant=direction_button_variant,
+                                        size="xl",
+                                        icon_size=reverse_icon_size,
                                     ),
-                                ],
+                                ),
+                            ],
+                        ),
+                        TangoSlider(
+                            min=motor.sec_per_plate_min,
+                            max=motor.sec_per_plate_max,
+                            divisions=int(
+                                motor.sec_per_plate_max - motor.sec_per_plate_min
                             ),
+                            label="{value}s",
+                            value=plate_time_draft,
+                            set_value=set_plate_time_draft,
+                            on_commit=on_plate_time_commit,
+                            scale=slider_scale,
                         ),
                     ],
                 ),
-                ft.Container(
-                    width=panel_width - (card_padding * 2),
-                    content=TangoButton(
-                        text=(
-                            loc.t("stop_motors")
-                            if is_running
-                            else loc.t("start_motors")
-                        ),
-                        expand=True,
-                        icon=ft.Icons.STOP if is_running else ft.Icons.PLAY_ARROW,
-                        tooltip=(
-                            loc.t("stop_motors")
-                            if is_running
-                            else loc.t("start_motors")
-                        ),
-                        on_click=on_toggle_click,
-                        size="lg" if not metrics.is_compact else "md",
-                        text_size=button_text_size,
-                        variant="surface" if is_running else "primary",
-                    ),
+                (
+                    ft.Column(
+                        spacing=action_gap,
+                        controls=[
+                            TangoButton(
+                                expand=True,
+                                icon=(
+                                    ft.Icons.STOP if is_running else ft.Icons.PLAY_ARROW
+                                ),
+                                icon_only=True,
+                                icon_size=toggle_icon_size,
+                                tooltip=(
+                                    loc.t("stop_motors")
+                                    if is_running
+                                    else loc.t("start_motors")
+                                ),
+                                on_click=on_toggle_click,
+                                size="xl",
+                                variant="surface" if is_running else "primary",
+                            ),
+                        ],
+                    )
+                    if metrics.is_compact
+                    else ft.Row(
+                        spacing=0,
+                        controls=[
+                            ft.Container(
+                                expand=True,
+                                content=TangoButton(
+                                    expand=True,
+                                    icon=(
+                                        ft.Icons.STOP
+                                        if is_running
+                                        else ft.Icons.PLAY_ARROW
+                                    ),
+                                    icon_only=True,
+                                    icon_size=toggle_icon_size,
+                                    tooltip=(
+                                        loc.t("stop_motors")
+                                        if is_running
+                                        else loc.t("start_motors")
+                                    ),
+                                    on_click=on_toggle_click,
+                                    size="xl",
+                                    variant="surface" if is_running else "primary",
+                                ),
+                            ),
+                        ],
+                    )
                 ),
             ],
         ),

@@ -5,6 +5,7 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 
 from .i18n import I18nService
+from services.motors.plate_speed import clamp_sec_per_plate
 from utils.config import config
 
 logger = logging.getLogger(__name__)
@@ -15,12 +16,20 @@ class SettingsService:
     def __init__(self, i18n_service: I18nService) -> None:
         self._i18n_service = i18n_service
         self._password_hasher = PasswordHasher()
-        self.default_speed_max = abs(config.motor_max_step_speed)
-        self.default_speed_min = -self.default_speed_max
+        self.default_sec_per_plate_min = min(
+            config.motor_min_sec_per_plate,
+            config.motor_max_sec_per_plate,
+        )
+        self.default_sec_per_plate_max = max(
+            config.motor_min_sec_per_plate,
+            config.motor_max_sec_per_plate,
+        )
         self.locale = config.locale.lower()
         self.locale_version = 0
         self.translations = self._i18n_service.translations_for(self.locale)
-        self.default_speed = self._clamp_default_speed(config.default_speed)
+        self.default_sec_per_plate = self._clamp_default_sec_per_plate(
+            config.default_sec_per_plate
+        )
         self.inactivity_timeout = config.inactivity_timeout
 
     def set_locale(self, locale: str) -> None:
@@ -45,14 +54,22 @@ class SettingsService:
         config.set("INACTIVITY_TIMEOUT", seconds)
         logger.info("Inactivity timeout changed to %ss", self.inactivity_timeout)
 
-    def set_default_speed(self, speed: int) -> None:
-        normalized_speed = self._clamp_default_speed(speed)
-        if self.default_speed == normalized_speed:
+    def set_default_sec_per_plate(self, sec_per_plate: float) -> None:
+        normalized_sec_per_plate = self._clamp_default_sec_per_plate(sec_per_plate)
+        if self.default_sec_per_plate == normalized_sec_per_plate:
             return
 
-        self.default_speed = normalized_speed
-        config.set("DEFAULT_SPEED", normalized_speed)
-        logger.info("Default speed changed to %s", self.default_speed)
+        self.default_sec_per_plate = normalized_sec_per_plate
+        persisted_value: int | float
+        if normalized_sec_per_plate.is_integer():
+            persisted_value = int(normalized_sec_per_plate)
+        else:
+            persisted_value = normalized_sec_per_plate
+        config.set("DEFAULT_SEC_PER_PLATE", persisted_value)
+        logger.info(
+            "Default seconds per plate changed to %s",
+            self.default_sec_per_plate,
+        )
 
     def update_admin_passcode(self, new_passcode: str) -> None:
         new_hash = self._password_hasher.hash(new_passcode)
@@ -81,5 +98,9 @@ class SettingsService:
             logger.exception("Admin passcode verification failed")
             return False
 
-    def _clamp_default_speed(self, speed: int) -> int:
-        return max(self.default_speed_min, min(speed, self.default_speed_max))
+    def _clamp_default_sec_per_plate(self, sec_per_plate: float) -> float:
+        return clamp_sec_per_plate(
+            sec_per_plate,
+            minimum=self.default_sec_per_plate_min,
+            maximum=self.default_sec_per_plate_max,
+        )

@@ -7,13 +7,14 @@ from theme import colors, radius
 from theme.animation import ICON_BUTTON_STYLE_MS
 
 ControlHandler = ControlEventHandler[IconButton] | None
-IconButtonVariant = Literal["primary", "secondary", "surface", "inverse"]
-IconButtonSize = Literal["sm", "md", "lg"]
+IconButtonVariant = Literal["primary", "secondary", "surface", "inverse", "warning"]
+IconButtonSize = Literal["sm", "md", "lg", "xl"]
 
 _SIZE_MAP = {
     "sm": (32, 14),
     "md": (40, 18),
     "lg": (48, 22),
+    "xl": (60, 26),
 }
 
 _VARIANT_STYLES: dict[IconButtonVariant, tuple[str, str, str]] = {
@@ -21,6 +22,7 @@ _VARIANT_STYLES: dict[IconButtonVariant, tuple[str, str, str]] = {
     "surface": (colors.SURFACE, colors.OUTLINE, colors.TEXT),
     "secondary": (colors.PRIMARY_SOFT, colors.PRIMARY_SOFT, colors.PRIMARY),
     "inverse": (colors.INVERSE_SURFACE, colors.INVERSE_OUTLINE, colors.TEXT_INVERSE),
+    "warning": (colors.WARNING_DARK, colors.WARNING_DARK, colors.TEXT_INVERSE),
 }
 
 
