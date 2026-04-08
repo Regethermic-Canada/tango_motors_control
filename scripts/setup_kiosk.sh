@@ -4,12 +4,15 @@ set -euo pipefail
 ###############################################################################
 # setup_kiosk.sh -> Configure labwc kiosk autostart for tango_motors_control
 #  - ensures required packages are installed
+#  - configures boot silence in /boot/firmware/config.txt
 #  - configures CAN overlay in /boot/firmware/config.txt
-#  - installs/enable systemd can0.service at boot
+#  - backs up and updates /boot/firmware/cmdline.txt for silent boot
+#  - installs/enables systemd can0.service at boot
 #  - writes ~/.config/labwc/rc.xml for kiosk hardening
 #  - writes ~/.config/labwc/autostart
 #  - backs up and updates Plymouth splash screen from project assets
-#  - starts app from ${APP_DIR}
+#  - masks getty@tty1.service
+#  - configures app autostart from ${APP_BIN}
 #  - switches LightDM session from rpd-labwc to labwc
 ###############################################################################
 
@@ -21,8 +24,18 @@ PROJECT_DIR_NAME="$(basename "$(dirname "${SCRIPT_DIR}")")"
 readonly PROJECT_DIR_NAME
 readonly APP_DIR="${HOME_DIR}/${PROJECT_DIR_NAME}"
 readonly BOOT_CONFIG="/boot/firmware/config.txt"
+readonly BOOT_CMDLINE="/boot/firmware/cmdline.txt"
+readonly DISABLE_SPLASH_LINE="disable_splash=1"
 readonly CAN_SPI_LINE="dtparam=spi=on"
 readonly CAN_OVERLAY_LINE="dtoverlay=mcp2515-can0,oscillator=12000000,interrupt=25,spimaxfrequency=2000000"
+readonly CMDLINE_BACKUP="/boot/firmware/cmdline.txt.back"
+readonly CMDLINE_APPEND=(
+	"quiet"
+	"loglevel=0"
+	"logo.nologo"
+	"vt.global_cursor_default=0"
+	"systemd.show_status=false"
+)
 readonly UNIT_DIR="/etc/systemd/system"
 readonly CAN_SERVICE_NAME="can0.service"
 readonly SPLASH_SRC="${APP_DIR}/src/assets/regethermic_screensaver.png"
@@ -63,17 +76,27 @@ fi
 
 echo
 
-# TODO:
-# Automate :
-# 1) make the boot silent
-
-# 1) Configure CAN overlay in /boot/firmware/config.txt
-echo "Configuring CAN overlay in ${BOOT_CONFIG}..."
+# 1) Configure boot silence in /boot/firmware/config.txt
+echo "Configuring boot silence in ${BOOT_CONFIG}..."
 if [[ ! -f "${BOOT_CONFIG}" ]]; then
 	echo "ERROR: Missing boot config file: ${BOOT_CONFIG}"
 	exit 1
 fi
+boot_config_changed=0
+if ! sudo grep -Fxq "${DISABLE_SPLASH_LINE}" "${BOOT_CONFIG}"; then
+	echo "${DISABLE_SPLASH_LINE}" | sudo tee -a "${BOOT_CONFIG}" >/dev/null
+	boot_config_changed=1
+fi
+if [[ "${boot_config_changed}" -eq 1 ]]; then
+	echo "Boot silence entry added to ${BOOT_CONFIG}."
+else
+	echo "Boot silence entry already present in ${BOOT_CONFIG}."
+fi
 
+echo
+
+# 2) Configure CAN overlay in /boot/firmware/config.txt
+echo "Configuring CAN overlay in ${BOOT_CONFIG}..."
 boot_config_changed=0
 if ! sudo grep -Fxq "${CAN_SPI_LINE}" "${BOOT_CONFIG}"; then
 	echo "${CAN_SPI_LINE}" | sudo tee -a "${BOOT_CONFIG}" >/dev/null
@@ -92,7 +115,43 @@ fi
 
 echo
 
-# 2) Install systemd can0.service
+# 3) Configure silent kernel/systemd boot in /boot/firmware/cmdline.txt
+echo "Configuring silent boot kernel arguments in ${BOOT_CMDLINE}..."
+if [[ ! -f "${BOOT_CMDLINE}" ]]; then
+	echo "ERROR: Missing boot cmdline file: ${BOOT_CMDLINE}"
+	exit 1
+fi
+if [[ ! -f "${CMDLINE_BACKUP}" ]]; then
+	echo "Creating cmdline backup..."
+	sudo cp "${BOOT_CMDLINE}" "${CMDLINE_BACKUP}"
+else
+	echo "Cmdline backup already exists: ${CMDLINE_BACKUP}"
+fi
+
+current_cmdline="$(sudo cat "${BOOT_CMDLINE}")"
+updated_cmdline="${current_cmdline}"
+updated_cmdline="${updated_cmdline// console=tty1 / }"
+updated_cmdline="${updated_cmdline#console=tty1 }"
+updated_cmdline="${updated_cmdline% console=tty1}"
+updated_cmdline="${updated_cmdline// console=tty1/}"
+
+for arg in "${CMDLINE_APPEND[@]}"; do
+	if [[ " ${updated_cmdline} " != *" ${arg} "* ]]; then
+		updated_cmdline+=" ${arg}"
+	fi
+done
+
+updated_cmdline="$(printf '%s\n' "${updated_cmdline}" | awk '{$1=$1; print}')"
+if [[ "${updated_cmdline}" != "${current_cmdline}" ]]; then
+	printf '%s\n' "${updated_cmdline}" | sudo tee "${BOOT_CMDLINE}" >/dev/null
+	echo "Updated ${BOOT_CMDLINE}."
+else
+	echo "Silent boot arguments already present in ${BOOT_CMDLINE}."
+fi
+
+echo
+
+# 4) Install systemd can0.service
 echo "Writing ${UNIT_DIR}/${CAN_SERVICE_NAME}..."
 sudo tee "${UNIT_DIR}/${CAN_SERVICE_NAME}" >/dev/null <<'EOF'
 [Unit]
@@ -122,7 +181,7 @@ ip -details link show can0 || true
 
 echo
 
-# 3) Backup and update Plymouth splash screen
+# 5) Backup and update Plymouth splash screen
 echo "Updating Plymouth splash screen..."
 if [[ ! -f "${SPLASH_SRC}" ]]; then
 	echo "ERROR: Splash source not found: ${SPLASH_SRC}"
@@ -143,13 +202,13 @@ sudo update-initramfs -u
 
 echo
 
-# 4) Prepare labwc config directory
+# 6) Prepare labwc config directory
 echo "Preparing labwc config directory..."
 mkdir -p "${LABWC_DIR}"
 
 echo
 
-# 5) Write labwc rc.xml (disable desktop context menu + define hide-cursor bind)
+# 7) Write labwc rc.xml (disable desktop context menu + define hide-cursor bind)
 echo "Writing labwc kiosk rc.xml..."
 cat >"${RC_FILE}" <<'EOF'
 <?xml version="1.0"?>
@@ -186,7 +245,7 @@ EOF
 
 echo
 
-# 6) Write labwc autostart script
+# 8) Write labwc autostart script
 echo "Writing kiosk autostart..."
 cat >"${AUTOSTART_FILE}" <<EOF
 #!/usr/bin/env bash
@@ -210,20 +269,34 @@ chmod +x "${AUTOSTART_FILE}"
 
 echo
 
-# 7) Switch LightDM session from rpd-labwc -> labwc
+# 9) Mask tty1 getty to suppress the local text login prompt
+echo "Masking getty@tty1.service..."
+sudo systemctl mask getty@tty1.service
+
+echo
+
+# 10) Switch LightDM session from rpd-labwc -> labwc
 echo "Updating LightDM session (rpd-labwc -> labwc)..."
 sudo sed -i 's/\<rpd-labwc\>/labwc/g' "${LIGHTDM_CONF}"
 
-# 8) Final summary
+# 11) Final summary
 echo
 echo "Required media packages checked:"
 echo "  - libmpv2"
 echo "  - wtype"
 echo
+echo "Boot silence configured in:"
+echo "  ${BOOT_CONFIG}"
+echo "  - ${DISABLE_SPLASH_LINE}"
+echo
 echo "CAN overlay configured in:"
 echo "  ${BOOT_CONFIG}"
 echo "  - ${CAN_SPI_LINE}"
 echo "  - ${CAN_OVERLAY_LINE}"
+echo
+echo "Boot cmdline updated:"
+echo "  ${BOOT_CMDLINE}"
+echo "  (backup: ${CMDLINE_BACKUP})"
 echo
 echo "CAN boot service written/enabled:"
 echo "  ${UNIT_DIR}/${CAN_SERVICE_NAME}"
@@ -239,6 +312,9 @@ echo "  ${RC_FILE}"
 echo
 echo "Kiosk autostart written:"
 echo "  ${AUTOSTART_FILE}"
+echo
+echo "tty1 getty masked:"
+echo "  getty@tty1.service"
 echo
 echo "App executable:"
 echo "  ${APP_BIN}"

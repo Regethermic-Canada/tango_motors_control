@@ -3,19 +3,24 @@ set -euo pipefail
 
 ###############################################################################
 # kill_kiosk.sh -> Revert labwc kiosk autostart for tango_motors_control
-#  - removes CAN overlay lines from /boot/firmware/config.txt
+#  - removes boot silence and CAN overlay lines from /boot/firmware/config.txt
+#  - restores /boot/firmware/cmdline.txt from backup
 #  - disables/removes systemd can0.service
 #  - restores Plymouth splash screen from backup
 #  - removes ~/.config/labwc/rc.xml
 #  - removes ~/.config/labwc/autostart
+#  - unmasks getty@tty1.service
 #  - switches LightDM session from labwc to rpd-labwc
 ###############################################################################
 
 # Configuration
 readonly HOME_DIR="${HOME}"
 readonly BOOT_CONFIG="/boot/firmware/config.txt"
+readonly BOOT_CMDLINE="/boot/firmware/cmdline.txt"
+readonly DISABLE_SPLASH_LINE="disable_splash=1"
 readonly CAN_SPI_LINE="dtparam=spi=on"
 readonly CAN_OVERLAY_LINE="dtoverlay=mcp2515-can0,oscillator=12000000,interrupt=25,spimaxfrequency=2000000"
+readonly CMDLINE_BACKUP="/boot/firmware/cmdline.txt.back"
 readonly UNIT_DIR="/etc/systemd/system"
 readonly CAN_SERVICE_NAME="can0.service"
 readonly PLYMOUTH_SPLASH_DST="/usr/share/plymouth/themes/pix/splash.png"
@@ -28,8 +33,8 @@ readonly LIGHTDM_CONF="/etc/lightdm/lightdm.conf"
 echo
 echo "Reverting kiosk setup for tango_motors_control..."
 
-# 0) Remove CAN overlay entries from boot config
-echo "Removing CAN overlay entries from ${BOOT_CONFIG}..."
+# 0) Remove boot silence and CAN overlay entries from /boot/firmware/config.txt
+echo "Removing boot silence and CAN overlay entries from ${BOOT_CONFIG}..."
 if [[ ! -f "${BOOT_CONFIG}" ]]; then
 	echo "ERROR: Missing boot config file: ${BOOT_CONFIG}"
 	exit 1
@@ -44,16 +49,32 @@ if sudo grep -Fxq "${CAN_OVERLAY_LINE}" "${BOOT_CONFIG}"; then
 	sudo sed -i "\|^${CAN_OVERLAY_LINE}$|d" "${BOOT_CONFIG}"
 	boot_config_changed=1
 fi
+if sudo grep -Fxq "${DISABLE_SPLASH_LINE}" "${BOOT_CONFIG}"; then
+	sudo sed -i "\|^${DISABLE_SPLASH_LINE}$|d" "${BOOT_CONFIG}"
+	boot_config_changed=1
+fi
 
 if [[ "${boot_config_changed}" -eq 1 ]]; then
-	echo "CAN overlay entries removed from ${BOOT_CONFIG}."
+	echo "Boot config entries removed from ${BOOT_CONFIG}."
 else
-	echo "CAN overlay entries already absent in ${BOOT_CONFIG}."
+	echo "Boot config entries already absent in ${BOOT_CONFIG}."
 fi
 
 echo
 
-# 1) Disable/remove CAN boot service
+# 1) Restore boot cmdline from backup
+echo "Restoring ${BOOT_CMDLINE} from backup..."
+if [[ -f "${CMDLINE_BACKUP}" ]]; then
+	sudo cp "${CMDLINE_BACKUP}" "${BOOT_CMDLINE}"
+	sudo rm -f "${CMDLINE_BACKUP}"
+	echo "Restored: ${BOOT_CMDLINE}"
+else
+	echo "Cmdline backup not found, skipping restore: ${CMDLINE_BACKUP}"
+fi
+
+echo
+
+# 2) Disable/remove CAN boot service
 echo "Stopping and Disabling ${CAN_SERVICE_NAME}..."
 sudo systemctl stop "${CAN_SERVICE_NAME}" >/dev/null 2>&1 || true
 sudo systemctl disable "${CAN_SERVICE_NAME}" >/dev/null 2>&1 || true
@@ -71,7 +92,7 @@ sudo systemctl daemon-reload
 
 echo
 
-# 2) Restore Plymouth splash screen from backup
+# 3) Restore Plymouth splash screen from backup
 echo "Restoring Plymouth splash screen from backup..."
 if [[ -f "${PLYMOUTH_SPLASH_BACKUP}" ]]; then
 	sudo cp "${PLYMOUTH_SPLASH_BACKUP}" "${PLYMOUTH_SPLASH_DST}"
@@ -83,7 +104,7 @@ fi
 
 echo
 
-# 3) Remove labwc kiosk rc.xml
+# 4) Remove labwc kiosk rc.xml
 echo "Removing kiosk rc.xml..."
 if [[ -f "${RC_FILE}" ]]; then
 	rm -f "${RC_FILE}"
@@ -94,7 +115,7 @@ fi
 
 echo
 
-# 4) Remove labwc autostart script
+# 5) Remove labwc autostart script
 echo "Removing kiosk autostart..."
 if [[ -f "${AUTOSTART_FILE}" ]]; then
 	rm -f "${AUTOSTART_FILE}"
@@ -105,14 +126,27 @@ fi
 
 echo
 
-# 5) Switch LightDM session from labwc -> rpd-labwc
+# 6) Unmask tty1 getty
+echo "Unmasking getty@tty1.service..."
+sudo systemctl unmask getty@tty1.service >/dev/null 2>&1 || true
+
+echo
+
+# 7) Switch LightDM session from labwc -> rpd-labwc
 echo "Updating LightDM session (labwc -> rpd-labwc)..."
 sudo sed -i 's/\<labwc\>/rpd-labwc/g' "${LIGHTDM_CONF}"
 
-# 6) Final summary
+# 8) Final summary
 echo
-echo "CAN overlay removed from:"
+echo "Boot silence and CAN overlay removed from:"
 echo "  ${BOOT_CONFIG}"
+echo "  - ${DISABLE_SPLASH_LINE}"
+echo "  - ${CAN_SPI_LINE}"
+echo "  - ${CAN_OVERLAY_LINE}"
+echo
+echo "Boot cmdline restored (if backup exists):"
+echo "  ${BOOT_CMDLINE}"
+echo "  (backup: ${CMDLINE_BACKUP})"
 echo
 echo "CAN boot service removed (if present):"
 echo "  ${UNIT_DIR}/${CAN_SERVICE_NAME}"
@@ -126,6 +160,9 @@ echo "  ${RC_FILE}"
 echo
 echo "Kiosk autostart removed (if present):"
 echo "  ${AUTOSTART_FILE}"
+echo
+echo "tty1 getty unmasked:"
+echo "  getty@tty1.service"
 echo
 echo "LightDM session updated in:"
 echo "  ${LIGHTDM_CONF}"
