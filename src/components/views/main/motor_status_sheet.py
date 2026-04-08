@@ -241,16 +241,13 @@ def MotorStatusSheet(*, statuses: list[MotorStatusSnapshot]) -> ft.Control:
 
     return ft.Container(
         expand=True,
-        alignment=ft.Alignment.TOP_CENTER,
+        alignment=ft.Alignment.CENTER,
         padding=ft.Padding(
             content_padding, content_padding, content_padding, content_padding
         ),
-        content=ft.Container(
-            width=content_width,
-            content=ft.Column(
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=card_gap,
-                controls=rows,
-            ),
+        content=ft.Column(
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=card_gap,
+            controls=rows,
         ),
     )

@@ -251,14 +251,16 @@ def _build_sheet_body_shell(
         )
 
     return (
-        ft.Container(
+        ft.Column(
             expand=True,
             alignment=(
-                ft.Alignment.CENTER
+                ft.MainAxisAlignment.CENTER
                 if body_align == "center"
-                else ft.Alignment.TOP_CENTER
+                else ft.MainAxisAlignment.START
             ),
-            content=body_content_slot,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            controls=[body_content_slot],
+            spacing=0,
         ),
         body_content_slot,
     )

@@ -227,7 +227,7 @@ def AdminView() -> ft.Control:
         active_sheet_title = loc.t("motor_status_sheet_title")
         active_sheet_content = MotorStatusSheet(statuses=motor_status_snapshots)
         active_sheet_scrollable = True
-        active_sheet_body_align = "top"
+        active_sheet_body_align = "center"
         active_sheet_on_dismiss = close_motor_status_sheet
 
     sheet_action_buttons: ft.Control = ft.Row(
