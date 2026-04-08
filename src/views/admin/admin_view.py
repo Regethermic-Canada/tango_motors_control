@@ -252,59 +252,54 @@ def AdminView() -> ft.Control:
         padding=ft.Padding(outer_pad, outer_pad, outer_pad, outer_pad),
         alignment=ft.Alignment.CENTER,
         content=ft.Column(
-            expand=True,
             spacing=0,
+            alignment=ft.MainAxisAlignment.CENTER,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
                 ft.Container(
-                    expand=True,
                     alignment=ft.Alignment.CENTER,
-                    content=ft.Container(
+                    content=TangoCard(
                         width=card_width,
-                        expand=True,
-                        content=TangoCard(
-                            expand=True,
-                            scrollable=True,
-                            padding=ft.Padding(
-                                card_padding,
-                                card_padding,
-                                card_padding,
-                                card_padding,
-                            ),
-                            content=ft.Column(
-                                spacing=block_spacing,
-                                controls=[
-                                    timeout_header,
-                                    TangoSlider(
-                                        min=10,
-                                        max=150,
-                                        divisions=14,
-                                        label="{value}s",
-                                        value=inactivity_timeout_draft,
-                                        set_value=set_inactivity_timeout_draft,
-                                        on_commit=on_timeout_commit,
-                                        scale=slider_scale,
+                        padding=ft.Padding(
+                            card_padding,
+                            card_padding,
+                            card_padding,
+                            card_padding,
+                        ),
+                        content=ft.Column(
+                            spacing=block_spacing,
+                            controls=[
+                                timeout_header,
+                                TangoSlider(
+                                    min=10,
+                                    max=150,
+                                    divisions=14,
+                                    label="{value}s",
+                                    value=inactivity_timeout_draft,
+                                    set_value=set_inactivity_timeout_draft,
+                                    on_commit=on_timeout_commit,
+                                    scale=slider_scale,
+                                ),
+                                ft.Divider(height=section_spacing),
+                                default_plate_time_header,
+                                TangoSlider(
+                                    min=settings_service.default_sec_per_plate_min,
+                                    max=settings_service.default_sec_per_plate_max,
+                                    divisions=int(
+                                        settings_service.default_sec_per_plate_max
+                                        - settings_service.default_sec_per_plate_min
                                     ),
-                                    ft.Divider(height=section_spacing),
-                                    default_plate_time_header,
-                                    TangoSlider(
-                                        min=settings_service.default_sec_per_plate_min,
-                                        max=settings_service.default_sec_per_plate_max,
-                                        divisions=int(
-                                            settings_service.default_sec_per_plate_max
-                                            - settings_service.default_sec_per_plate_min
-                                        ),
-                                        label="{value}s",
-                                        value=default_plate_time_draft,
-                                        set_value=set_default_plate_time_draft,
-                                        on_commit=on_default_plate_time_commit,
-                                        scale=slider_scale,
-                                    ),
-                                    ft.Divider(height=section_spacing),
-                                    admin_passcode_label,
-                                    admin_passcode_description,
-                                    sheet_action_buttons,
-                                ],
-                            ),
+                                    label="{value}s",
+                                    value=default_plate_time_draft,
+                                    set_value=set_default_plate_time_draft,
+                                    on_commit=on_default_plate_time_commit,
+                                    scale=slider_scale,
+                                ),
+                                ft.Divider(height=section_spacing),
+                                admin_passcode_label,
+                                admin_passcode_description,
+                                sheet_action_buttons,
+                            ],
                         ),
                     ),
                 ),
