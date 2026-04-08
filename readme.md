@@ -44,23 +44,23 @@ MOTOR_DIRECTIONS=1,-1
 MOTOR_COMMAND_HZ=2
 MOTOR_RAMP_TIME_S=0.5
 MOTOR_HOLD_RELEASE_TIMEOUT_S=5.0
-MOTOR_PLATE_SIZE_CM=53
-MOTOR_MIN_SEC_PER_PLATE=15
-MOTOR_MAX_SEC_PER_PLATE=40
-DEFAULT_SEC_PER_PLATE=15
+MOTOR_TRAY_SIZE_CM=53
+MOTOR_MIN_SEC_PER_TRAY=15
+MOTOR_MAX_SEC_PER_TRAY=40
+DEFAULT_SEC_PER_TRAY=15
 ```
 
 `MOTOR_RAMP_TIME_S` is the time used to slew from `0 rad/s` to the fastest configured
-plate-time target. Internally the app converts `seconds/plate` into target `rad/s`.
+tray-time target. Internally the app converts `seconds/tray` into target `rad/s`.
 Start, stop, and live speed changes use the same ramp so the motors do not step abruptly.
 `MOTOR_HOLD_RELEASE_TIMEOUT_S` controls how long stop holds `0 rad/s` before auto-release.
 
 `MOTOR_IDS` and `MOTOR_DIRECTIONS` must have the same number of entries.
 Example: `MOTOR_IDS=1,2,3,4` with `MOTOR_DIRECTIONS=1,-1,1,-1`.
 
-In UI, plate time is configurable with `MOTOR_MIN_SEC_PER_PLATE..MOTOR_MAX_SEC_PER_PLATE`.
-The control is always non-negative. `Start Motors` / `Stop Motors` handles run state, and
-direction is toggled separately with the reverse control.
+In UI, tray speed is configurable with `MOTOR_MIN_SEC_PER_TRAY..MOTOR_MAX_SEC_PER_TRAY`.
+The slider stays in `seconds/tray`, and the UI also shows the derived `trays/minute`
+indicator underneath. `Start Motors` / `Stop Motors` handles run state.
 
 For complete motor/CAN setup (hardware wiring, CAN interface bring-up, usage and safety flow),
 follow the CubeMars library repository documentation:

@@ -47,7 +47,7 @@ class Config:
 
     # User Preferences
     locale: str
-    default_sec_per_plate: float
+    default_sec_per_tray: float
     admin_passcode_hash: str
 
     # Assets
@@ -67,9 +67,9 @@ class Config:
     motor_command_hz: float
     motor_ramp_time_s: float
     motor_hold_release_timeout_s: float
-    motor_plate_size_cm: float
-    motor_min_sec_per_plate: float
-    motor_max_sec_per_plate: float
+    motor_tray_size_cm: float
+    motor_min_sec_per_tray: float
+    motor_max_sec_per_tray: float
     motor_max_temp_c: float
 
     _storage_path: Path
@@ -82,7 +82,7 @@ class Config:
         is_frozen = getattr(sys, "frozen", False)
 
         if is_frozen:
-            # Bundle directory (contains assets and templates)
+            # Bundle directory (contains assets and bundled config files)
             bundle_dir = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
 
             if sys.platform.startswith("linux"):
@@ -97,7 +97,7 @@ class Config:
 
             if not storage_path.exists():
                 storage_path.parent.mkdir(parents=True, exist_ok=True)
-                # Try to find a pre-configured 'data' or the 'data.template' in the bundle
+                # Try to find a pre-configured 'data' or the bundled template.
                 for source_name in ["data", "data.template"]:
                     source_path = bundle_dir / "storage" / source_name
                     if source_path.exists():
@@ -125,7 +125,7 @@ class Config:
             app_screen_width=max(320, int(get_env("APP_SCREEN_WIDTH", "800"))),
             app_screen_height=max(240, int(get_env("APP_SCREEN_HEIGHT", "480"))),
             locale=get_env("LOCALE", "fr").lower(),
-            default_sec_per_plate=float(get_env("DEFAULT_SEC_PER_PLATE", "15")),
+            default_sec_per_tray=float(get_env("DEFAULT_SEC_PER_TRAY", "15")),
             admin_passcode_hash=get_env("ADMIN_PASSCODE_HASH", ""),
             asset_logo=get_env("ASSET_LOGO", "tango_logo.png"),
             asset_screensaver=get_env(
@@ -143,9 +143,9 @@ class Config:
             motor_hold_release_timeout_s=max(
                 0.0, float(get_env("MOTOR_HOLD_RELEASE_TIMEOUT_S", "5.0"))
             ),
-            motor_plate_size_cm=max(0.1, float(get_env("MOTOR_PLATE_SIZE_CM", "53"))),
-            motor_min_sec_per_plate=float(get_env("MOTOR_MIN_SEC_PER_PLATE", "15")),
-            motor_max_sec_per_plate=float(get_env("MOTOR_MAX_SEC_PER_PLATE", "40")),
+            motor_tray_size_cm=max(0.1, float(get_env("MOTOR_TRAY_SIZE_CM", "53"))),
+            motor_min_sec_per_tray=float(get_env("MOTOR_MIN_SEC_PER_TRAY", "15")),
+            motor_max_sec_per_tray=float(get_env("MOTOR_MAX_SEC_PER_TRAY", "40")),
             motor_max_temp_c=float(get_env("MOTOR_MAX_TEMP_C", "70.0")),
         )
 

@@ -1,8 +1,9 @@
 from collections.abc import Callable
+from typing import Literal
+
 import flet as ft
 from flet.controls.control_event import Event
 from flet.controls.material.button import Button
-from typing import Literal
 from components.views.admin.admin_passcode_sheet import AdminPasscodeSheet
 from components.views.main.motor_status_sheet import MotorStatusSheet
 from components.ui.card import TangoCard
@@ -15,6 +16,7 @@ from components.ui.button import TangoButton
 from contexts.motor import MotorContext
 from contexts.settings import SettingsContext
 from contexts.locale import LocaleContext
+from services.motors.tray_speed import sec_per_tray_to_trays_per_minute
 from theme import colors, spacing
 from theme.scale import ViewportArea, get_viewport_metrics, resolve_panel_width
 
@@ -29,8 +31,8 @@ def AdminView() -> ft.Control:
     inactivity_timeout_draft, set_inactivity_timeout_draft = ft.use_state(
         float(settings_service.inactivity_timeout)
     )
-    default_plate_time_draft, set_default_plate_time_draft = ft.use_state(
-        float(settings_service.default_sec_per_plate)
+    default_tray_time_draft, set_default_tray_time_draft = ft.use_state(
+        float(settings_service.default_sec_per_tray)
     )
     new_passcode, set_new_passcode = ft.use_state("")
     confirm_passcode, set_confirm_passcode = ft.use_state("")
@@ -85,6 +87,18 @@ def AdminView() -> ft.Control:
     motor_status_snapshots = (
         motor.get_status_snapshots() if active_sheet == "motor_status" else []
     )
+    default_tray_rate = sec_per_tray_to_trays_per_minute(default_tray_time_draft)
+    default_control_min = settings_service.default_sec_per_tray_min
+    default_control_max = settings_service.default_sec_per_tray_max
+    default_control_divisions = max(
+        1,
+        int(
+            round(
+                settings_service.default_sec_per_tray_max
+                - settings_service.default_sec_per_tray_min
+            )
+        ),
+    )
 
     def sync_motor_status_refresh() -> None:
         motor.set_status_refresh_enabled(active_sheet == "motor_status")
@@ -94,13 +108,13 @@ def AdminView() -> ft.Control:
 
     def sync_slider_drafts() -> None:
         set_inactivity_timeout_draft(float(settings_service.inactivity_timeout))
-        set_default_plate_time_draft(float(settings_service.default_sec_per_plate))
+        set_default_tray_time_draft(float(settings_service.default_sec_per_tray))
 
     ft.use_effect(
         sync_slider_drafts,
         [
             settings_service.inactivity_timeout,
-            settings_service.default_sec_per_plate,
+            settings_service.default_sec_per_tray,
         ],
     )
 
@@ -119,13 +133,24 @@ def AdminView() -> ft.Control:
         settings_service.set_inactivity_timeout(committed_value)
         show_settings_toast("inactivity_timeout_updated")
 
-    def on_default_plate_time_commit(value: float) -> None:
-        committed_value = float(round(value))
-        set_default_plate_time_draft(committed_value)
-        if settings_service.default_sec_per_plate == committed_value:
+    def on_default_tray_time_commit(value: float) -> None:
+        committed_value = max(
+            settings_service.default_sec_per_tray_min,
+            min(float(value), settings_service.default_sec_per_tray_max),
+        )
+        set_default_tray_time_draft(committed_value)
+        if settings_service.default_sec_per_tray == committed_value:
             return
-        settings_service.set_default_sec_per_plate(committed_value)
-        show_settings_toast("default_plate_time_updated")
+        settings_service.set_default_sec_per_tray(committed_value)
+        show_settings_toast("default_tray_time_updated")
+
+    def on_default_control_value_change(value: float) -> None:
+        set_default_tray_time_draft(
+            max(
+                settings_service.default_sec_per_tray_min,
+                min(float(value), settings_service.default_sec_per_tray_max),
+            )
+        )
 
     timeout_label = TangoText(
         loc.t("inactivity_timeout"),
@@ -138,13 +163,13 @@ def AdminView() -> ft.Control:
         size=value_size,
         color=colors.TEXT_MUTED,
     )
-    default_plate_time_label = TangoText(
-        loc.t("default_plate_time"),
+    default_tray_time_label = TangoText(
+        loc.t("default_tray_time"),
         variant="subtitle",
         size=section_title_size,
     )
-    default_plate_time_value = TangoText(
-        f"{int(round(default_plate_time_draft))} {loc.t('seconds_per_plate_unit')}",
+    default_tray_time_value = TangoText(
+        f"{int(round(default_tray_time_draft))} {loc.t('seconds_per_tray_unit')}",
         variant="caption",
         size=value_size,
         color=colors.TEXT_MUTED,
@@ -174,17 +199,17 @@ def AdminView() -> ft.Control:
             controls=[timeout_label, timeout_value],
         )
 
-    default_plate_time_header: ft.Control
+    default_tray_time_header: ft.Control
     if metrics.is_compact:
-        default_plate_time_header = ft.Column(
+        default_tray_time_header = ft.Column(
             spacing=slider_value_gap,
             horizontal_alignment=ft.CrossAxisAlignment.START,
-            controls=[default_plate_time_label, default_plate_time_value],
+            controls=[default_tray_time_label, default_tray_time_value],
         )
     else:
-        default_plate_time_header = ft.Row(
+        default_tray_time_header = ft.Row(
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-            controls=[default_plate_time_label, default_plate_time_value],
+            controls=[default_tray_time_label, default_tray_time_value],
         )
 
     def reset_passcode_sheet_state() -> None:
@@ -236,8 +261,8 @@ def AdminView() -> ft.Control:
         active_sheet_title = loc.t("motor_status_sheet_title")
         active_sheet_content = MotorStatusSheet(
             statuses=motor_status_snapshots,
-            target_sec_per_plate=motor.sec_per_plate,
-            target_plates_per_second=motor.plates_per_second,
+            target_sec_per_tray=motor.sec_per_tray,
+            target_trays_per_minute=motor.trays_per_minute,
         )
         active_sheet_scrollable = True
         active_sheet_body_align = "center"
@@ -308,18 +333,27 @@ def AdminView() -> ft.Control:
                                     scale=slider_scale,
                                 ),
                                 ft.Divider(height=section_spacing),
-                                default_plate_time_header,
+                                default_tray_time_header,
+                                ft.Row(
+                                    alignment=ft.MainAxisAlignment.CENTER,
+                                    controls=[
+                                        TangoText(
+                                            f"{default_tray_rate:.1f} {loc.t('trays_per_minute_unit')}",
+                                            variant="caption",
+                                            size=value_size,
+                                            color=colors.TEXT_MUTED,
+                                            text_align=ft.TextAlign.CENTER,
+                                        ),
+                                    ],
+                                ),
                                 TangoSlider(
-                                    min=settings_service.default_sec_per_plate_min,
-                                    max=settings_service.default_sec_per_plate_max,
-                                    divisions=int(
-                                        settings_service.default_sec_per_plate_max
-                                        - settings_service.default_sec_per_plate_min
-                                    ),
-                                    label="{value}s",
-                                    value=default_plate_time_draft,
-                                    set_value=set_default_plate_time_draft,
-                                    on_commit=on_default_plate_time_commit,
+                                    min=default_control_min,
+                                    max=default_control_max,
+                                    divisions=default_control_divisions,
+                                    label="{value}",
+                                    value=default_tray_time_draft,
+                                    set_value=on_default_control_value_change,
+                                    on_commit=on_default_tray_time_commit,
                                     scale=slider_scale,
                                 ),
                                 ft.Divider(height=section_spacing),

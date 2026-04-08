@@ -9,8 +9,8 @@ from threading import Event, RLock, Thread
 
 from cubemars_servo_can import CubeMarsServoCAN
 
-from .plate_speed import sec_per_plate_to_velocity_rad_s
 from .speed_ramp import SpeedRamp
+from .tray_speed import sec_per_tray_to_velocity_rad_s
 from utils.config import Config
 
 logger = logging.getLogger(__name__)
@@ -54,12 +54,12 @@ class MotorServiceConfig:
             command_hz=max(1.0, app_config.motor_command_hz),
             ramp_time_s=max(0.0, app_config.motor_ramp_time_s),
             hold_release_timeout_s=max(0.0, app_config.motor_hold_release_timeout_s),
-            max_target_velocity_rad_s=sec_per_plate_to_velocity_rad_s(
+            max_target_velocity_rad_s=sec_per_tray_to_velocity_rad_s(
                 min(
-                    app_config.motor_min_sec_per_plate,
-                    app_config.motor_max_sec_per_plate,
+                    app_config.motor_min_sec_per_tray,
+                    app_config.motor_max_sec_per_tray,
                 ),
-                plate_size_cm=app_config.motor_plate_size_cm,
+                tray_size_cm=app_config.motor_tray_size_cm,
             ),
             max_mosfet_temp_c=app_config.motor_max_temp_c,
         )

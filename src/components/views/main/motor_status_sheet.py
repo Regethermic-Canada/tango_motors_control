@@ -84,8 +84,8 @@ def _chunk_controls(
 def MotorStatusSheet(
     *,
     statuses: list[MotorStatusSnapshot],
-    target_sec_per_plate: float,
-    target_plates_per_second: float,
+    target_sec_per_tray: float,
+    target_trays_per_minute: float,
 ) -> ft.Control:
     loc = ft.use_context(LocaleContext)
     metrics = get_viewport_metrics(
@@ -187,10 +187,10 @@ def MotorStatusSheet(
                                         value_min_width=value_min_width,
                                     ),
                                     _build_metric_row(
-                                        label=loc.t("motor_plate_time"),
+                                        label=loc.t("motor_tray_time"),
                                         value=_format_metric(
-                                            target_sec_per_plate,
-                                            suffix=loc.t("seconds_per_plate_unit"),
+                                            target_sec_per_tray,
+                                            suffix=loc.t("seconds_per_tray_unit"),
                                             fallback=unavailable_value,
                                         ),
                                         label_size=caption_size,
@@ -198,12 +198,12 @@ def MotorStatusSheet(
                                         value_min_width=value_min_width,
                                     ),
                                     _build_metric_row(
-                                        label=loc.t("motor_plate_rate"),
+                                        label=loc.t("motor_tray_rate"),
                                         value=_format_metric(
-                                            target_plates_per_second,
-                                            suffix=loc.t("plates_per_second_unit"),
+                                            target_trays_per_minute,
+                                            suffix=loc.t("trays_per_minute_unit"),
                                             fallback=unavailable_value,
-                                            precision=3,
+                                            precision=1,
                                         ),
                                         label_size=caption_size,
                                         value_size=value_size,

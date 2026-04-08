@@ -4,9 +4,9 @@ import flet as ft
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 
-from .i18n import I18nService
-from services.motors.plate_speed import clamp_sec_per_plate
+from services.motors.tray_speed import clamp_sec_per_tray
 from utils.config import config
+from .i18n import I18nService
 
 logger = logging.getLogger(__name__)
 
@@ -16,19 +16,19 @@ class SettingsService:
     def __init__(self, i18n_service: I18nService) -> None:
         self._i18n_service = i18n_service
         self._password_hasher = PasswordHasher()
-        self.default_sec_per_plate_min = min(
-            config.motor_min_sec_per_plate,
-            config.motor_max_sec_per_plate,
+        self.default_sec_per_tray_min = min(
+            config.motor_min_sec_per_tray,
+            config.motor_max_sec_per_tray,
         )
-        self.default_sec_per_plate_max = max(
-            config.motor_min_sec_per_plate,
-            config.motor_max_sec_per_plate,
+        self.default_sec_per_tray_max = max(
+            config.motor_min_sec_per_tray,
+            config.motor_max_sec_per_tray,
         )
         self.locale = config.locale.lower()
         self.locale_version = 0
         self.translations = self._i18n_service.translations_for(self.locale)
-        self.default_sec_per_plate = self._clamp_default_sec_per_plate(
-            config.default_sec_per_plate
+        self.default_sec_per_tray = self._clamp_default_sec_per_tray(
+            config.default_sec_per_tray
         )
         self.inactivity_timeout = config.inactivity_timeout
 
@@ -54,21 +54,21 @@ class SettingsService:
         config.set("INACTIVITY_TIMEOUT", seconds)
         logger.info("Inactivity timeout changed to %ss", self.inactivity_timeout)
 
-    def set_default_sec_per_plate(self, sec_per_plate: float) -> None:
-        normalized_sec_per_plate = self._clamp_default_sec_per_plate(sec_per_plate)
-        if self.default_sec_per_plate == normalized_sec_per_plate:
+    def set_default_sec_per_tray(self, sec_per_tray: float) -> None:
+        normalized_sec_per_tray = self._clamp_default_sec_per_tray(sec_per_tray)
+        if self.default_sec_per_tray == normalized_sec_per_tray:
             return
 
-        self.default_sec_per_plate = normalized_sec_per_plate
+        self.default_sec_per_tray = normalized_sec_per_tray
         persisted_value: int | float
-        if normalized_sec_per_plate.is_integer():
-            persisted_value = int(normalized_sec_per_plate)
+        if normalized_sec_per_tray.is_integer():
+            persisted_value = int(normalized_sec_per_tray)
         else:
-            persisted_value = normalized_sec_per_plate
-        config.set("DEFAULT_SEC_PER_PLATE", persisted_value)
+            persisted_value = normalized_sec_per_tray
+        config.set("DEFAULT_SEC_PER_TRAY", persisted_value)
         logger.info(
-            "Default seconds per plate changed to %s",
-            self.default_sec_per_plate,
+            "Default seconds per tray changed to %s",
+            self.default_sec_per_tray,
         )
 
     def update_admin_passcode(self, new_passcode: str) -> None:
@@ -98,9 +98,9 @@ class SettingsService:
             logger.exception("Admin passcode verification failed")
             return False
 
-    def _clamp_default_sec_per_plate(self, sec_per_plate: float) -> float:
-        return clamp_sec_per_plate(
-            sec_per_plate,
-            minimum=self.default_sec_per_plate_min,
-            maximum=self.default_sec_per_plate_max,
+    def _clamp_default_sec_per_tray(self, sec_per_tray: float) -> float:
+        return clamp_sec_per_tray(
+            sec_per_tray,
+            minimum=self.default_sec_per_tray_min,
+            maximum=self.default_sec_per_tray_max,
         )

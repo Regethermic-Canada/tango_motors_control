@@ -8,10 +8,10 @@ from services.motors.motor_service import (
     MotorServiceConfig,
     MotorStatusSnapshot,
 )
-from services.motors.plate_speed import (
-    clamp_sec_per_plate,
-    sec_per_plate_to_plates_per_second,
-    sec_per_plate_to_velocity_rad_s,
+from services.motors.tray_speed import (
+    clamp_sec_per_tray,
+    sec_per_tray_to_trays_per_minute,
+    sec_per_tray_to_velocity_rad_s,
 )
 from utils.config import config
 
@@ -21,48 +21,37 @@ logger = logging.getLogger(__name__)
 @ft.observable
 class MotorController:
     def __init__(self) -> None:
-        self.plate_size_cm = config.motor_plate_size_cm
-        self.sec_per_plate_min = min(
-            config.motor_min_sec_per_plate,
-            config.motor_max_sec_per_plate,
+        self.tray_size_cm = config.motor_tray_size_cm
+        self.sec_per_tray_min = min(
+            config.motor_min_sec_per_tray,
+            config.motor_max_sec_per_tray,
         )
-        self.sec_per_plate_max = max(
-            config.motor_min_sec_per_plate,
-            config.motor_max_sec_per_plate,
+        self.sec_per_tray_max = max(
+            config.motor_min_sec_per_tray,
+            config.motor_max_sec_per_tray,
         )
-        self.sec_per_plate = self._clamp_sec_per_plate(config.default_sec_per_plate)
-        self.plates_per_second = sec_per_plate_to_plates_per_second(self.sec_per_plate)
+        self.sec_per_tray = self._clamp_sec_per_tray(config.default_sec_per_tray)
+        self.trays_per_minute = sec_per_tray_to_trays_per_minute(self.sec_per_tray)
         self.target_velocity_rad_s = 0.0
-        self.is_reversed = False
         self.is_motors_running = False
         self.status_refresh_enabled = False
         self.status_version = 0
         self._motor_service = MotorService(MotorServiceConfig.from_app_config(config))
         self.target_velocity_rad_s = self._resolve_target_velocity_rad_s()
 
-    def set_sec_per_plate(self, sec_per_plate: float) -> bool:
-        normalized_sec_per_plate = self._clamp_sec_per_plate(sec_per_plate)
-        if self.sec_per_plate == normalized_sec_per_plate:
+    def set_sec_per_tray(self, sec_per_tray: float) -> bool:
+        normalized_sec_per_tray = self._clamp_sec_per_tray(sec_per_tray)
+        if self.sec_per_tray == normalized_sec_per_tray:
             return False
 
-        self.sec_per_plate = normalized_sec_per_plate
+        self.sec_per_tray = normalized_sec_per_tray
         self._apply_speed_to_motors()
         logger.info(
-            "Plate time set to %.0fs/plate (target=%.3f rad/s)",
-            self.sec_per_plate,
+            "Tray time set to %.0fs/tray (target=%.3f rad/s)",
+            self.sec_per_tray,
             self.target_velocity_rad_s,
         )
         return True
-
-    def toggle_direction(self) -> bool:
-        self.is_reversed = not self.is_reversed
-        self._apply_speed_to_motors()
-        logger.info(
-            "Motor direction toggled to %s (target=%.3f rad/s)",
-            "reverse" if self.is_reversed else "forward",
-            self.target_velocity_rad_s,
-        )
-        return self.is_reversed
 
     def sync_motor_state(self) -> None:
         running = self._motor_service.is_running()
@@ -146,9 +135,7 @@ class MotorController:
 
     def _apply_speed_to_motors(self) -> None:
         try:
-            self.plates_per_second = sec_per_plate_to_plates_per_second(
-                self.sec_per_plate
-            )
+            self.trays_per_minute = sec_per_tray_to_trays_per_minute(self.sec_per_tray)
             self.target_velocity_rad_s = self._resolve_target_velocity_rad_s()
             if self.is_motors_running:
                 self.target_velocity_rad_s = (
@@ -159,16 +146,15 @@ class MotorController:
         except Exception:
             logger.exception("Failed to apply speed command to motors")
 
-    def _clamp_sec_per_plate(self, sec_per_plate: float) -> float:
-        return clamp_sec_per_plate(
-            sec_per_plate,
-            minimum=self.sec_per_plate_min,
-            maximum=self.sec_per_plate_max,
+    def _clamp_sec_per_tray(self, sec_per_tray: float) -> float:
+        return clamp_sec_per_tray(
+            sec_per_tray,
+            minimum=self.sec_per_tray_min,
+            maximum=self.sec_per_tray_max,
         )
 
     def _resolve_target_velocity_rad_s(self) -> float:
-        direction = -1.0 if self.is_reversed else 1.0
-        return direction * sec_per_plate_to_velocity_rad_s(
-            self.sec_per_plate,
-            plate_size_cm=self.plate_size_cm,
+        return sec_per_tray_to_velocity_rad_s(
+            self.sec_per_tray,
+            tray_size_cm=self.tray_size_cm,
         )

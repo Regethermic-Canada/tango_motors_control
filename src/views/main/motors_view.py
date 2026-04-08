@@ -5,7 +5,6 @@ from flet.controls.control_event import Event
 from flet.controls.material.button import Button
 from components.ui.button import TangoButton
 from components.ui.card import TangoCard
-from components.ui.icon_button import TangoIconButton, IconButtonVariant
 from components.ui.slider import TangoSlider
 from components.ui.text import TangoText
 from components.ui.tango_toast import ToastType, show_toast
@@ -13,6 +12,7 @@ from contexts.locale import LocaleContext
 from contexts.motor import MotorContext
 from contexts.settings import SettingsContext
 from models.motor_types import MotorAction
+from services.motors.tray_speed import sec_per_tray_to_trays_per_minute
 from theme import colors, spacing
 from theme.scale import ViewportArea, get_viewport_metrics, resolve_panel_width
 
@@ -30,14 +30,19 @@ def MotorsView() -> ft.Control:
         min_scale=0.8,
     )
     is_running = motor.is_motors_running
-    plate_time_draft, set_plate_time_draft = ft.use_state(float(motor.sec_per_plate))
+    tray_setting_draft, set_tray_setting_draft = ft.use_state(float(motor.sec_per_tray))
 
-    def sync_plate_time_draft() -> None:
-        set_plate_time_draft(float(motor.sec_per_plate))
+    def sync_tray_setting_draft() -> None:
+        set_tray_setting_draft(float(motor.sec_per_tray))
 
-    ft.use_effect(sync_plate_time_draft, [motor.sec_per_plate])
+    ft.use_effect(sync_tray_setting_draft, [motor.sec_per_tray])
 
-    preview_sec_per_plate = float(round(plate_time_draft))
+    tray_rate_preview = sec_per_tray_to_trays_per_minute(tray_setting_draft)
+    control_min = motor.sec_per_tray_min
+    control_max = motor.sec_per_tray_max
+    control_divisions = max(
+        1, int(round(motor.sec_per_tray_max - motor.sec_per_tray_min))
+    )
 
     content_spacing = int(
         round((spacing.LG if metrics.is_compact else spacing.XL) * metrics.scale)
@@ -66,7 +71,6 @@ def MotorsView() -> ft.Control:
     action_gap = int(
         round((spacing.SM if metrics.is_compact else spacing.MD) * metrics.scale)
     )
-    reverse_icon_size = int(round((22 if metrics.is_compact else 24) * metrics.scale))
     value_row_gap = int(
         round((spacing.SM if metrics.is_compact else spacing.MD) * metrics.scale)
     )
@@ -76,17 +80,7 @@ def MotorsView() -> ft.Control:
     value_block_padding_y = int(
         round((spacing.XS if metrics.is_compact else spacing.SM) * metrics.scale)
     )
-    direction_button_offset = int(
-        round((spacing.MD if metrics.is_compact else spacing.LG) * metrics.scale)
-    )
     toggle_icon_size = int(round((52 if metrics.is_compact else 60) * metrics.scale))
-
-    direction_icon = (
-        ft.Icons.ARROW_BACK if motor.is_reversed else ft.Icons.ARROW_FORWARD
-    )
-    direction_button_variant: IconButtonVariant = (
-        "warning" if motor.is_reversed else "primary"
-    )
 
     def build_toast_message(message_key: str) -> Callable[[], str]:
         return lambda: settings_service.t(message_key)
@@ -115,45 +109,42 @@ def MotorsView() -> ft.Control:
             build=build_toast_message(message_key),
         )
 
-    def on_plate_time_commit(value: float) -> None:
-        committed_value = float(round(value))
-        set_plate_time_draft(committed_value)
-        changed = motor.set_sec_per_plate(committed_value)
+    def on_control_value_change(value: float) -> None:
+        bounded_value = max(
+            motor.sec_per_tray_min, min(float(value), motor.sec_per_tray_max)
+        )
+        set_tray_setting_draft(bounded_value)
+
+    def on_control_value_commit(value: float) -> None:
+        committed_sec_per_tray = max(
+            motor.sec_per_tray_min,
+            min(float(value), motor.sec_per_tray_max),
+        )
+        set_tray_setting_draft(committed_sec_per_tray)
+        changed = motor.set_sec_per_tray(committed_sec_per_tray)
         if not changed:
             return
 
-        if committed_value <= motor.sec_per_plate_min:
+        if committed_sec_per_tray <= motor.sec_per_tray_min:
             show_toast(
                 page=ft.context.page,
                 type=ToastType.WARNING,
-                build=build_toast_message("min_plate_time_reached"),
+                build=build_toast_message("min_tray_time_reached"),
             )
             return
 
-        if committed_value >= motor.sec_per_plate_max:
+        if committed_sec_per_tray >= motor.sec_per_tray_max:
             show_toast(
                 page=ft.context.page,
                 type=ToastType.WARNING,
-                build=build_toast_message("max_plate_time_reached"),
+                build=build_toast_message("max_tray_time_reached"),
             )
             return
 
         show_toast(
             page=ft.context.page,
             type=ToastType.INFO,
-            build=build_toast_message("plate_time_updated"),
-        )
-
-    def on_direction_click(_: Event[ft.IconButton]) -> None:
-        motor.toggle_direction()
-        show_toast(
-            page=ft.context.page,
-            type=ToastType.WARNING if motor.is_reversed else ToastType.INFO,
-            build=build_toast_message(
-                "direction_set_reverse"
-                if motor.is_reversed
-                else "direction_set_forward"
-            ),
+            build=build_toast_message("tray_time_updated"),
         )
 
     return TangoCard(
@@ -189,18 +180,14 @@ def MotorsView() -> ft.Control:
                                                 width=speed_number_width,
                                                 alignment=ft.Alignment.CENTER_RIGHT,
                                                 content=TangoText(
-                                                    str(
-                                                        int(
-                                                            round(preview_sec_per_plate)
-                                                        )
-                                                    ),
+                                                    str(int(round(tray_setting_draft))),
                                                     variant="display",
                                                     size=speed_value_size,
                                                     text_align=ft.TextAlign.RIGHT,
                                                 ),
                                             ),
                                             TangoText(
-                                                loc.t("seconds_per_plate_unit"),
+                                                loc.t("seconds_per_tray_unit"),
                                                 variant="subtitle",
                                                 size=speed_unit_size,
                                                 color=colors.TEXT_MUTED,
@@ -209,33 +196,28 @@ def MotorsView() -> ft.Control:
                                         ],
                                     ),
                                 ),
-                                ft.Container(
-                                    margin=ft.Margin(direction_button_offset, 0, 0, 0),
-                                    content=TangoIconButton(
-                                        icon=direction_icon,
-                                        on_click=on_direction_click,
-                                        tooltip=(
-                                            loc.t("set_forward")
-                                            if motor.is_reversed
-                                            else loc.t("set_reverse")
-                                        ),
-                                        variant=direction_button_variant,
-                                        size="xl",
-                                        icon_size=reverse_icon_size,
-                                    ),
+                            ],
+                        ),
+                        ft.Row(
+                            alignment=ft.MainAxisAlignment.CENTER,
+                            controls=[
+                                TangoText(
+                                    f"{tray_rate_preview:.1f} {loc.t('trays_per_minute_unit')}",
+                                    variant="caption",
+                                    size=speed_unit_size,
+                                    color=colors.TEXT_MUTED,
+                                    text_align=ft.TextAlign.CENTER,
                                 ),
                             ],
                         ),
                         TangoSlider(
-                            min=motor.sec_per_plate_min,
-                            max=motor.sec_per_plate_max,
-                            divisions=int(
-                                motor.sec_per_plate_max - motor.sec_per_plate_min
-                            ),
-                            label="{value}s",
-                            value=plate_time_draft,
-                            set_value=set_plate_time_draft,
-                            on_commit=on_plate_time_commit,
+                            min=control_min,
+                            max=control_max,
+                            divisions=control_divisions,
+                            label="{value}",
+                            value=tray_setting_draft,
+                            set_value=on_control_value_change,
+                            on_commit=on_control_value_commit,
                             scale=slider_scale,
                         ),
                     ],
