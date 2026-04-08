@@ -19,15 +19,23 @@ def Layout(content: ft.Control) -> ft.Control:
     ASSET_SCREENSAVER = config.asset_screensaver
     metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
 
-    logo_left_padding = int(round((spacing.MD if metrics.is_compact else spacing.LG) * metrics.scale))
-    logo_bottom_padding = int(round((spacing.XS if metrics.is_compact else spacing.SM) * metrics.scale))
-    body_bottom_inset = int(round((spacing.LG if metrics.is_compact else spacing.XL) * metrics.scale))
+    logo_left_padding = int(
+        round((spacing.MD if metrics.is_compact else spacing.LG) * metrics.scale)
+    )
+    logo_bottom_padding = int(
+        round((spacing.XS if metrics.is_compact else spacing.SM) * metrics.scale)
+    )
+    body_bottom_inset = int(
+        round((spacing.LG if metrics.is_compact else spacing.XL) * metrics.scale)
+    )
     logo_width = int(round((120 if metrics.is_compact else 160) * metrics.scale))
     header_side_padding = int(
         round((spacing.MD if metrics.is_compact else spacing.LG) * metrics.scale)
     )
     header_right = int(round(spacing.MD * metrics.scale))
-    header_gap = int(round((spacing.XS if metrics.is_compact else spacing.SM) * metrics.scale))
+    header_gap = int(
+        round((spacing.XS if metrics.is_compact else spacing.SM) * metrics.scale)
+    )
     top_band_height = int(round((68 if metrics.is_compact else 76) * metrics.scale))
     toast_top_offset = top_band_height + int(round(spacing.SM * metrics.scale))
     title_spacing = int(round(2 * metrics.scale))
