@@ -32,8 +32,8 @@ def LanguageSelector() -> ft.Control:
     loc = ft.use_context(LocaleContext)
     settings_service = ft.use_context(SettingsContext).current()
     metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
-    diameter = int(round((32 if metrics.is_compact else 40) * metrics.scale))
-    label_size = int(round((13 if metrics.is_compact else 14) * metrics.scale))
+    diameter = int(round((40 if metrics.is_compact else 48) * metrics.scale))
+    label_size = int(round((14 if metrics.is_compact else 16) * metrics.scale))
     next_locale = "fr" if loc.locale == "en" else "en"
 
     def on_toggle_language(_: Event[ft.Container]) -> None:
@@ -111,9 +111,9 @@ def AdminModeToggle() -> ft.Control:
 
     return TangoIconButton(
         icon=ft.Icons.SETTINGS if not is_admin else ft.Icons.HOME,
-        icon_size=int(round(18 * metrics.scale)),
+        icon_size=int(round((20 if metrics.is_compact else 22) * metrics.scale)),
         tooltip=loc.t("admin_settings") if not is_admin else loc.t("main_view"),
         on_click=on_admin_click,
-        variant="primary" if is_admin else "surface",
-        size="sm" if metrics.is_compact else "md",
+        variant="inverse" if is_admin else "surface",
+        size="md" if metrics.is_compact else "lg",
     )

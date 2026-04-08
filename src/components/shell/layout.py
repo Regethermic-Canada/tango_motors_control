@@ -1,10 +1,9 @@
 import flet as ft
-from components.ui.card import TangoCard
 from components.ui.text import TangoText
 from contexts.locale import LocaleContext
 from contexts.route import RouteContext
 from contexts.shell import ShellContext
-from theme import colors, radius, spacing
+from theme import colors, spacing
 from theme.scale import get_viewport_metrics
 from .navigation import AdminModeToggle, LanguageSelector
 from .screensaver import Screensaver
@@ -27,8 +26,7 @@ def Layout(content: ft.Control) -> ft.Control:
         round((spacing.MD if metrics.is_compact else spacing.LG) * metrics.scale)
     )
     header_right = int(round(spacing.MD * metrics.scale))
-    header_gap = int(round(spacing.XS * metrics.scale))
-    header_card_padding = int(round(4 * metrics.scale))
+    header_gap = int(round((spacing.XS if metrics.is_compact else spacing.SM) * metrics.scale))
     top_band_height = int(round((68 if metrics.is_compact else 76) * metrics.scale))
     toast_top_offset = top_band_height + int(round(spacing.SM * metrics.scale))
     title_spacing = int(round(2 * metrics.scale))
@@ -120,24 +118,15 @@ def Layout(content: ft.Control) -> ft.Control:
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         controls=[
                             title_block,
-                            TangoCard(
-                                padding=ft.Padding(
-                                    header_card_padding,
-                                    header_card_padding,
-                                    header_card_padding,
-                                    header_card_padding,
-                                ),
-                                border_radius=radius.SHELL,
-                                content=ft.Row(
-                                    controls=[
-                                        AdminModeToggle(),
-                                        LanguageSelector(),
-                                    ],
-                                    spacing=header_gap,
-                                    tight=True,
-                                    alignment=ft.MainAxisAlignment.END,
-                                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                                ),
+                            ft.Row(
+                                controls=[
+                                    AdminModeToggle(),
+                                    LanguageSelector(),
+                                ],
+                                spacing=header_gap,
+                                tight=True,
+                                alignment=ft.MainAxisAlignment.END,
+                                vertical_alignment=ft.CrossAxisAlignment.CENTER,
                             ),
                         ],
                     ),
