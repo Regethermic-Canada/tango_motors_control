@@ -164,3 +164,6 @@ storage/data
 
 # Temp
 .temp/
+
+# Agents
+.codex
