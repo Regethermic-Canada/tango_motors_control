@@ -99,6 +99,7 @@ uv run flet pack src/main.py \
   --name tango_motors_control \
   --icon src/assets/icon.png \
   --pyinstaller-build-args=--paths=src \
+  --hidden-import can.interfaces.socketcan \
   --add-data "src/assets:assets" \
   --add-data "storage:storage"
 ```
