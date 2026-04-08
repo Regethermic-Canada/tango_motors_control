@@ -96,7 +96,7 @@ follow the CubeMars library repository documentation:
 # executable will be in the /dist folder
 uv run flet pack src/main.py \
   --yes \
-  --name tango-motors-control \
+  --name tango_motors_control \
   --icon src/assets/icon.png \
   --pyinstaller-build-args=--paths=src \
   --add-data "src/assets:assets" \
@@ -104,4 +104,3 @@ uv run flet pack src/main.py \
 ```
 
 ---
-

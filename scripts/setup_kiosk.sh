@@ -31,7 +31,7 @@ readonly PLYMOUTH_SPLASH_BACKUP="/usr/share/plymouth/themes/pix/splash.png.bak"
 readonly LABWC_DIR="${HOME_DIR}/.config/labwc"
 readonly RC_FILE="${LABWC_DIR}/rc.xml"
 readonly AUTOSTART_FILE="${LABWC_DIR}/autostart"
-readonly APP_CMD="${HOME_DIR}/.local/bin/uv run flet run"
+readonly APP_BIN="${APP_DIR}/dist/tango_motors_control"
 readonly LIGHTDM_CONF="/etc/lightdm/lightdm.conf"
 
 echo
@@ -49,6 +49,16 @@ if ! dpkg -s wtype >/dev/null 2>&1; then
 	echo "Installing wtype..."
 	sudo apt update
 	sudo apt install -y wtype
+fi
+
+echo
+
+# 0c) Ensure packaged executable is present
+echo "Checking packaged executable..."
+if [[ ! -x "${APP_BIN}" ]]; then
+	echo "ERROR: Packaged executable not found or not executable: ${APP_BIN}"
+	echo "Build it first, then rerun this setup."
+	exit 1
 fi
 
 echo
@@ -194,7 +204,7 @@ if command -v wtype >/dev/null 2>&1; then
 fi
 
 cd "${APP_DIR}"
-exec /usr/bin/env bash -lc $(printf '%q' "${APP_CMD}")
+exec "${APP_BIN}"
 EOF
 chmod +x "${AUTOSTART_FILE}"
 
@@ -229,6 +239,9 @@ echo "  ${RC_FILE}"
 echo
 echo "Kiosk autostart written:"
 echo "  ${AUTOSTART_FILE}"
+echo
+echo "App executable:"
+echo "  ${APP_BIN}"
 echo
 echo "LightDM session updated in:"
 echo "  ${LIGHTDM_CONF}"
