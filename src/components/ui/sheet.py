@@ -2,6 +2,7 @@ import asyncio
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Literal
 
 import flet as ft
 
@@ -38,6 +39,7 @@ _SHEET_TRANSITION = make(SHEET_TRANSITION_MS, SHEET_TRANSITION_CURVE)
 __all__ = ["TangoSheet"]
 
 _SheetBuild = Callable[[], tuple[str | None, ft.Control]]
+SheetBodyAlign = Literal["top", "center"]
 
 
 @dataclass(frozen=True)
@@ -64,6 +66,7 @@ class _SheetRuntime:
     body_content_slot: ft.Container
     body: ft.Container
     is_scrollable: bool
+    body_align: SheetBodyAlign
     close_token: int
 
 
@@ -217,9 +220,22 @@ def _build_sheet_body_shell(
     *,
     content: ft.Control,
     scrollable: bool,
+    body_align: SheetBodyAlign,
 ) -> tuple[ft.Control, ft.Container]:
     body_content_slot = ft.Container(content=content)
     if scrollable:
+        if body_align == "center":
+            return (
+                ft.Column(
+                    expand=True,
+                    scroll=ft.ScrollMode.ALWAYS,
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    controls=[body_content_slot],
+                    spacing=0,
+                ),
+                body_content_slot,
+            )
         return (
             ft.ListView(
                 controls=[
@@ -237,7 +253,11 @@ def _build_sheet_body_shell(
     return (
         ft.Container(
             expand=True,
-            alignment=ft.Alignment.CENTER,
+            alignment=(
+                ft.Alignment.CENTER
+                if body_align == "center"
+                else ft.Alignment.TOP_CENTER
+            ),
             content=body_content_slot,
         ),
         body_content_slot,
@@ -249,17 +269,23 @@ def _build_sheet_body(
     content: ft.Control,
     layout: _SheetLayout,
     scrollable: bool,
+    body_align: SheetBodyAlign,
 ) -> tuple[ft.Container, ft.Container]:
     body_content, body_content_slot = _build_sheet_body_shell(
         content=content,
         scrollable=scrollable,
+        body_align=body_align,
     )
     return (
         ft.Container(
             content=body_content,
             padding=layout.body_padding,
             expand=True,
-            alignment=ft.Alignment.TOP_CENTER,
+            alignment=(
+                ft.Alignment.CENTER
+                if body_align == "center"
+                else ft.Alignment.TOP_CENTER
+            ),
         ),
         body_content_slot,
     )
@@ -287,6 +313,7 @@ def _build_sheet_runtime(
     padding: ft.Padding | int | None,
     full_screen: bool,
     scrollable: bool,
+    body_align: SheetBodyAlign,
     on_close: Callable[[], None],
 ) -> _SheetRuntime:
     layout = _resolve_sheet_layout(
@@ -304,6 +331,7 @@ def _build_sheet_runtime(
         content=content,
         layout=layout,
         scrollable=scrollable,
+        body_align=body_align,
     )
     surface = _build_sheet_surface(
         body=body,
@@ -340,6 +368,7 @@ def _build_sheet_runtime(
         body_content_slot=body_content_slot,
         body=body,
         is_scrollable=scrollable,
+        body_align=body_align,
         close_token=0,
     )
 
@@ -353,6 +382,7 @@ def _update_sheet_runtime(
     padding: ft.Padding | int | None,
     full_screen: bool,
     scrollable: bool,
+    body_align: SheetBodyAlign,
 ) -> None:
     layout = _resolve_sheet_layout(
         page,
@@ -367,14 +397,19 @@ def _update_sheet_runtime(
     runtime.surface.expand = True
     runtime.header.padding = layout.header_padding
     runtime.body.padding = layout.body_padding
-    if runtime.is_scrollable != scrollable:
+    runtime.body.alignment = (
+        ft.Alignment.CENTER if body_align == "center" else ft.Alignment.TOP_CENTER
+    )
+    if runtime.is_scrollable != scrollable or runtime.body_align != body_align:
         next_body_content, next_body_content_slot = _build_sheet_body_shell(
             content=content,
             scrollable=scrollable,
+            body_align=body_align,
         )
         runtime.body.content = next_body_content
         runtime.body_content_slot = next_body_content_slot
         runtime.is_scrollable = scrollable
+        runtime.body_align = body_align
     else:
         runtime.body_content_slot.content = content
     runtime.body.expand = True
@@ -394,6 +429,7 @@ def _create_sheet_runtime(
     padding: ft.Padding | int | None = None,
     full_screen: bool = False,
     scrollable: bool = False,
+    body_align: SheetBodyAlign = "top",
     on_close: Callable[[], None] | None = None,
 ) -> _SheetRuntime:
     def request_close() -> None:
@@ -407,6 +443,7 @@ def _create_sheet_runtime(
         padding=padding,
         full_screen=full_screen,
         scrollable=scrollable,
+        body_align=body_align,
         on_close=request_close,
     )
 
@@ -431,6 +468,7 @@ def _present_sheet(
     padding: ft.Padding | int | None,
     full_screen: bool,
     scrollable: bool,
+    body_align: SheetBodyAlign,
     build: _SheetBuild | None,
     animate_in: bool,
     insert_at: int | None,
@@ -446,6 +484,7 @@ def _present_sheet(
             padding=padding,
             full_screen=full_screen,
             scrollable=scrollable,
+            body_align=body_align,
         )
         return current.overlay
 
@@ -495,6 +534,7 @@ def _present_sheet(
             padding=padding,
             full_screen=full_screen,
             scrollable=scrollable,
+            body_align=body_align,
             build=build,
             animate_in=False,
             insert_at=next_insert_at,
@@ -507,6 +547,7 @@ def _present_sheet(
         padding=padding,
         full_screen=full_screen,
         scrollable=scrollable,
+        body_align=body_align,
         on_close=close_sheet,
     )
     runtime.close_token = close_token
@@ -549,6 +590,7 @@ def _show_sheet(
     padding: ft.Padding | int | None = None,
     full_screen: bool = False,
     scrollable: bool = False,
+    body_align: SheetBodyAlign = "top",
     build: _SheetBuild | None = None,
 ) -> ft.Container:
     if build is not None and (content is not None or title is not None):
@@ -568,6 +610,7 @@ def _show_sheet(
         padding=padding,
         full_screen=full_screen,
         scrollable=scrollable,
+        body_align=body_align,
         build=build,
         animate_in=True,
         insert_at=None,
@@ -584,6 +627,7 @@ def TangoSheet(
     padding: ft.Padding | int | None = None,
     full_screen: bool = False,
     scrollable: bool = False,
+    body_align: SheetBodyAlign = "top",
 ) -> ft.Control:
     page = ft.context.page
 
@@ -604,6 +648,7 @@ def TangoSheet(
             padding=padding,
             full_screen=full_screen,
             scrollable=scrollable,
+            body_align=body_align,
         )
 
     def _cleanup_sheet_overlay() -> None:
@@ -620,6 +665,7 @@ def TangoSheet(
             padding,
             full_screen,
             scrollable,
+            body_align,
         ],
     )
     ft.on_unmounted(_cleanup_sheet_overlay)

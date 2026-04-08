@@ -63,6 +63,15 @@ def AdminView() -> ft.Control:
     card_padding = int(
         round((spacing.XL if metrics.is_compact else spacing.XXL) * metrics.scale)
     )
+    available_card_height = max(
+        320,
+        int(round(metrics.height - (outer_pad * 2))),
+    )
+    preferred_card_height = int(
+        round((520 if metrics.is_compact else 560) * metrics.scale)
+    )
+    use_scrollable_card = available_card_height < preferred_card_height
+    card_height = available_card_height if use_scrollable_card else None
     slider_scale = max(1.08, metrics.scale * 1.08)
     slider_value_gap = max(4, int(round(6 * metrics.scale)))
     action_button_size = int(round((18 if metrics.is_compact else 19) * metrics.scale))
@@ -205,17 +214,20 @@ def AdminView() -> ft.Control:
     active_sheet_title: str | None = None
     active_sheet_content: ft.Control | None = None
     active_sheet_scrollable = False
+    active_sheet_body_align: Literal["top", "center"] = "top"
     active_sheet_on_dismiss: Callable[[], None] | None = None
 
     if active_sheet == "passcode":
         active_sheet_title = loc.t("change_admin_passcode")
         active_sheet_content = passcode_sheet_content
         active_sheet_scrollable = False
+        active_sheet_body_align = "center"
         active_sheet_on_dismiss = close_passcode_sheet
     elif active_sheet == "motor_status":
         active_sheet_title = loc.t("motor_status_sheet_title")
         active_sheet_content = MotorStatusSheet(statuses=motor_status_snapshots)
         active_sheet_scrollable = True
+        active_sheet_body_align = "top"
         active_sheet_on_dismiss = close_motor_status_sheet
 
     sheet_action_buttons: ft.Control = ft.Row(
@@ -260,6 +272,8 @@ def AdminView() -> ft.Control:
                     alignment=ft.Alignment.CENTER,
                     content=TangoCard(
                         width=card_width,
+                        height=card_height,
+                        scrollable=use_scrollable_card,
                         padding=ft.Padding(
                             card_padding,
                             card_padding,
@@ -308,6 +322,7 @@ def AdminView() -> ft.Control:
                     title=active_sheet_title,
                     content=active_sheet_content,
                     scrollable=active_sheet_scrollable,
+                    body_align=active_sheet_body_align,
                     on_dismiss=active_sheet_on_dismiss,
                 ),
             ],
