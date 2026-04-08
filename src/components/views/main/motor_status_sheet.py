@@ -5,13 +5,8 @@ from components.ui.tag import TangoTag, TagVariant
 from components.ui.text import TangoText
 from contexts.locale import LocaleContext
 from services.motors.motor_service import MotorStatusSnapshot
-from services.motors.plate_speed import (
-    velocity_rad_s_to_plates_per_second,
-    velocity_rad_s_to_sec_per_plate,
-)
 from theme import colors, spacing
 from theme.scale import ViewportArea, get_viewport_metrics
-from utils.config import config
 
 
 def _format_metric(
@@ -86,7 +81,12 @@ def _chunk_controls(
 
 
 @ft.component
-def MotorStatusSheet(*, statuses: list[MotorStatusSnapshot]) -> ft.Control:
+def MotorStatusSheet(
+    *,
+    statuses: list[MotorStatusSnapshot],
+    target_sec_per_plate: float,
+    target_plates_per_second: float,
+) -> ft.Control:
     loc = ft.use_context(LocaleContext)
     metrics = get_viewport_metrics(
         ft.context.page,
@@ -189,10 +189,7 @@ def MotorStatusSheet(*, statuses: list[MotorStatusSnapshot]) -> ft.Control:
                                     _build_metric_row(
                                         label=loc.t("motor_plate_time"),
                                         value=_format_metric(
-                                            velocity_rad_s_to_sec_per_plate(
-                                                measured_velocity_rad_s or 0.0,
-                                                plate_size_cm=config.motor_plate_size_cm,
-                                            ),
+                                            target_sec_per_plate,
                                             suffix=loc.t("seconds_per_plate_unit"),
                                             fallback=unavailable_value,
                                         ),
@@ -203,10 +200,7 @@ def MotorStatusSheet(*, statuses: list[MotorStatusSnapshot]) -> ft.Control:
                                     _build_metric_row(
                                         label=loc.t("motor_plate_rate"),
                                         value=_format_metric(
-                                            velocity_rad_s_to_plates_per_second(
-                                                measured_velocity_rad_s or 0.0,
-                                                plate_size_cm=config.motor_plate_size_cm,
-                                            ),
+                                            target_plates_per_second,
                                             suffix=loc.t("plates_per_second_unit"),
                                             fallback=unavailable_value,
                                             precision=3,
