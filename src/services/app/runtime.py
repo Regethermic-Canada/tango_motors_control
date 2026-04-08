@@ -31,6 +31,7 @@ class AppRuntime:
         self._shell_service = shell_service
         self._set_viewport_size = set_viewport_size
         self._set_ui_ready = set_ui_ready
+        self._motor_init_started = False
 
     async def monitor_loop(self) -> None:
         logger.info("Global inactivity monitor task started")
@@ -59,6 +60,9 @@ class AppRuntime:
         self._page.update()
 
     async def initialize_motors_task(self) -> None:
+        if self._motor_init_started:
+            return
+        self._motor_init_started = True
         await asyncio.to_thread(self._motor_controller.initialize_motors)
 
     async def shutdown_motors_task(self) -> None:
@@ -83,7 +87,6 @@ class AppRuntime:
         self._page.on_resize = self.on_page_resize
         self.sync_viewport_size(force=True)
         self._page.on_keyboard_event = lambda _: self._shell_service.reset_timer()
-        self._page.run_task(self.initialize_motors_task)
         self._page.run_task(self.monitor_loop)
         self._page.run_task(self.warmup_first_frame_update_task)
 
@@ -167,3 +170,4 @@ class AppRuntime:
             logger.exception("Viewport warmup failed")
         finally:
             self._set_ui_ready(True)
+            self._page.run_task(self.initialize_motors_task)
