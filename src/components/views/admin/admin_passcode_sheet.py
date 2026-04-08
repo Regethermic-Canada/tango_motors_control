@@ -67,7 +67,7 @@ def AdminPasscodeSheet(
             show_toast(
                 page=page,
                 type=ToastType.ERROR,
-                build=lambda: loc.t("admin_passcode_update_failed"),
+                build=lambda: settings_service.t("admin_passcode_update_failed"),
             )
             set_is_saving(False)
             return
@@ -75,7 +75,7 @@ def AdminPasscodeSheet(
         show_toast(
             page=page,
             type=ToastType.SUCCESS,
-            build=lambda: loc.t("admin_passcode_updated"),
+            build=lambda: settings_service.t("admin_passcode_updated"),
         )
         set_is_saving(False)
         on_close()
@@ -85,7 +85,7 @@ def AdminPasscodeSheet(
         show_toast(
             page=page,
             type=ToastType.ERROR,
-            build=lambda: loc.t("admin_passcode_mismatch"),
+            build=lambda: settings_service.t("admin_passcode_mismatch"),
         )
 
         def apply_shake_offset(point: ft.Offset) -> None:
