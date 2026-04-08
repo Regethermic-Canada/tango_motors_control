@@ -95,13 +95,13 @@ follow the CubeMars library repository documentation:
 ```bash
 # executable will be in the /dist folder
 uv run flet pack src/main.py \
+  --yes \
+  --name tango-motors-control \
+  --icon src/assets/icon.png \
+  --pyinstaller-build-args=--paths=src \
   --add-data "src/assets:assets" \
-  --add-data "src/components:components" \
-  --add-data "src/contexts:contexts" \
-  --add-data "src/models:models" \
-  --add-data "src/services:services" \
-  --add-data "src/utils:utils" \
   --add-data "storage:storage"
 ```
 
 ---
+
