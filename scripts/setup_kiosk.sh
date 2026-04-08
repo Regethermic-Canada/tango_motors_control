@@ -29,6 +29,10 @@ readonly DISABLE_SPLASH_LINE="disable_splash=1"
 readonly CAN_SPI_LINE="dtparam=spi=on"
 readonly CAN_OVERLAY_LINE="dtoverlay=mcp2515-can0,oscillator=12000000,interrupt=25,spimaxfrequency=2000000"
 readonly CMDLINE_BACKUP="/boot/firmware/cmdline.txt.back"
+readonly CMDLINE_REMOVE=(
+	"console=tty1"
+	"console=serial0,115200"
+)
 readonly CMDLINE_APPEND=(
 	"quiet"
 	"loglevel=0"
@@ -130,10 +134,12 @@ fi
 
 current_cmdline="$(sudo cat "${BOOT_CMDLINE}")"
 updated_cmdline="${current_cmdline}"
-updated_cmdline="${updated_cmdline// console=tty1 / }"
-updated_cmdline="${updated_cmdline#console=tty1 }"
-updated_cmdline="${updated_cmdline% console=tty1}"
-updated_cmdline="${updated_cmdline// console=tty1/}"
+for arg in "${CMDLINE_REMOVE[@]}"; do
+	updated_cmdline="${updated_cmdline// ${arg} / }"
+	updated_cmdline="${updated_cmdline#"${arg}" }"
+	updated_cmdline="${updated_cmdline% "${arg}"}"
+	updated_cmdline="${updated_cmdline// ${arg}/}"
+done
 
 for arg in "${CMDLINE_APPEND[@]}"; do
 	if [[ " ${updated_cmdline} " != *" ${arg} "* ]]; then
