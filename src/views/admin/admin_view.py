@@ -25,6 +25,7 @@ def AdminView() -> ft.Control:
     motor = ft.use_context(MotorContext).current()
     settings_service = ft.use_context(SettingsContext).current()
     active_sheet, set_active_sheet = ft.use_state("")
+    _ = motor.status_version if active_sheet == "motor_status" else 0
     inactivity_timeout_draft, set_inactivity_timeout_draft = ft.use_state(
         float(settings_service.inactivity_timeout)
     )
@@ -82,6 +83,12 @@ def AdminView() -> ft.Control:
         round((spacing.XS if metrics.is_compact else spacing.MD) * metrics.scale)
     )
     motor_status_snapshots = motor.get_status_snapshots()
+
+    def sync_motor_status_refresh() -> None:
+        motor.set_status_refresh_enabled(active_sheet == "motor_status")
+
+    ft.use_effect(sync_motor_status_refresh, [active_sheet])
+    ft.on_unmounted(lambda: motor.set_status_refresh_enabled(False))
 
     def sync_slider_drafts() -> None:
         set_inactivity_timeout_draft(float(settings_service.inactivity_timeout))

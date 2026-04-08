@@ -35,6 +35,8 @@ class MotorController:
         self.target_velocity_rad_s = 0.0
         self.is_reversed = False
         self.is_motors_running = False
+        self.status_refresh_enabled = False
+        self.status_version = 0
         self._motor_service = MotorService(MotorServiceConfig.from_app_config(config))
         self.target_velocity_rad_s = self._resolve_target_velocity_rad_s()
 
@@ -67,6 +69,17 @@ class MotorController:
         if running != self.is_motors_running:
             self.is_motors_running = running
             logger.info("Motor running state changed to %s", self.is_motors_running)
+        if self.status_refresh_enabled:
+            self.status_version += 1
+
+    def set_status_refresh_enabled(self, enabled: bool) -> None:
+        normalized_enabled = bool(enabled)
+        if self.status_refresh_enabled == normalized_enabled:
+            return
+
+        self.status_refresh_enabled = normalized_enabled
+        if normalized_enabled:
+            self.status_version += 1
 
     def initialize_motors(self) -> None:
         try:
