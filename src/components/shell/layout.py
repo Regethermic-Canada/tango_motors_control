@@ -19,9 +19,10 @@ def Layout(content: ft.Control) -> ft.Control:
     ASSET_SCREENSAVER = config.asset_screensaver
     metrics = get_viewport_metrics(ft.context.page, min_scale=0.7)
 
-    logo_bottom_padding = int(round((spacing.XL + spacing.XS) * metrics.scale))
-    body_bottom_inset = int(round((spacing.XXL + spacing.SM) * metrics.scale))
-    logo_width = int(round((240 if metrics.is_compact else 320) * metrics.scale))
+    logo_left_padding = int(round((spacing.MD if metrics.is_compact else spacing.LG) * metrics.scale))
+    logo_bottom_padding = int(round((spacing.XS if metrics.is_compact else spacing.SM) * metrics.scale))
+    body_bottom_inset = int(round((spacing.LG if metrics.is_compact else spacing.XL) * metrics.scale))
+    logo_width = int(round((120 if metrics.is_compact else 160) * metrics.scale))
     header_side_padding = int(
         round((spacing.MD if metrics.is_compact else spacing.LG) * metrics.scale)
     )
@@ -87,9 +88,14 @@ def Layout(content: ft.Control) -> ft.Control:
                 ),
                 ft.Container(
                     expand=True,
-                    alignment=ft.Alignment.BOTTOM_CENTER,
-                    padding=ft.Padding(0, 0, 0, logo_bottom_padding),
-                    opacity=0.08,
+                    alignment=ft.Alignment.BOTTOM_RIGHT,
+                    padding=ft.Padding(
+                        0,
+                        0,
+                        logo_left_padding,
+                        logo_bottom_padding,
+                    ),
+                    opacity=0.06,
                     content=ft.Image(
                         src=ASSET_LOGO,
                         width=logo_width,
