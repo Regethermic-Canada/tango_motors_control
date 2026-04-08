@@ -56,12 +56,18 @@ def _build_metric_row(
             ft.Container(
                 width=value_min_width,
                 alignment=ft.Alignment.CENTER_RIGHT,
-                content=TangoText(
-                    value,
-                    variant="body_strong",
-                    size=value_size,
-                    color=colors.TEXT,
+                content=ft.Text(
+                    value=value,
+                    style=TangoText(
+                        "",
+                        variant="body_strong",
+                        size=value_size,
+                        color=colors.TEXT,
+                    ).style,
                     text_align=ft.TextAlign.RIGHT,
+                    no_wrap=True,
+                    max_lines=1,
+                    overflow=ft.TextOverflow.ELLIPSIS,
                 ),
             ),
         ],

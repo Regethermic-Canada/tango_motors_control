@@ -50,7 +50,7 @@ MOTOR_IDS=1,2,3,4
 # Example for 4 mirrored motors: 1,-1,1,-1
 MOTOR_DIRECTIONS=1,-1,1,-1
 # Motor command/update rate in Hz while running velocity mode.
-MOTOR_COMMAND_HZ=50
+MOTOR_COMMAND_HZ=5
 # Ramp time in seconds for a full 0 rad/s to fastest plate-time sweep.
 MOTOR_RAMP_TIME_S=0.5
 # Hold at 0 rad/s for this many seconds after stop, then release motors automatically.
