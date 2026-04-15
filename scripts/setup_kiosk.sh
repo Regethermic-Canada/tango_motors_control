@@ -4,7 +4,7 @@ set -euo pipefail
 ###############################################################################
 # setup_kiosk.sh -> Configure labwc kiosk autostart for tango_motors_control
 #  - ensures required packages are installed
-#  - configures boot silence in /boot/firmware/config.txt
+#  - configures boot silence, Bluetooth disable, and UARTs in /boot/firmware/config.txt
 #  - configures CAN overlay in /boot/firmware/config.txt
 #  - backs up and updates /boot/firmware/cmdline.txt for silent boot
 #  - installs/enables systemd can0.service at boot
@@ -25,9 +25,17 @@ readonly PROJECT_DIR_NAME
 readonly APP_DIR="${HOME_DIR}/${PROJECT_DIR_NAME}"
 readonly BOOT_CONFIG="/boot/firmware/config.txt"
 readonly BOOT_CMDLINE="/boot/firmware/cmdline.txt"
-readonly DISABLE_SPLASH_LINE="disable_splash=1"
-readonly CAN_SPI_LINE="dtparam=spi=on"
-readonly CAN_OVERLAY_LINE="dtoverlay=mcp2515-can0,oscillator=12000000,interrupt=25,spimaxfrequency=2000000"
+readonly CONFIG_BACKUP="/boot/firmware/config.txt.back"
+readonly CONFIG_APPEND=(
+	"disable_splash=1"
+	"dtoverlay=disable-bt"
+	"dtparam=spi=on"
+	"dtoverlay=mcp2515-can0,oscillator=12000000,interrupt=25,spimaxfrequency=2000000"
+	"enable_uart=1"
+	"dtoverlay=uart2"
+	"dtoverlay=uart3"
+	"dtoverlay=uart5"
+)
 readonly CMDLINE_BACKUP="/boot/firmware/cmdline.txt.back"
 readonly CMDLINE_REMOVE=(
 	"console=tty1"
@@ -80,46 +88,37 @@ fi
 
 echo
 
-# 1) Configure boot silence in /boot/firmware/config.txt
-echo "Configuring boot silence in ${BOOT_CONFIG}..."
+# 1) Configure boot options in /boot/firmware/config.txt
+echo "Configuring boot options in ${BOOT_CONFIG}..."
 if [[ ! -f "${BOOT_CONFIG}" ]]; then
 	echo "ERROR: Missing boot config file: ${BOOT_CONFIG}"
 	exit 1
 fi
-boot_config_changed=0
-if ! sudo grep -Fxq "${DISABLE_SPLASH_LINE}" "${BOOT_CONFIG}"; then
-	echo "${DISABLE_SPLASH_LINE}" | sudo tee -a "${BOOT_CONFIG}" >/dev/null
-	boot_config_changed=1
-fi
-if [[ "${boot_config_changed}" -eq 1 ]]; then
-	echo "Boot silence entry added to ${BOOT_CONFIG}."
+if [[ ! -f "${CONFIG_BACKUP}" ]]; then
+	echo "Creating config backup..."
+	sudo cp "${BOOT_CONFIG}" "${CONFIG_BACKUP}"
 else
-	echo "Boot silence entry already present in ${BOOT_CONFIG}."
+	echo "Config backup already exists: ${CONFIG_BACKUP}"
+fi
+
+boot_config_changed=0
+for line in "${CONFIG_APPEND[@]}"; do
+	if ! sudo grep -Fxq "${line}" "${BOOT_CONFIG}"; then
+		echo "${line}" | sudo tee -a "${BOOT_CONFIG}" >/dev/null
+		boot_config_changed=1
+		echo "  + Added: ${line}"
+	fi
+done
+
+if [[ "${boot_config_changed}" -eq 1 ]]; then
+	echo "Boot config updated in ${BOOT_CONFIG}."
+else
+	echo "Boot config already up to date in ${BOOT_CONFIG}."
 fi
 
 echo
 
-# 2) Configure CAN overlay in /boot/firmware/config.txt
-echo "Configuring CAN overlay in ${BOOT_CONFIG}..."
-boot_config_changed=0
-if ! sudo grep -Fxq "${CAN_SPI_LINE}" "${BOOT_CONFIG}"; then
-	echo "${CAN_SPI_LINE}" | sudo tee -a "${BOOT_CONFIG}" >/dev/null
-	boot_config_changed=1
-fi
-if ! sudo grep -Fxq "${CAN_OVERLAY_LINE}" "${BOOT_CONFIG}"; then
-	echo "${CAN_OVERLAY_LINE}" | sudo tee -a "${BOOT_CONFIG}" >/dev/null
-	boot_config_changed=1
-fi
-
-if [[ "${boot_config_changed}" -eq 1 ]]; then
-	echo "CAN overlay entries added to ${BOOT_CONFIG}."
-else
-	echo "CAN overlay entries already present in ${BOOT_CONFIG}."
-fi
-
-echo
-
-# 3) Configure silent kernel/systemd boot in /boot/firmware/cmdline.txt
+# 2) Configure silent kernel/systemd boot in /boot/firmware/cmdline.txt
 echo "Configuring silent boot kernel arguments in ${BOOT_CMDLINE}..."
 if [[ ! -f "${BOOT_CMDLINE}" ]]; then
 	echo "ERROR: Missing boot cmdline file: ${BOOT_CMDLINE}"
@@ -157,7 +156,7 @@ fi
 
 echo
 
-# 4) Install systemd can0.service
+# 3) Install systemd can0.service
 echo "Writing ${UNIT_DIR}/${CAN_SERVICE_NAME}..."
 sudo tee "${UNIT_DIR}/${CAN_SERVICE_NAME}" >/dev/null <<'EOF'
 [Unit]
@@ -187,7 +186,7 @@ ip -details link show can0 || true
 
 echo
 
-# 5) Backup and update Plymouth splash screen
+# 4) Backup and update Plymouth splash screen
 echo "Updating Plymouth splash screen..."
 if [[ ! -f "${SPLASH_SRC}" ]]; then
 	echo "ERROR: Splash source not found: ${SPLASH_SRC}"
@@ -208,13 +207,13 @@ sudo update-initramfs -u
 
 echo
 
-# 6) Prepare labwc config directory
+# 5) Prepare labwc config directory
 echo "Preparing labwc config directory..."
 mkdir -p "${LABWC_DIR}"
 
 echo
 
-# 7) Write labwc rc.xml (disable desktop context menu + define hide-cursor bind)
+# 6) Write labwc rc.xml (disable desktop context menu + define hide-cursor bind)
 echo "Writing labwc kiosk rc.xml..."
 cat >"${RC_FILE}" <<'EOF'
 <?xml version="1.0"?>
@@ -251,7 +250,7 @@ EOF
 
 echo
 
-# 8) Write labwc autostart script
+# 7) Write labwc autostart script
 echo "Writing kiosk autostart..."
 cat >"${AUTOSTART_FILE}" <<EOF
 #!/usr/bin/env bash
@@ -275,30 +274,27 @@ chmod +x "${AUTOSTART_FILE}"
 
 echo
 
-# 9) Mask tty1 getty to suppress the local text login prompt
+# 8) Mask tty1 getty to suppress the local text login prompt
 echo "Masking getty@tty1.service..."
 sudo systemctl mask getty@tty1.service
 
 echo
 
-# 10) Switch LightDM session from rpd-labwc -> labwc
+# 9) Switch LightDM session from rpd-labwc -> labwc
 echo "Updating LightDM session (rpd-labwc -> labwc)..."
 sudo sed -i 's/\<rpd-labwc\>/labwc/g' "${LIGHTDM_CONF}"
 
-# 11) Final summary
+# 10) Final summary
 echo
 echo "Required media packages checked:"
 echo "  - libmpv2"
 echo "  - wtype"
 echo
-echo "Boot silence configured in:"
-echo "  ${BOOT_CONFIG}"
-echo "  - ${DISABLE_SPLASH_LINE}"
-echo
-echo "CAN overlay configured in:"
-echo "  ${BOOT_CONFIG}"
-echo "  - ${CAN_SPI_LINE}"
-echo "  - ${CAN_OVERLAY_LINE}"
+echo "Boot options configured in ${BOOT_CONFIG}:"
+echo "  (backup: ${CONFIG_BACKUP})"
+for line in "${CONFIG_APPEND[@]}"; do
+	echo "  - ${line}"
+done
 echo
 echo "Boot cmdline updated:"
 echo "  ${BOOT_CMDLINE}"
