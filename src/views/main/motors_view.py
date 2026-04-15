@@ -85,31 +85,44 @@ def MotorsView() -> ft.Control:
     def build_toast_message(message_key: str) -> Callable[[], str]:
         return lambda: settings_service.t(message_key)
 
+    def build_raw_toast_message(message: str) -> Callable[[], str]:
+        return lambda: message
+
     def on_toggle_click(_: Event[Button]) -> None:
         result = motor.toggle_motors()
 
         message_key = "motors_action_failed"
         toast_type = ToastType.ERROR
+        toast_build = build_toast_message(message_key)
         if result.action == MotorAction.STARTED:
             message_key = "motors_start_success"
             toast_type = ToastType.SUCCESS
+            toast_build = build_toast_message(message_key)
         elif result.action == MotorAction.STOPPED:
             message_key = "motors_stop_success"
             toast_type = ToastType.INFO
+            toast_build = build_toast_message(message_key)
         elif result.action == MotorAction.START_BLOCKED_BY_SAFETY:
-            message_key = "motors_start_blocked_by_safety"
             toast_type = ToastType.WARNING
+            toast_build = (
+                build_raw_toast_message(result.error)
+                if result.error
+                else build_toast_message("motors_start_blocked_by_safety")
+            )
         elif result.action == MotorAction.START_FAILED_NO_MOTORS:
             message_key = "motors_start_no_motors"
+            toast_build = build_toast_message(message_key)
         elif result.action == MotorAction.START_FAILED:
             message_key = "motors_start_failed"
+            toast_build = build_toast_message(message_key)
         elif result.action == MotorAction.STOP_FAILED:
             message_key = "motors_stop_failed"
+            toast_build = build_toast_message(message_key)
 
         show_toast(
             page=ft.context.page,
             type=toast_type,
-            build=build_toast_message(message_key),
+            build=toast_build,
         )
 
     def on_control_value_change(value: float) -> None:
