@@ -46,6 +46,21 @@ class SettingsService:
     def t(self, key: str, default: str | None = None) -> str:
         return self.translations.get(key, default or key)
 
+    def t_format(
+        self,
+        key: str,
+        /,
+        *,
+        default: str | None = None,
+        **kwargs: object,
+    ) -> str:
+        template = self.t(key, default)
+        try:
+            return template.format(**kwargs)
+        except Exception:
+            logger.exception("Failed to format translation for key %s", key)
+            return template
+
     def set_inactivity_timeout(self, seconds: float) -> None:
         if self.inactivity_timeout == seconds:
             return

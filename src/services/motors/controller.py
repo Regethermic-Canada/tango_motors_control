@@ -203,6 +203,27 @@ class MotorController:
             interlock = self._safety_sensor_service.get_interlock_snapshot()
             self._refresh_interlock_state(interlock)
             if interlock.enabled and not interlock.is_clear:
+                blocked_labels = ", ".join(interlock.blocked_labels)
+                faulted_labels = ", ".join(interlock.faulted_labels)
+                waiting_labels = ", ".join(interlock.waiting_labels)
+                if interlock.is_blocked:
+                    return MotorActionResult(
+                        action=MotorAction.START_BLOCKED_BY_SAFETY,
+                        error=blocked_labels,
+                        message_key="motors_start_blocked_by_safety_object",
+                    )
+                if interlock.is_faulted:
+                    return MotorActionResult(
+                        action=MotorAction.START_BLOCKED_BY_SAFETY,
+                        error=faulted_labels,
+                        message_key="motors_start_blocked_by_safety_faulted",
+                    )
+                if interlock.is_waiting:
+                    return MotorActionResult(
+                        action=MotorAction.START_BLOCKED_BY_SAFETY,
+                        error=waiting_labels,
+                        message_key="motors_start_blocked_by_safety_waiting",
+                    )
                 return MotorActionResult(
                     action=MotorAction.START_BLOCKED_BY_SAFETY,
                     error=interlock.reason,

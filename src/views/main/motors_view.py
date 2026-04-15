@@ -85,6 +85,13 @@ def MotorsView() -> ft.Control:
     def build_toast_message(message_key: str) -> Callable[[], str]:
         return lambda: settings_service.t(message_key)
 
+    def build_formatted_toast_message(
+        message_key: str,
+        *,
+        labels: str,
+    ) -> Callable[[], str]:
+        return lambda: settings_service.t_format(message_key, labels=labels)
+
     def build_raw_toast_message(message: str) -> Callable[[], str]:
         return lambda: message
 
@@ -104,11 +111,15 @@ def MotorsView() -> ft.Control:
             toast_build = build_toast_message(message_key)
         elif result.action == MotorAction.START_BLOCKED_BY_SAFETY:
             toast_type = ToastType.WARNING
-            toast_build = (
-                build_raw_toast_message(result.error)
-                if result.error
-                else build_toast_message("motors_start_blocked_by_safety")
-            )
+            if result.message_key:
+                toast_build = build_formatted_toast_message(
+                    result.message_key,
+                    labels=result.error,
+                )
+            elif result.error:
+                toast_build = build_raw_toast_message(result.error)
+            else:
+                toast_build = build_toast_message("motors_start_blocked_by_safety")
         elif result.action == MotorAction.START_FAILED_NO_MOTORS:
             message_key = "motors_start_no_motors"
             toast_build = build_toast_message(message_key)

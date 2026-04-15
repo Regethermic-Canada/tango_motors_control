@@ -15,3 +15,4 @@ class MotorAction(Enum):
 class MotorActionResult:
     action: MotorAction
     error: str = ""
+    message_key: str = ""
