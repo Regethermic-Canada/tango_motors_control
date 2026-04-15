@@ -4,6 +4,7 @@ from collections.abc import Callable
 
 import flet as ft
 
+from components.ui.tango_toast import ToastType, show_toast
 from services.app.overlay_registry import OverlayRole, get_overlay_close_callback
 from services.motors.controller import MotorController
 from .settings import SettingsService
@@ -32,7 +33,7 @@ class AppRuntime:
         self._set_viewport_size = set_viewport_size
         self._set_ui_ready = set_ui_ready
 
-    async def monitor_loop(self) -> None:
+    async def inactivity_monitor_loop(self) -> None:
         logger.info("Global inactivity monitor task started")
         while True:
             await asyncio.sleep(1.0)
@@ -44,7 +45,30 @@ class AppRuntime:
             if self._shell_service.is_screensaver_active:
                 self._close_all_overlays()
 
-            self._motor_controller.sync_motor_state()
+    async def motor_supervision_loop(self) -> None:
+        logger.info("Motor supervision task started")
+        while True:
+            await asyncio.sleep(0.1)
+            self._motor_controller.update_safety_and_motor_state()
+            message_key = (
+                self._motor_controller.consume_pending_safety_toast_message_key()
+            )
+            if message_key is None:
+                continue
+            resolved_message_key = message_key
+
+            def build_toast_message(*, key: str = resolved_message_key) -> str:
+                return self._settings_service.t(key)
+
+            show_toast(
+                page=self._page,
+                type=(
+                    ToastType.WARNING
+                    if resolved_message_key == "safety_interlock_blocked"
+                    else ToastType.INFO
+                ),
+                build=build_toast_message,
+            )
 
     def _close_all_overlays(self) -> None:
         """Closes active sheets and toasts."""
@@ -58,10 +82,10 @@ class AppRuntime:
 
         self._page.update()
 
-    async def initialize_motors_task(self) -> None:
+    async def initialize_motor_control_task(self) -> None:
         await asyncio.to_thread(self._motor_controller.initialize_motors)
 
-    async def shutdown_motors_task(self) -> None:
+    async def shutdown_motor_control_task(self) -> None:
         await asyncio.to_thread(self._motor_controller.shutdown_motors)
 
     def on_page_resize(self, _: object) -> None:
@@ -83,12 +107,13 @@ class AppRuntime:
         self._page.on_resize = self.on_page_resize
         self.sync_viewport_size(force=True)
         self._page.on_keyboard_event = lambda _: self._shell_service.reset_timer()
-        self._page.run_task(self.initialize_motors_task)
-        self._page.run_task(self.monitor_loop)
+        self._page.run_task(self.initialize_motor_control_task)
+        self._page.run_task(self.inactivity_monitor_loop)
+        self._page.run_task(self.motor_supervision_loop)
         self._page.run_task(self.warmup_first_frame_update_task)
 
     async def on_unmounted(self) -> None:
-        await self.shutdown_motors_task()
+        await self.shutdown_motor_control_task()
 
     def sync_viewport_size(self, *, force: bool = False) -> None:
         size = self._get_current_viewport_size()

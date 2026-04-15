@@ -96,6 +96,9 @@ def MotorsView() -> ft.Control:
         elif result.action == MotorAction.STOPPED:
             message_key = "motors_stop_success"
             toast_type = ToastType.INFO
+        elif result.action == MotorAction.START_BLOCKED_BY_SAFETY:
+            message_key = "motors_start_blocked_by_safety"
+            toast_type = ToastType.WARNING
         elif result.action == MotorAction.START_FAILED_NO_MOTORS:
             message_key = "motors_start_no_motors"
         elif result.action == MotorAction.START_FAILED:

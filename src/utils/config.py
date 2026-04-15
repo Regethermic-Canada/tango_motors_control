@@ -31,6 +31,10 @@ def parse_int_csv(value: str) -> list[int]:
     return [int(token) for token in tokens]
 
 
+def parse_str_csv(value: str) -> list[str]:
+    return [token.strip() for token in value.split(",") if token.strip()]
+
+
 @dataclass
 class Config:
     """
@@ -71,6 +75,18 @@ class Config:
     motor_min_sec_per_tray: float
     motor_max_sec_per_tray: float
     motor_max_temp_c: float
+
+    # Safety Sensors
+    safety_sensor_enabled: bool
+    safety_sensor_ports: list[str]
+    safety_sensor_labels: list[str]
+    safety_sensor_stop_below_mm: list[int]
+    safety_sensor_baudrate: int
+    safety_sensor_timeout_s: float
+    safety_sensor_startup_delay_s: float
+    safety_sensor_poll_interval_s: float
+    safety_sensor_upload_interval: int
+    safety_sensor_clear_confirmations: int
 
     _storage_path: Path
 
@@ -113,6 +129,16 @@ class Config:
 
         motor_ids = parse_int_csv(get_env("MOTOR_IDS", "1,2"))
         motor_directions = parse_int_csv(get_env("MOTOR_DIRECTIONS", "1,-1"))
+        safety_sensor_ports = parse_str_csv(
+            get_env(
+                "SAFETY_SENSOR_PORTS",
+                "/dev/ttyAMA0,/dev/ttyAMA2,/dev/ttyAMA3,/dev/ttyAMA5",
+            )
+        )
+        safety_sensor_labels = parse_str_csv(get_env("SAFETY_SENSOR_LABELS", ""))
+        safety_sensor_stop_below_mm = parse_int_csv(
+            get_env("SAFETY_SENSOR_STOP_BELOW_MM", "150,150,150,150")
+        )
 
         if not motor_ids:
             motor_ids = [1]
@@ -147,6 +173,28 @@ class Config:
             motor_min_sec_per_tray=float(get_env("MOTOR_MIN_SEC_PER_TRAY", "15")),
             motor_max_sec_per_tray=float(get_env("MOTOR_MAX_SEC_PER_TRAY", "40")),
             motor_max_temp_c=float(get_env("MOTOR_MAX_TEMP_C", "70.0")),
+            safety_sensor_enabled=get_env_bool("SAFETY_SENSOR_ENABLED", False),
+            safety_sensor_ports=safety_sensor_ports,
+            safety_sensor_labels=safety_sensor_labels,
+            safety_sensor_stop_below_mm=safety_sensor_stop_below_mm,
+            safety_sensor_baudrate=max(
+                2400, int(get_env("SAFETY_SENSOR_BAUDRATE", "9600"))
+            ),
+            safety_sensor_timeout_s=max(
+                0.01, float(get_env("SAFETY_SENSOR_TIMEOUT_S", "0.1"))
+            ),
+            safety_sensor_startup_delay_s=max(
+                0.0, float(get_env("SAFETY_SENSOR_STARTUP_DELAY_S", "0.1"))
+            ),
+            safety_sensor_poll_interval_s=max(
+                0.01, float(get_env("SAFETY_SENSOR_POLL_INTERVAL_S", "0.05"))
+            ),
+            safety_sensor_upload_interval=max(
+                1, min(100, int(get_env("SAFETY_SENSOR_UPLOAD_INTERVAL", "1")))
+            ),
+            safety_sensor_clear_confirmations=max(
+                1, int(get_env("SAFETY_SENSOR_CLEAR_CONFIRMATIONS", "3"))
+            ),
         )
 
     def set(self, key: str, value: object) -> None:
@@ -163,6 +211,8 @@ class Config:
                     attr_name,
                     str_value.strip().lower() in {"1", "true", "yes", "on"},
                 )
+            elif attr_name in {"safety_sensor_ports", "safety_sensor_labels"}:
+                setattr(self, attr_name, parse_str_csv(str_value))
             elif isinstance(current_val, list):
                 setattr(self, attr_name, parse_int_csv(str_value))
             elif isinstance(current_val, int):

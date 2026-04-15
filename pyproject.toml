@@ -12,6 +12,7 @@ dependencies = [
   "cubemars-servo-can",
   "flet>=0.80.1",
   "python-dotenv>=1.2.1",
+  "xkc-kl200-python",
 ]
 
 [dependency-groups]
@@ -34,3 +35,4 @@ path = "src"
 
 [tool.uv.sources]
 cubemars-servo-can = { git = "https://github.com/sam0rr/cubemars_servo_can.git" }
+xkc-kl200-python = { git = "https://github.com/sam0rr/XKC_KL200_python.git" }

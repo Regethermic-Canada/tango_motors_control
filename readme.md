@@ -62,10 +62,41 @@ In UI, tray speed is configurable with `MOTOR_MIN_SEC_PER_TRAY..MOTOR_MAX_SEC_PE
 The slider stays in `seconds/tray`, and the UI also shows the derived `trays/minute`
 indicator underneath. `Start Motors` / `Stop Motors` handles run state.
 
+## Safety sensor config
+
+The app can also run a KL200-based safety interlock. When any configured sensor reports
+`distance <= threshold`, all motors are stopped. When every sensor is clear again and the
+clear state has been confirmed for the configured number of consecutive readings, the motors
+restart automatically only if they were stopped by that interlock.
+
+In `storage/data`:
+
+```ini
+SAFETY_SENSOR_ENABLED=true
+SAFETY_SENSOR_PORTS=/dev/ttyAMA0,/dev/ttyAMA2,/dev/ttyAMA3,/dev/ttyAMA5
+SAFETY_SENSOR_LABELS=sensor1,sensor2,sensor3,sensor4
+SAFETY_SENSOR_STOP_BELOW_MM=150,150,150,150
+SAFETY_SENSOR_BAUDRATE=9600
+SAFETY_SENSOR_TIMEOUT_S=0.1
+SAFETY_SENSOR_STARTUP_DELAY_S=0.1
+SAFETY_SENSOR_POLL_INTERVAL_S=0.05
+SAFETY_SENSOR_UPLOAD_INTERVAL=1
+SAFETY_SENSOR_CLEAR_CONFIRMATIONS=3
+```
+
+Notes:
+
+- `ttyAMA4` is intentionally not used because it conflicts with the `SPI0` pin block used by the CAN interface in this hardware layout.
+- The current KL200 integration uses the library's auto-upload mode so stale UART data becomes a fail-safe fault instead of silently reusing an old measurement.
+- If any sensor becomes unavailable or stale, motor start is blocked and a running system is stopped until the sensor recovers.
+
 For complete motor/CAN setup (hardware wiring, CAN interface bring-up, usage and safety flow),
 follow the CubeMars library repository documentation:
 
 - https://github.com/sam0rr/cubemars_servo_can
+
+For the KL200 Raspberry Pi UART wiring and port mapping used here, follow the bundled
+library documentation in `../XKC_KL200_python/README.md` and `../XKC_KL200_python/docs/configuration.md`.
 
 ---
 

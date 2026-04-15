@@ -63,3 +63,28 @@ MOTOR_MIN_SEC_PER_TRAY=15
 MOTOR_MAX_SEC_PER_TRAY=40
 # Safety max MOSFET temperature in Celsius
 MOTOR_MAX_TEMP_C=70.0
+
+###############################################################################
+# Safety Sensors (XKC-KL200 UART)
+###############################################################################
+# Enable the safety interlock driven by XKC-KL200 distance sensors.
+SAFETY_SENSOR_ENABLED=false
+# Raspberry Pi UART devices used by the four sensors.
+# UART4 is intentionally not used because it conflicts with the SPI0/CAN wiring.
+SAFETY_SENSOR_PORTS=/dev/ttyAMA0,/dev/ttyAMA2,/dev/ttyAMA3,/dev/ttyAMA5
+# Optional labels used in logs and status views. Must match SAFETY_SENSOR_PORTS count.
+SAFETY_SENSOR_LABELS=sensor1,sensor2,sensor3,sensor4
+# Stop all motors when the measured distance is less than or equal to the per-sensor threshold (mm).
+SAFETY_SENSOR_STOP_BELOW_MM=150,150,150,150
+# Sensor serial baud rate configured on every KL200.
+SAFETY_SENSOR_BAUDRATE=9600
+# Command timeout used during setup/reconnect.
+SAFETY_SENSOR_TIMEOUT_S=0.1
+# Delay after opening the UART before configuring the sensor.
+SAFETY_SENSOR_STARTUP_DELAY_S=0.1
+# Poll period for each sensor worker thread.
+SAFETY_SENSOR_POLL_INTERVAL_S=0.05
+# Auto-upload interval sent to the sensor protocol (supported range: 1..100).
+SAFETY_SENSOR_UPLOAD_INTERVAL=1
+# Require this many consecutive clear readings before motors are allowed to run again.
+SAFETY_SENSOR_CLEAR_CONFIRMATIONS=3
